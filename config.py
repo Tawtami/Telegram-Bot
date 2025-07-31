@@ -9,9 +9,6 @@ BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your actual bot token from @Bo
 BOT_NAME = "Ostad Hatami Bot"
 BOT_USERNAME = "OstadHatami_bot"
 
-# Admin Configuration
-ADMIN_USER_ID = None  # Your Telegram user ID for admin features
-
 # Course Information
 COURSES = {
     "دهم": {
@@ -31,20 +28,20 @@ COURSES = {
 
 # Contact Information
 CONTACT_INFO = {
-    "whatsapp": "+98 938 153 0556",  # Update with actual WhatsApp number
-    "phone": "+98 938 153 0556",     # Update with actual phone number
-    "telegram": "@Ostad_Hatami",      # Update with actual Telegram username
-    "email": "HamrahBaOstad@gmail.com",  # Update with actual email
-    "address": "تهران",    # Update with actual address
+    "whatsapp": "+98 938 153 0556",
+    "phone": "+98 938 153 0556",
+    "telegram": "@Ostad_Hatami",
+    "email": "HamrahBaOstad@gmail.com",
+    "address": "تهران",
     "working_hours": "شنبه تا چهارشنبه: ۹ صبح تا ۶ عصر\nپنجشنبه: ۹ صبح تا ۱ ظهر"
 }
 
 # Social Media Links
 SOCIAL_LINKS = {
-    "instagram": "https://www.instagram.com/hamrahbaostad",      # Update with actual Instagram
-    "youtube": "youtube.com/@hamrahbaostad", # Update with actual YouTube
-    "telegram_channel": "https://t.me/hamrahbaostad", # Update with actual Telegram channel
-    "website": "Soon"        # Update with actual website
+    "instagram": "https://www.instagram.com/hamrahbaostad",
+    "youtube": "youtube.com/@hamrahbaostad",
+    "telegram_channel": "https://t.me/hamrahbaostad",
+    "website": "Soon"
 }
 
 # Book Information
@@ -61,16 +58,6 @@ BOOK_INFO = {
 
 # Data Storage
 DATA_FILE = "data/students.json"
-BACKUP_FILE = "data/students_backup.json"
 
 # Logging Configuration
-LOG_LEVEL = "INFO"
-LOG_FILE = "logs/bot.log"
-
-# Message Templates
-MESSAGES = {
-    "welcome": "👋 سلام {name}! خوش آمدید به ربات ثبت‌نام کلاس‌های ریاضی استاد.",
-    "registration_success": "✅ ثبت‌نام شما با موفقیت انجام شد!",
-    "registration_cancelled": "❌ ثبت‌نام لغو شد. برای شروع مجدد /start را ارسال کنید.",
-    "already_registered": "شما قبلاً ثبت‌نام کرده‌اید. منوی اصلی نمایش داده می‌شود."
-} 
+LOG_LEVEL = "INFO" 

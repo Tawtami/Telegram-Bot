@@ -45,9 +45,6 @@ class HostedMathBot:
         """Ensure data directory exists"""
         os.makedirs("data", exist_ok=True)
         os.makedirs("logs", exist_ok=True)
-        if not os.path.exists(DATA_FILE):
-            with open(DATA_FILE, 'w', encoding='utf-8') as f:
-                json.dump([], f, ensure_ascii=False, indent=2)
     
     def setup_handlers(self):
         """Setup all bot handlers"""
