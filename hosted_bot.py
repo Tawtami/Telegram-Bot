@@ -217,4 +217,9 @@ async def main():
         logger.error(f"❌ خطا در اجرای ربات: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("🛑 ربات متوقف شد")
+    except Exception as e:
+        logger.error(f"❌ خطای غیرمنتظره: {e}") 
