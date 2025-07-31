@@ -170,9 +170,9 @@ class ProfessionalMathBot:
 
 📚 این ربات برای ثبت‌نام در کلاس‌های ریاضی طراحی شده است.
 
-🎯 **کلاس‌های رایگان آنلاین** در حال برگزاری است!
+🎯 <b>کلاس‌های رایگان آنلاین</b> در حال برگزاری است!
 
-📝 **برای ثبت‌نام فوری:** /register
+📝 <b>برای ثبت‌نام فوری:</b> /register
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
         """
@@ -190,7 +190,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /help command"""
@@ -215,7 +215,7 @@ class ProfessionalMathBot:
 📞 **پشتیبانی:**
 برای سوالات بیشتر با استاد تماس بگیرید
         """
-        await update.message.reply_text(help_text, parse_mode='Markdown')
+        await update.message.reply_text(help_text, parse_mode='HTML')
     
     async def register_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Start registration process"""
@@ -227,10 +227,10 @@ class ProfessionalMathBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(
-            "📝 **ثبت‌نام در کلاس‌های ریاضی**\n\n"
+            "📝 <b>ثبت‌نام در کلاس‌های ریاضی</b>\n\n"
             "لطفاً نوع کلاس مورد نظر خود را انتخاب کنید:",
             reply_markup=reply_markup,
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         return CHOOSING_COURSE
     
@@ -294,7 +294,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(registration_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(registration_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_youtube(self, query):
         """Show YouTube educational content"""
@@ -326,7 +326,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(youtube_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(youtube_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_announcements(self, query):
         """Show latest announcements"""
@@ -346,7 +346,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(announcements_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(announcements_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_special_courses(self, query):
         """Show special free courses"""
@@ -371,7 +371,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(special_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(special_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_schedule(self, query):
         """Show current class schedule"""
@@ -397,7 +397,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(schedule_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(schedule_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_courses(self, query):
         """Show available courses"""
@@ -420,7 +420,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(courses_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(courses_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_book_info(self, query):
         """Show book information"""
@@ -449,7 +449,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(book_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(book_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_contact_info(self, query):
         """Show contact information"""
@@ -476,7 +476,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(contact_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(contact_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_social_links(self, query):
         """Show social media links"""
@@ -504,7 +504,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(social_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(social_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def show_main_menu(self, query):
         """Show main menu"""
@@ -529,15 +529,15 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(menu_text, reply_markup=reply_markup, parse_mode='Markdown')
+        await query.edit_message_text(menu_text, reply_markup=reply_markup, parse_mode='HTML')
     
     async def start_free_registration(self, query):
         """Start free course registration"""
         context.user_data['registration_type'] = 'free'
         await query.edit_message_text(
-            "🎓 **ثبت‌نام کلاس‌های رایگان**\n\n"
+            "🎓 <b>ثبت‌نام کلاس‌های رایگان</b>\n\n"
             "لطفاً نام و نام خانوادگی خود را وارد کنید:",
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         return ENTERING_NAME
     
@@ -545,9 +545,9 @@ class ProfessionalMathBot:
         """Start paid course registration"""
         context.user_data['registration_type'] = 'paid'
         await query.edit_message_text(
-            "💰 **ثبت‌نام کلاس‌های پولی**\n\n"
+            "💰 <b>ثبت‌نام کلاس‌های پولی</b>\n\n"
             "لطفاً نام و نام خانوادگی خود را وارد کنید:",
-            parse_mode='Markdown'
+            parse_mode='HTML'
         )
         return ENTERING_NAME
     
@@ -619,7 +619,7 @@ class ProfessionalMathBot:
 ✅ آیا اطلاعات فوق صحیح است؟ (بله/خیر)
         """
         
-        await update.message.reply_text(confirm_text, parse_mode='Markdown')
+        await update.message.reply_text(confirm_text, parse_mode='HTML')
         return CONFIRMING_REGISTRATION
     
     async def confirm_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -647,19 +647,19 @@ class ProfessionalMathBot:
                 # Send confirmation to user
                 if student_data['registration_type'] == 'free':
                     await update.message.reply_text(
-                        "✅ **ثبت‌نام شما با موفقیت انجام شد!**\n\n"
+                        "✅ <b>ثبت‌نام شما با موفقیت انجام شد!</b>\n\n"
                         "🎓 کلاس‌های رایگان\n"
                         "📞 ادمین‌ها به زودی با شما تماس خواهند گرفت.\n"
                         "📅 برنامه کلاس‌ها از طریق ربات اطلاع‌رسانی می‌شود.",
-                        parse_mode='Markdown'
+                        parse_mode='HTML'
                     )
                 else:
                     await update.message.reply_text(
-                        "✅ **ثبت‌نام شما با موفقیت انجام شد!**\n\n"
+                        "✅ <b>ثبت‌نام شما با موفقیت انجام شد!</b>\n\n"
                         "💰 کلاس‌های پولی\n"
                         "📞 ادمین‌ها برای پرداخت با شما تماس خواهند گرفت.\n"
                         "💳 پرداخت به صورت دستی انجام می‌شود.",
-                        parse_mode='Markdown'
+                        parse_mode='HTML'
                     )
             else:
                 await update.message.reply_text(
@@ -731,7 +731,7 @@ class ProfessionalMathBot:
         else:
             status_text = "❌ شما هنوز ثبت‌نام نکرده‌اید.\n\nبرای ثبت‌نام /register را ارسال کنید."
         
-        await update.message.reply_text(status_text, parse_mode='Markdown')
+        await update.message.reply_text(status_text, parse_mode='HTML')
     
     async def admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Admin commands"""
@@ -761,7 +761,7 @@ class ProfessionalMathBot:
 برای دسترسی به این قابلیت‌ها، لطفاً با توسعه‌دهنده تماس بگیرید.
         """
         
-        await update.message.reply_text(admin_text, parse_mode='Markdown')
+        await update.message.reply_text(admin_text, parse_mode='HTML')
     
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors"""
