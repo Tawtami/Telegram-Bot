@@ -135,6 +135,13 @@ logs/*.log
 *.db
 *.sqlite
 
+# Environment variables and sensitive data
+.env
+.env.local
+.env.production
+config_secret.py
+secrets.py
+
 # IDE
 .vscode/
 .idea/

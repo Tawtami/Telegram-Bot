@@ -5,7 +5,7 @@ Configuration file for Math Course Registration Bot
 """
 
 # Bot Configuration
-BOT_TOKEN = "8468544112:AAH9P9J6uBTuhrveLnT17yblVnP7_Ebxgaw"  # Replace with your actual bot token from @BotFather
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your actual bot token from @BotFather
 BOT_NAME = "Ostad Hatami Bot"
 BOT_USERNAME = "OstadHatami_bot"
 
