@@ -64,6 +64,7 @@ class HostedMathBot:
         """
         
         keyboard = [
+            [InlineKeyboardButton("📝 ثبت‌نام در کلاس", callback_data="register")],
             [InlineKeyboardButton("📚 کلاس‌های ریاضی", callback_data="courses")],
             [InlineKeyboardButton("📘 کتاب انفجار خلاقیت", callback_data="book")],
             [InlineKeyboardButton("📞 اطلاعات تماس", callback_data="contact")],
@@ -78,7 +79,9 @@ class HostedMathBot:
         query = update.callback_query
         await query.answer()
         
-        if query.data == "courses":
+        if query.data == "register":
+            await self.show_registration(query)
+        elif query.data == "courses":
             await self.show_courses(query)
         elif query.data == "book":
             await self.show_book_info(query)
@@ -106,6 +109,29 @@ class HostedMathBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await query.edit_message_text(courses_text, reply_markup=reply_markup)
+    
+    async def show_registration(self, query):
+        """Show registration form"""
+        registration_text = """
+📝 ثبت‌نام در کلاس‌های ریاضی
+
+🎯 برای ثبت‌نام در کلاس‌های ریاضی، لطفاً:
+
+1️⃣ ابتدا کلاس مورد نظر خود را انتخاب کنید
+2️⃣ اطلاعات تماس خود را ارسال کنید
+3️⃣ منتظر تماس استاد باشید
+
+📞 یا مستقیماً با استاد تماس بگیرید:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("📚 مشاهده کلاس‌ها", callback_data="courses")],
+            [InlineKeyboardButton("📞 تماس مستقیم", callback_data="contact")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(registration_text, reply_markup=reply_markup)
     
     async def show_book_info(self, query):
         """Show book information"""
@@ -188,6 +214,7 @@ class HostedMathBot:
         """
         
         keyboard = [
+            [InlineKeyboardButton("📝 ثبت‌نام در کلاس", callback_data="register")],
             [InlineKeyboardButton("📚 کلاس‌های ریاضی", callback_data="courses")],
             [InlineKeyboardButton("📘 کتاب انفجار خلاقیت", callback_data="book")],
             [InlineKeyboardButton("📞 اطلاعات تماس", callback_data="contact")],
