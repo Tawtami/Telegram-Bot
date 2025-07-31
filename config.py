@@ -9,6 +9,12 @@ BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your actual bot token from @Bo
 BOT_NAME = "Ostad Hatami Bot"
 BOT_USERNAME = "OstadHatami_bot"
 
+# Admin Configuration
+ADMIN_IDS = [
+    "@Ostad_Hatami",  # استاد حاتمی
+    "@F209EVRH"       # شما
+]
+
 # Course Information
 COURSES = {
     "دهم": {
@@ -74,7 +80,7 @@ CONTACT_INFO = {
 # Social Media Links
 SOCIAL_LINKS = {
     "instagram": "https://www.instagram.com/hamrahbaostad",
-    "youtube": "youtube.com/@hamrahbaostad",
+    "youtube": "https://youtube.com/@hamrahbaostad",
     "telegram_channel": "https://t.me/hamrahbaostad",
     "website": "Soon"
 }
@@ -112,6 +118,17 @@ ANNOUNCEMENTS = [
 
 # Data Storage
 DATA_FILE = "data/students.json"
+BACKUP_FILE = "data/students_backup.json"
+
+# Security Configuration
+ENCRYPTION_KEY = "your-secret-encryption-key-here"  # Change this in production
+HASH_SALT = "your-hash-salt-here"  # Change this in production
 
 # Logging Configuration
-LOG_LEVEL = "INFO" 
+LOG_LEVEL = "INFO"
+LOG_FILE = "logs/bot.log"
+
+# Notification Settings
+NOTIFICATION_ENABLED = True
+AUTO_BACKUP_ENABLED = True
+BACKUP_INTERVAL_HOURS = 24 
