@@ -30,8 +30,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=getattr(logging, LOG_LEVEL),
     handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
+        logging.StreamHandler()  # Only use console logging for Railway
     ]
 )
 logger = logging.getLogger(__name__)
