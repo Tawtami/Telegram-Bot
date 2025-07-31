@@ -201,14 +201,14 @@ class HostedMathBot:
         """Handle errors"""
         logger.error(f"Exception while handling an update: {context.error}")
 
-async def main():
+def main():
     """Main function to run the bot"""
     try:
         bot = HostedMathBot()
         logger.info("🤖 ربات کلاس‌های ریاضی در حال راه‌اندازی...")
         
         # Start the bot
-        await bot.application.run_polling(drop_pending_updates=True)
+        bot.application.run_polling(drop_pending_updates=True)
         
     except ValueError as e:
         logger.error(f"❌ خطا در تنظیمات: {e}")
@@ -217,9 +217,4 @@ async def main():
         logger.error(f"❌ خطا در اجرای ربات: {e}")
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("🛑 ربات متوقف شد")
-    except Exception as e:
-        logger.error(f"❌ خطای غیرمنتظره: {e}") 
+    main() 
