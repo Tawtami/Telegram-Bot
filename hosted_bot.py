@@ -284,6 +284,8 @@ class ProfessionalMathBot:
             await self.show_admin_stats(query)
         elif query.data == "admin_payments":
             await self.show_admin_payments(query)
+        elif query.data == "admin":
+            await self.show_admin_panel(query)
 
     async def show_registration_menu(self, query):
         """Professional registration menu"""
@@ -1041,6 +1043,111 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
                 logger.error(f"Error sending notification to user {student.get('user_id')}: {e}")
         
         return sent_count
+
+    async def process_payment(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle payment processing"""
+        query = update.callback_query
+        await query.answer()
+        
+        payment_type = query.data.replace('payment_', '')
+        
+        if payment_type == 'confirm':
+            # Payment confirmed by admin
+            text = """
+✅ <b>پرداخت تأیید شد!</b>
+
+🎁 <b>محصول شما ارسال شد:</b>
+• لینک کلاس
+• مواد آموزشی
+• دسترسی به کانال خصوصی
+
+📞 <b>برای سوالات:</b>
+{CONTACT_INFO['phone']}
+
+🔙 <b>بازگشت به منوی اصلی:</b>
+            """
+        elif payment_type == 'pending':
+            text = """
+⏳ <b>پرداخت در حال بررسی</b>
+
+لطفاً منتظر تأیید ادمین باشید.
+
+📞 <b>برای سوالات:</b>
+{CONTACT_INFO['phone']}
+            """
+        else:
+            text = """
+❌ <b>خطا در پرداخت</b>
+
+لطفاً با پشتیبانی تماس بگیرید.
+
+📞 <b>پشتیبانی:</b>
+{CONTACT_INFO['phone']}
+            """
+        
+        keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        return ConversationHandler.END
+
+    async def show_admin_panel(self, query):
+        """Show admin panel interface"""
+        user_id = query.from_user.id
+        username = query.from_user.username
+        
+        # Check if user is admin
+        is_admin = False
+        for admin in ADMIN_IDS:
+            if admin.startswith('@') and admin[1:] == username:
+                is_admin = True
+                break
+            elif str(user_id) == admin:
+                is_admin = True
+                break
+        
+        if not is_admin:
+            text = "❌ <b>دسترسی غیرمجاز!</b>"
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            return
+        
+        # Admin panel
+        students = self.data_manager.load_students()
+        total_students = len(students)
+        pending_payments = len([s for s in students if s.get('status') == 'pending_payment'])
+        
+        text = f"""
+🔧 <b>پنل مدیریت ربات</b>
+
+📊 <b>آمار کلی:</b>
+👥 کل دانش‌آموزان: {total_students}
+💎 در انتظار پرداخت: {pending_payments}
+
+📈 <b>وضعیت ربات:</b>
+✅ فعال و آماده
+🟢 تمام سرویس‌ها در دسترس
+
+🔧 <b>تنظیمات:</b>
+• پشتیبان‌گیری خودکار: {'فعال' if AUTO_BACKUP_ENABLED else 'غیرفعال'}
+• اطلاع‌رسانی: {'فعال' if NOTIFICATION_ENABLED else 'غیرفعال'}
+
+📢 <b>ویژگی‌های مدیریت:</b>
+• ارسال اطلاعیه به همه کاربران
+• مدیریت پرداخت‌ها
+• مشاهده آمار کامل
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("📢 ارسال اطلاعیه", callback_data="admin_broadcast")],
+            [InlineKeyboardButton("📊 مشاهده آمار کامل", callback_data="admin_stats")],
+            [InlineKeyboardButton("💎 مدیریت پرداخت‌ها", callback_data="admin_payments")],
+            [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
 
     async def show_admin_broadcast(self, query):
         """Show admin broadcast interface"""
