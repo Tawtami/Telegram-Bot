@@ -18,7 +18,7 @@
 
 #### متغیرهای محیطی Railway:
 ```
-BOT_TOKEN=8468544112:AAH9P9J6uBTuhrveLnT17yblVnP7_Ebxgaw
+BOT_TOKEN=YOUR_BOT_TOKEN_HERE
 ADMIN_USER_ID=YOUR_TELEGRAM_USER_ID
 ```
 
@@ -32,7 +32,7 @@ ADMIN_USER_ID=YOUR_TELEGRAM_USER_ID
 ### ۱. ایجاد فایل `.env`:
 ```bash
 # در پوشه پروژه، فایل .env ایجاد کنید
-BOT_TOKEN=8468544112:AAH9P9J6uBTuhrveLnT17yblVnP7_Ebxgaw
+BOT_TOKEN=YOUR_BOT_TOKEN_HERE
 ADMIN_USER_ID=YOUR_TELEGRAM_USER_ID
 ```
 

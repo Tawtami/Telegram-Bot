@@ -40,7 +40,7 @@ git push -u origin main
 2. به تب "Variables" بروید
 3. متغیر جدید اضافه کنید:
    - **Name:** `BOT_TOKEN`
-   - **Value:** `8468544112:AAH9P9J6uBTuhrveLnT17yblVnP7_Ebxgaw`
+   - **Value:** `YOUR_BOT_TOKEN_HERE`
 
 ### مرحله ۳: تست ربات
 

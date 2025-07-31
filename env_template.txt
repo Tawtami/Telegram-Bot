@@ -1,0 +1,11 @@
+# Environment Variables Template
+# کپی این فایل به .env و مقادیر را تنظیم کنید
+
+# Bot Token (از @BotFather دریافت کنید)
+BOT_TOKEN=YOUR_BOT_TOKEN_HERE
+
+# Admin User ID (اختیاری)
+ADMIN_USER_ID=YOUR_TELEGRAM_USER_ID
+
+# Log Level
+LOG_LEVEL=INFO 

@@ -67,7 +67,7 @@ git push -u origin main
 
 ### متغیر محیطی Railway:
 ```
-BOT_TOKEN=8468544112:AAH9P9J6uBTuhrveLnT17yblVnP7_Ebxgaw
+BOT_TOKEN=YOUR_BOT_TOKEN_HERE
 ```
 
 ### اطلاعات تماس:
