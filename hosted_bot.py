@@ -112,12 +112,81 @@ class ProfessionalDataManager:
     def add_student(self, student_data):
         """Add new student securely"""
         students = self.load_students()
-        student_data['id'] = len(students) + 1
-        student_data['registration_date'] = datetime.now().isoformat()
-        student_data['status'] = 'pending'
-        students.append(student_data)
+        
+        # Check if user already exists
+        existing_user = None
+        for student in students:
+            if student.get('user_id') == student_data.get('user_id'):
+                existing_user = student
+                break
+        
+        if existing_user:
+            # Update existing user data
+            existing_user.update(student_data)
+            existing_user['last_updated'] = datetime.now().isoformat()
+            logger.info(f"Updated existing user data for user_id: {student_data.get('user_id')}")
+        else:
+            # Add new student
+            student_data['id'] = len(students) + 1
+            student_data['registration_date'] = datetime.now().isoformat()
+            student_data['last_updated'] = datetime.now().isoformat()
+            student_data['status'] = 'pending'
+            students.append(student_data)
+            logger.info(f"Added new user data for user_id: {student_data.get('user_id')}")
+        
         self.save_students(students)
         return student_data
+    
+    def update_student(self, user_id, updates):
+        """Update existing student data"""
+        students = self.load_students()
+        
+        for student in students:
+            if student.get('user_id') == user_id:
+                student.update(updates)
+                student['last_updated'] = datetime.now().isoformat()
+                self.save_students(students)
+                logger.info(f"Updated student data for user_id: {user_id}")
+                return True
+        
+        logger.warning(f"Student not found for user_id: {user_id}")
+        return False
+    
+    def get_student_by_user_id(self, user_id):
+        """Get student data by user_id"""
+        students = self.load_students()
+        
+        for student in students:
+            if student.get('user_id') == user_id:
+                return student
+        
+        return None
+    
+    def export_user_data_summary(self):
+        """Export user data summary for admin viewing"""
+        students = self.load_students()
+        
+        if not students:
+            return "هیچ کاربری ثبت‌نام نکرده است."
+        
+        summary = f"📊 خلاصه اطلاعات کاربران - {datetime.now().strftime('%Y/%m/%d %H:%M')}\n\n"
+        summary += f"👥 کل کاربران: {len(students)}\n\n"
+        
+        # Group by course
+        course_groups = {}
+        for student in students:
+            course = student.get('course', 'نامشخص')
+            if course not in course_groups:
+                course_groups[course] = []
+            course_groups[course].append(student)
+        
+        for course, course_students in course_groups.items():
+            summary += f"📚 {course} ({len(course_students)} نفر):\n"
+            for student in course_students:
+                summary += f"  • {student.get('name', 'نامشخص')} - {student.get('phone', 'نامشخص')} - {student.get('grade', 'نامشخص')} - {student.get('field', 'نامشخص')}\n"
+            summary += "\n"
+        
+        return summary
 
 class ProfessionalMathBot:
     """Professional Math Course Registration Bot - 2025 Edition"""
@@ -141,6 +210,7 @@ class ProfessionalMathBot:
         self.application.add_handler(CommandHandler("register", self.register_command))
         self.application.add_handler(CommandHandler("status", self.status_command))
         self.application.add_handler(CommandHandler("admin", self.admin_command))
+        self.application.add_handler(CommandHandler("export", self.export_command))
         
         # Callback query handler
         self.application.add_handler(CallbackQueryHandler(self.handle_callback))
@@ -329,6 +399,10 @@ class ProfessionalMathBot:
             await self.show_admin_payments(query)
         elif query.data == "admin":
             await self.show_admin_panel(query)
+        elif query.data == "admin_user_details" or query.data.startswith("admin_user_details_page_"):
+            await self.show_admin_user_details(query)
+        elif query.data == "admin_export":
+            await self.show_admin_export(query)
 
     async def show_registration_menu(self, query):
         """Professional registration menu"""
@@ -1102,11 +1176,55 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
             [InlineKeyboardButton("📢 ارسال اطلاعیه", callback_data="admin_broadcast")],
             [InlineKeyboardButton("📊 مشاهده آمار کامل", callback_data="admin_stats")],
             [InlineKeyboardButton("💎 مدیریت پرداخت‌ها", callback_data="admin_payments")],
+            [InlineKeyboardButton("📋 خروجی اطلاعات کاربران", callback_data="admin_export")],
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(text, reply_markup=reply_markup, )
+
+    async def export_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Export user data for admin"""
+        user_id = update.effective_user.id
+        username = update.effective_user.username
+        
+        # Check if user is admin
+        is_admin = False
+        for admin in ADMIN_IDS:
+            if admin.startswith('@') and admin[1:] == username:
+                is_admin = True
+                break
+            elif str(user_id) == admin:
+                is_admin = True
+                break
+        
+        if not is_admin:
+            text = "❌ دسترسی غیرمجاز!"
+            await update.message.reply_text(text)
+            return
+        
+        # Export user data
+        summary = self.data_manager.export_user_data_summary()
+        
+        # Split long messages if needed
+        if len(summary) > 4000:
+            parts = [summary[i:i+4000] for i in range(0, len(summary), 4000)]
+            for i, part in enumerate(parts, 1):
+                await update.message.reply_text(f"📊 بخش {i} از {len(parts)}:\n\n{part}")
+        else:
+            await update.message.reply_text(summary)
+        
+        # Also save to file for easy access
+        try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"data/user_export_{timestamp}.txt"
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(summary)
+            
+            await update.message.reply_text(f"✅ فایل خروجی در {filename} ذخیره شد.")
+        except Exception as e:
+            logger.error(f"Error saving export file: {e}")
+            await update.message.reply_text("❌ خطا در ذخیره فایل خروجی.")
 
     async def send_notification_to_users(self, message_text, course_filter=None):
         """Send notification to all users or specific course users"""
@@ -1240,6 +1358,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
             [InlineKeyboardButton("📢 ارسال اطلاعیه", callback_data="admin_broadcast")],
             [InlineKeyboardButton("📊 مشاهده آمار کامل", callback_data="admin_stats")],
             [InlineKeyboardButton("💎 مدیریت پرداخت‌ها", callback_data="admin_payments")],
+            [InlineKeyboardButton("📋 خروجی اطلاعات کاربران", callback_data="admin_export")],
             [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1301,6 +1420,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         """
         
         keyboard = [
+            [InlineKeyboardButton("📋 مشاهده جزئیات کاربران", callback_data="admin_user_details")],
             [InlineKeyboardButton("📊 گزارش کامل", callback_data="admin_full_report")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="admin")]
         ]
@@ -1333,6 +1453,123 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         
         keyboard = [
             [InlineKeyboardButton("📋 مشاهده همه", callback_data="admin_all_payments")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="admin")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup)
+
+    async def show_admin_user_details(self, query):
+        """Show detailed user information for admin"""
+        students = self.data_manager.load_students()
+        
+        if not students:
+            text = """
+📋 جزئیات کاربران
+
+❌ هیچ کاربری ثبت‌نام نکرده است.
+            """
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="admin_stats")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await query.edit_message_text(text, reply_markup=reply_markup)
+            return
+        
+        # Get page from context or default to 0
+        page = 0
+        if hasattr(query, 'data') and 'page_' in query.data:
+            try:
+                page = int(query.data.split('_')[-1])
+            except:
+                page = 0
+        
+        students_per_page = 3  # Show 3 students per page due to message length
+        start_idx = page * students_per_page
+        end_idx = start_idx + students_per_page
+        page_students = students[start_idx:end_idx]
+        
+        text = f"""
+📋 جزئیات کاربران (صفحه {page + 1} از {(len(students) + students_per_page - 1) // students_per_page})
+
+👥 کل کاربران: {len(students)}
+        """
+        
+        for i, student in enumerate(page_students, start_idx + 1):
+            registration_date = student.get('registration_date', 'نامشخص')
+            if registration_date != 'نامشخص':
+                try:
+                    # Convert ISO format to readable date
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(registration_date.replace('Z', '+00:00'))
+                    registration_date = dt.strftime('%Y/%m/%d %H:%M')
+                except:
+                    pass
+            
+            text += f"""
+
+{i}. 👤 {student.get('name', 'نامشخص')}
+   📱 تلفن: {student.get('phone', 'نامشخص')}
+   📚 کلاس: {student.get('course', 'نامشخص')}
+   🎓 پایه: {student.get('grade', 'نامشخص')}
+   📖 رشته: {student.get('field', 'نامشخص')}
+   📞 تلفن والدین: {student.get('parent_phone', 'نامشخص')}
+   💰 نوع: {student.get('type', 'نامشخص')}
+   📅 تاریخ ثبت‌نام: {registration_date}
+   ✅ وضعیت: {student.get('status', 'نامشخص')}
+   🆔 شناسه کاربر: {student.get('user_id', 'نامشخص')}
+"""
+        
+        keyboard = []
+        
+        # Navigation buttons
+        if page > 0:
+            keyboard.append([InlineKeyboardButton("⬅️ صفحه قبل", callback_data=f"admin_user_details_page_{page-1}")])
+        
+        if end_idx < len(students):
+            keyboard.append([InlineKeyboardButton("➡️ صفحه بعد", callback_data=f"admin_user_details_page_{page+1}")])
+        
+        keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="admin_stats")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup)
+
+    async def show_admin_export(self, query):
+        """Show admin export interface"""
+        # Export user data
+        summary = self.data_manager.export_user_data_summary()
+        
+        # Split long messages if needed
+        if len(summary) > 4000:
+            # Show first part and save to file
+            first_part = summary[:4000]
+            text = f"{first_part}\n\n... (ادامه در فایل ذخیره شده)"
+            
+            # Save to file
+            try:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"data/user_export_{timestamp}.txt"
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(summary)
+                
+                text += f"\n\n✅ فایل کامل در {filename} ذخیره شد."
+            except Exception as e:
+                logger.error(f"Error saving export file: {e}")
+                text += "\n\n❌ خطا در ذخیره فایل خروجی."
+        else:
+            text = summary
+            # Save to file anyway for easy access
+            try:
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"data/user_export_{timestamp}.txt"
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write(summary)
+                
+                text += f"\n\n✅ فایل در {filename} ذخیره شد."
+            except Exception as e:
+                logger.error(f"Error saving export file: {e}")
+                text += "\n\n❌ خطا در ذخیره فایل خروجی."
+        
+        keyboard = [
+            [InlineKeyboardButton("📋 مشاهده جزئیات کاربران", callback_data="admin_user_details")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="admin")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
