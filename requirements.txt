@@ -1,3 +1,7 @@
 python-telegram-bot==21.7
-python-dotenv==1.0.0 
+python-dotenv==1.0.0
+redis==5.0.1
+aiohttp==3.9.1
+celery==5.3.4
+psycopg2-binary==2.9.9 
  

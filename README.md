@@ -1,228 +1,159 @@
-# 🤖 ربات تلگرام حرفه‌ای کلاس‌های ریاضی - نسخه ۲۰۲۵
+# 🤖 Advanced Math Course Registration Bot - 2025 Edition
 
-## 🎯 ویژگی‌های اصلی
+A professional Telegram bot for educational course registration, built with modern Python and comprehensive features for 2025.
 
-### 📝 ثبت‌نام کامل و جامع
-- **منوی ثبت‌نام فوری** پس از `/start`
-- **ثبت‌نام کلاس‌های رایگان** با تأیید خودکار
-- **ثبت‌نام کلاس‌های پولی** با اطلاع‌رسانی ادمین‌ها
-- **ذخیره‌سازی امن** اطلاعات کاربران با رمزگذاری
-- **تأیید ثبت‌نام** با جزئیات کامل
+## 🚀 Features
 
-### 💎 سیستم پرداخت حرفه‌ای
-- **انتخاب کلاس پولی** با قیمت‌گذاری شفاف
-- **اطلاع‌رسانی خودکار** به ادمین‌ها (`@Ostad_Hatami` و `@F209EVRH`)
-- **ارسال بلافاصله محصول** پس از تأیید پرداخت
-- **مدیریت پرداخت‌ها** در پنل ادمین
+### Core Functionality
+- **Complete Registration System** - Multi-step registration with comprehensive data collection
+- **User Data Management** - Secure storage and constant updates
+- **Admin Panel** - Full administrative control with user management
+- **Course Management** - Free and paid course registration
+- **Payment Processing** - Manual payment confirmation system
+- **Data Export** - Comprehensive user data export functionality
 
-### 📢 سیستم اطلاع‌رسانی پیشرفته
-- **ارسال پیام به کاربران** برای اطلاع‌رسانی کلاس‌ها
-- **هشدارهای مهم** و اطلاعیه‌های فوری
-- **اطلاع‌رسانی انتخابی** بر اساس کلاس
-- **پنل مدیریت اطلاعیه‌ها**
+### Advanced Features
+- **Multi-language Support** - Persian and English
+- **Smart Reply Suggestions** - Context-aware responses
+- **Gamification System** - Points, badges, and achievements
+- **Professional UI/UX** - Rich interactive menus and adaptive interfaces
+- **Scalable Architecture** - Redis caching, PostgreSQL support, message queues
+- **Security Features** - Data encryption, secure storage, admin authentication
 
-### 🎓 محتوای آموزشی رایگان
-- **کانال یوتیوب** با آموزش‌های رایگان
-- **کلاس‌های ویژه رایگان** برای همه پایه‌ها
-- **برنامه کلاس‌ها** با جزئیات کامل
-- **ظرفیت کلاس‌ها** و وضعیت ثبت‌نام
+## 📋 Requirements
 
-### 🔧 پنل مدیریت حرفه‌ای
-- **آمار کامل** کاربران و کلاس‌ها
-- **مدیریت پرداخت‌ها** و تأییدها
-- **ارسال اطلاعیه** به همه کاربران
-- **گزارش‌های تحلیلی** و نرخ تبدیل
+- Python 3.8+
+- Telegram Bot Token
+- Redis (optional, for caching)
+- PostgreSQL (optional, for database)
 
-## 🚀 ویژگی‌های فنی
+## 🛠️ Installation
 
-### 🔒 امنیت پیشرفته
-- **رمزگذاری داده‌ها** با کلیدهای امن
-- **هش کردن اطلاعات حساس** 
-- **پشتیبان‌گیری خودکار** روزانه
-- **محافظت از توکن** ربات
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Tawtami/Telegram-Bot.git
+   cd Telegram-Bot
+   ```
 
-### 📊 مدیریت داده‌ها
-- **ذخیره‌سازی JSON** با ساختار بهینه
-- **پشتیبان‌گیری خودکار** هر ۲۴ ساعت
-- **بازیابی داده‌ها** در صورت نیاز
-- **لاگ‌گیری کامل** عملیات
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 🎨 رابط کاربری حرفه‌ای
-- **منوهای تعاملی** با دکمه‌های زیبا
-- **فرمت‌بندی HTML** برای نمایش بهتر
-- **ناوبری آسان** بین بخش‌های مختلف
-- **پاسخ‌های سریع** و کاربرپسند
+3. **Set up environment variables**
+   ```bash
+   cp env_template.txt .env
+   # Edit .env with your bot token and other settings
+   ```
 
-## 📋 دستورات ربات
+4. **Run the bot**
+   ```bash
+   python hosted_bot.py
+   ```
 
-### 👤 دستورات کاربران
-- `/start` - منوی اصلی ربات
-- `/register` - ثبت‌نام مستقیم
-- `/status` - وضعیت ثبت‌نام
-- `/help` - راهنمای استفاده
+## 🔧 Configuration
 
-### 🔧 دستورات ادمین
-- `/admin` - پنل مدیریت (فقط ادمین‌ها)
+Edit `config.py` to customize:
+- Bot settings and features
+- Course information
+- Admin user IDs
+- Database connections
+- Security settings
 
-## 🎓 کلاس‌های موجود
+## 📊 User Data System
 
-### 🆓 کلاس‌های رایگان
-1. **مهارت‌های حل خلاق مسائل ریاضی**
-   - پایه‌های دهم، یازدهم و دوازدهم
-   - جمعه‌ها ساعت ۳ بعدازظهر
-   - آنلاین در اسکای روم
+The bot includes a comprehensive user data management system:
 
-2. **کلاس‌های پایه دهم**
-   - مشترک ریاضی و تجربی
-   - جمعه‌ها
+- **Data Collection**: Name, phone, grade, field, parent phone
+- **Secure Storage**: JSON files with encryption
+- **Admin Access**: View and export user data
+- **Constant Updates**: Automatic data synchronization
+- **Backup System**: Automatic backup creation
 
-3. **کلاس‌های پایه یازدهم**
-   - مشترک ریاضی و تجربی
-   - جمعه‌ها
+### Admin Commands
+- `/admin` - Access admin panel
+- `/export` - Export user data
+- `/stats` - View bot statistics
 
-4. **کلاس‌های پایه دوازدهم**
-   - مشترک ریاضی و تجربی
-   - جمعه‌ها
+## 🚀 Deployment
 
-### 💎 کلاس‌های ویژه پولی
-1. **نظریه اعداد و ریاضی گسسته**
-   - قیمت: ۵۰۰,۰۰۰ تومان
-   - پایه دوازدهم ریاضی + المپیاد
-   - دوره کامل
+### Railway Deployment
+1. Connect your GitHub repository to Railway
+2. Set environment variables in Railway dashboard
+3. Deploy automatically
 
-## 📅 برنامه کلاس‌ها
+### Manual Deployment
+1. Upload files to your server
+2. Install dependencies
+3. Set environment variables
+4. Run with `python hosted_bot.py`
 
-### جمعه ۱۰ مرداد
-- **زمان:** ساعت ۳ بعدازظهر
-- **شرکت‌کنندگان:** پایه‌های دهم، یازدهم و دوازدهم
-- **موضوع:** مشترک هر دو رشته ریاضی و تجربی
-- **پلتفرم:** اسکای روم
+## 📁 Project Structure
 
-### جمعه ۱۷ مرداد
-- **زمان:** ساعت ۳ بعدازظهر
-- **شرکت‌کنندگان:** پایه دوازدهم ریاضی
-- **موضوع:** شروع کلاس نظریه اعداد
-- **پلتفرم:** اسکای روم
-
-## 👥 ظرفیت کلاس‌ها
-
-| پایه | ثبت‌نام شده | حداکثر | وضعیت | ظرفیت خالی |
-|------|-------------|--------|-------|------------|
-| دهم | ۲۱ | ۲۹ | در حال ثبت‌نام | ۸ |
-| یازدهم | ۲۳ | ۲۹ | در حال ثبت‌نام | ۶ |
-| دوازدهم | ۲۹ | ۲۹ | تکمیل شده | ۰ |
-
-## 📞 اطلاعات تماس
-
-- **تلفن:** +98 938 153 0556
-- **تلگرام:** @Ostad_Hatami
-- **ایمیل:** HamrahBaOstad@gmail.com
-- **ساعات کاری:** شنبه تا چهارشنبه ۹ صبح تا ۶ عصر
-
-## 🔗 شبکه‌های اجتماعی
-
-- **📺 یوتیوب:** [کانال آموزش‌های رایگان](https://youtube.com/@hamrahbaostad)
-- **📢 تلگرام:** [کانال اطلاعیه‌ها](https://t.me/hamrahbaostad)
-- **📸 اینستاگرام:** [محتوا و نمونه کارها](https://www.instagram.com/hamrahbaostad)
-
-## 📚 کتاب انفجار خلاقیت ریاضی
-
-- **نویسنده:** استاد حاتمی
-- **قیمت:** ۱۵۰,۰۰۰ تومان
-- **سال انتشار:** ۱۴۰۴
-- **توضیحات:** تکنیک‌های خلاقانه حل مسائل ریاضی حاصل ۴۰ سال تدریس در مدارس معتبر تهران
-
-## 🛠️ نصب و راه‌اندازی
-
-### پیش‌نیازها
-- Python 3.13+
-- python-telegram-bot==21.7
-- python-dotenv==1.0.0
-
-### نصب محلی
-```bash
-# Clone repository
-git clone https://github.com/Tawtami/Telegram-Bot.git
-cd Telegram-Bot
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables
-cp env_template.txt .env
-# Edit .env and add your BOT_TOKEN
-
-# Run bot
-python hosted_bot.py
+```
+├── hosted_bot.py              # Main bot application
+├── config.py                  # Configuration settings
+├── requirements.txt           # Python dependencies
+├── Procfile                  # Railway deployment
+├── runtime.txt               # Python version
+├── .gitignore               # Git ignore rules
+├── data/                    # User data storage
+│   ├── students.json        # User data
+│   └── students_backup.json # Backup data
+├── logs/                    # Log files
+└── docs/                    # Documentation
+    ├── FINAL_SUMMARY_2025.md
+    ├── USER_DATA_SYSTEM_SUMMARY.md
+    ├── RAILWAY_SETUP.md
+    ├── HOSTING_GUIDE.md
+    ├── GITHUB_COMMANDS.md
+    └── SECURITY_GUIDE.md
 ```
 
-### راه‌اندازی روی Railway
-1. Fork این repository
-2. اتصال به Railway.app
-3. تنظیم متغیر محیطی `BOT_TOKEN`
-4. Deploy خودکار
+## 🔒 Security
 
-## 🔧 تنظیمات
+- Environment variables for sensitive data
+- Data encryption for phone numbers
+- Admin authentication
+- Secure file handling
+- Input validation
 
-### متغیرهای محیطی
-```bash
-BOT_TOKEN=your_bot_token_here
-```
+## 📈 Analytics & Monitoring
 
-### فایل config.py
-- تنظیم اطلاعات کلاس‌ها
-- تنظیم اطلاعات تماس
-- تنظیم ادمین‌ها
-- تنظیم کلیدهای امنیتی
+- User registration tracking
+- Course enrollment statistics
+- Payment processing logs
+- Error monitoring and logging
+- Performance metrics
 
-## 📊 آمار و گزارش‌ها
+## 🤝 Contributing
 
-### آمار کلی
-- تعداد کل دانش‌آموزان
-- تعداد کلاس‌های رایگان و پولی
-- پرداخت‌های در انتظار
-- نرخ تبدیل
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
-### گزارش‌های تحلیلی
-- آمار کلاس‌ها
-- روند ثبت‌نام
-- عملکرد پرداخت‌ها
-- بازخورد کاربران
+## 📄 License
 
-## 🔒 امنیت
+This project is licensed under the MIT License.
 
-### محافظت از داده‌ها
-- رمزگذاری اطلاعات حساس
-- هش کردن شماره تلفن‌ها
-- پشتیبان‌گیری خودکار
-- لاگ‌گیری امن
+## 🆘 Support
 
-### محافظت از ربات
-- بررسی دسترسی ادمین‌ها
-- محدودیت دستورات
-- محافظت از توکن
-- مدیریت خطاها
+For support and questions:
+- Check the documentation in the `docs/` folder
+- Review the configuration in `config.py`
+- Check logs in the `logs/` directory
 
-## 🚀 ویژگی‌های آینده
+## 🎯 Roadmap
 
-- [ ] اتصال به درگاه پرداخت
-- [ ] سیستم امتیازدهی
-- [ ] گواهی پایان دوره
-- [ ] سیستم مشاوره آنلاین
-- [ ] اپلیکیشن موبایل
-
-## 📞 پشتیبانی
-
-برای سوالات و مشکلات:
-- **تلفن:** +98 938 153 0556
-- **تلگرام:** @Ostad_Hatami
-- **ایمیل:** HamrahBaOstad@gmail.com
-
-## 📄 لایسنس
-
-این پروژه تحت لایسنس MIT منتشر شده است.
+- [ ] Voice message support
+- [ ] Advanced analytics dashboard
+- [ ] Multi-currency payment support
+- [ ] Integration with learning management systems
+- [ ] Mobile app companion
+- [ ] Advanced AI features (when requested)
 
 ---
 
-**🤖 ربات تلگرام حرفه‌ای کلاس‌های ریاضی - نسخه ۲۰۲۵**  
-**توسعه‌یافته با ❤️ برای آموزش بهتر ریاضی** 
+**Built with ❤️ for educational excellence in 2025** 
