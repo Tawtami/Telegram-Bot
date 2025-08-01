@@ -218,7 +218,7 @@ class ProfessionalMathBot:
         # Conversation handler for registration
         conv_handler = ConversationHandler(
             entry_points=[
-                CallbackQueryHandler(self.start_registration, pattern='^start_registration$'),
+                CallbackQueryHandler(self.start_registration, pattern='^free_registration$'),
                 CallbackQueryHandler(self.start_paid_registration, pattern='^paid_registration$')
             ],
             states={
@@ -239,7 +239,7 @@ class ProfessionalMathBot:
                     CallbackQueryHandler(self.cancel_registration, pattern='^cancel$')
                 ],
                 ENTERING_FIELD: [
-                    CallbackQueryHandler(self.enter_field, pattern='^field_'),
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.enter_field),
                     CallbackQueryHandler(self.cancel_registration, pattern='^cancel$')
                 ],
                 ENTERING_PARENT_PHONE: [
@@ -812,12 +812,8 @@ class ProfessionalMathBot:
         return ENTERING_FIELD
 
     async def enter_field(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle field selection"""
-        query = update.callback_query
-        await query.answer()
-        
-        field = query.data.replace('field_', '')
-        context.user_data['field'] = field
+        """Handle field input"""
+        context.user_data['field'] = update.message.text
         
         text = """
 📱 شماره تلفن والدین را وارد کنید:
@@ -828,7 +824,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("❌ انصراف", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup)
+        await update.message.reply_text(text, reply_markup=reply_markup)
         return ENTERING_PARENT_PHONE
 
     async def enter_parent_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
