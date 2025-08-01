@@ -192,15 +192,15 @@ class ProfessionalMathBot:
         """Enhanced start command with comprehensive menu"""
         user = update.effective_user
         welcome_text = f"""
-🎓 <b>به ربات کلاس‌های ریاضی خوش آمدید!</b>
+🎓 به ربات کلاس‌های ریاضی خوش آمدید!
 
 سلام {user.first_name} عزیز! 👋
 
 📚 این ربات برای ثبت‌نام در کلاس‌های ریاضی طراحی شده است.
 
-🎯 <b>کلاس‌های رایگان آنلاین</b> در حال برگزاری است!
+🎯 کلاس‌های رایگان آنلاین در حال برگزاری است!
 
-📝 <b>برای ثبت‌نام فوری:</b> /register
+📝 برای ثبت‌نام فوری: /register
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
         """
@@ -218,27 +218,27 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(welcome_text, reply_markup=reply_markup)
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Professional help command"""
         help_text = """
-🔧 <b>راهنمای استفاده از ربات</b>
+🔧 راهنمای استفاده از ربات
 
-📝 <b>دستورات اصلی:</b>
+📝 دستورات اصلی:
 /start - منوی اصلی ربات
 /register - ثبت‌نام مستقیم
 /status - وضعیت ثبت‌نام
 /help - این راهنما
 
-📚 <b>ویژگی‌های ربات:</b>
+📚 ویژگی‌های ربات:
 • ثبت‌نام در کلاس‌های رایگان و پولی
 • اطلاعیه‌های به‌روز کلاس‌ها
 • برنامه زمان‌بندی کلاس‌ها
 • دسترسی به محتوای آموزشی رایگان
 • پشتیبانی ۲۴/۷
 
-💡 <b>نکات مهم:</b>
+💡 نکات مهم:
 • برای کلاس‌های پولی، پس از ثبت‌نام، ادمین‌ها اطلاع‌رسانی می‌شوند
 • محصول بلافاصله پس از تأیید پرداخت ارسال می‌شود
 • تمام اطلاعات شما به صورت امن ذخیره می‌شود
@@ -247,7 +247,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(help_text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(help_text, reply_markup=reply_markup)
 
     async def register_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Direct registration command"""
@@ -290,16 +290,16 @@ class ProfessionalMathBot:
     async def show_registration_menu(self, query):
         """Professional registration menu"""
         text = """
-🎓 <b>منوی ثبت‌نام کلاس‌های ریاضی</b>
+🎓 منوی ثبت‌نام کلاس‌های ریاضی
 
 لطفاً نوع کلاس مورد نظر خود را انتخاب کنید:
 
-📚 <b>کلاس‌های رایگان:</b>
+📚 کلاس‌های رایگان:
 • آموزش مهارت‌های حل مسئله
 • کلاس‌های پایه دهم، یازدهم و دوازدهم
 • مناسب رشته‌های ریاضی و تجربی
 
-💎 <b>کلاس‌های ویژه پولی:</b>
+💎 کلاس‌های ویژه پولی:
 • نظریه اعداد و ریاضی گسسته
 • المپیاد ریاضی
 • کلاس‌های پیشرفته
@@ -315,7 +315,7 @@ class ProfessionalMathBot:
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         if query:
-            await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            await query.edit_message_text(text, reply_markup=reply_markup)
         else:
             # This would be called from register_command
             pass
@@ -323,18 +323,18 @@ class ProfessionalMathBot:
     async def show_youtube(self, query):
         """Show YouTube channel for free tutorials"""
         text = f"""
-📺 <b>کانال یوتیوب همراه با استاد</b>
+📺 کانال یوتیوب همراه با استاد
 
-🎓 <b>آموزش‌های رایگان:</b>
+🎓 آموزش‌های رایگان:
 • حل مسئله‌های ریاضی
 • تکنیک‌های حل خلاقانه
 • آموزش مفاهیم پایه تا پیشرفته
 • نمونه سوالات امتحانی
 
-🔗 <b>لینک کانال:</b>
+🔗 لینک کانال:
 {SOCIAL_LINKS['youtube']}
 
-💡 <b>نکته:</b>
+💡 نکته:
 تمام محتوای این کانال کاملاً رایگان است و می‌توانید از آن استفاده کنید.
         """
         
@@ -344,20 +344,20 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_announcements(self, query):
         """Show latest announcements"""
         text = """
-📢 <b>آخرین اطلاعیه‌ها</b>
+📢 آخرین اطلاعیه‌ها
 
 """
         
         for announcement in ANNOUNCEMENTS:
-            text += f"📌 <b>{announcement['title']}</b>\n{announcement['content']}\n\n"
+            text += f"📌 {announcement['title']}\n{announcement['content']}\n\n"
         
         text += """
-💡 <b>برای اطلاع از آخرین اخبار:</b>
+💡 برای اطلاع از آخرین اخبار:
 • عضو کانال تلگرام شوید
 • پیام‌های ربات را دنبال کنید
         """
@@ -368,23 +368,23 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_special_courses(self, query):
         """Show special free courses"""
         text = """
-🎓 <b>کلاس‌های ویژه رایگان</b>
+🎓 کلاس‌های ویژه رایگان
 
 """
         
         for course in SPECIAL_COURSES:
-            text += f"📚 <b>{course['name']}</b>\n"
+            text += f"📚 {course['name']}\n"
             text += f"📅 {course['schedule']}\n"
             text += f"👥 {course['capacity']}\n"
             text += f"📝 {course['description']}\n\n"
         
         text += """
-✅ <b>ویژگی‌های کلاس‌های رایگان:</b>
+✅ ویژگی‌های کلاس‌های رایگان:
 • بدون هزینه
 • کیفیت بالا
 • مناسب همه پایه‌ها
@@ -397,23 +397,23 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_schedule(self, query):
         """Show current class schedule"""
         text = """
-📅 <b>برنامه کلاس‌های هفته جاری</b>
+📅 برنامه کلاس‌های هفته جاری
 
 """
         
         for schedule in CURRENT_SCHEDULE:
-            text += f"📚 <b>{schedule['day']}</b>\n"
+            text += f"📚 {schedule['day']}\n"
             text += f"⏰ {schedule['time']}\n"
             text += f"👥 {schedule['grade']}\n"
             text += f"📝 {schedule['topic']}\n\n"
         
         text += """
-💡 <b>نکات مهم:</b>
+💡 نکات مهم:
 • حضور به موقع الزامی است
 • لینک کلاس صبح همان روز ارسال می‌شود
 • با نرم‌افزار کروم وارد شوید
@@ -425,23 +425,23 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_courses(self, query):
         """Show available courses"""
         text = """
-📚 <b>کلاس‌های موجود</b>
+📚 کلاس‌های موجود
 
 """
         
         for course in COURSES:
-            text += f"📖 <b>{course['name']}</b>\n"
+            text += f"📖 {course['name']}\n"
             text += f"💰 {course['price']}\n"
             text += f"📅 {course['duration']}\n"
             text += f"📝 {course['description']}\n\n"
         
         text += """
-💡 <b>برای ثبت‌نام:</b>
+💡 برای ثبت‌نام:
 • کلاس‌های رایگان: ثبت‌نام مستقیم
 • کلاس‌های پولی: پس از ثبت‌نام، ادمین‌ها اطلاع‌رسانی می‌شوند
         """
@@ -452,22 +452,22 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_book_info(self, query):
         """Show book information"""
         text = f"""
-📖 <b>اطلاعات کتاب</b>
+📖 اطلاعات کتاب
 
-📚 <b>نام کتاب:</b> {BOOK_INFO['name']}
-👨‍🏫 <b>نویسنده:</b> {BOOK_INFO['author']}
-💰 <b>قیمت:</b> {BOOK_INFO['price']}
-📅 <b>سال انتشار:</b> {BOOK_INFO['year']}
+📚 نام کتاب: {BOOK_INFO['name']}
+👨‍🏫 نویسنده: {BOOK_INFO['author']}
+💰 قیمت: {BOOK_INFO['price']}
+📅 سال انتشار: {BOOK_INFO['year']}
 
-📝 <b>توضیحات:</b>
+📝 توضیحات:
 {BOOK_INFO['description']}
 
-📞 <b>برای خرید:</b>
+📞 برای خرید:
 {CONTACT_INFO['phone']}
         """
         
@@ -477,23 +477,23 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_contact_info(self, query):
         """Show contact information"""
         text = f"""
-📞 <b>اطلاعات تماس</b>
+📞 اطلاعات تماس
 
-👨‍🏫 <b>استاد حاتمی</b>
+👨‍🏫 استاد حاتمی
 📱 {CONTACT_INFO['phone']}
 📧 {CONTACT_INFO['email']}
 📍 {CONTACT_INFO['address']}
 
-⏰ <b>ساعات پاسخگویی:</b>
+⏰ ساعات پاسخگویی:
 شنبه تا چهارشنبه: ۹ صبح تا ۹ شب
 پنجشنبه: ۹ صبح تا ۶ عصر
 
-💡 <b>برای سوالات:</b>
+💡 برای سوالات:
 • از طریق ربات پیام دهید
 • مستقیماً تماس بگیرید
 • در کانال تلگرام سوال کنید
@@ -506,28 +506,28 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_social_links(self, query):
         """Show social media links"""
         text = """
-🔗 <b>شبکه‌های اجتماعی</b>
+🔗 شبکه‌های اجتماعی
 
-📱 <b>کانال‌های رسمی:</b>
+📱 کانال‌های رسمی:
 
-📺 <b>یوتیوب:</b>
+📺 یوتیوب:
 آموزش‌های رایگان و کامل
 {SOCIAL_LINKS['youtube']}
 
-📢 <b>کانال تلگرام:</b>
+📢 کانال تلگرام:
 اطلاعیه‌ها و اخبار
 {SOCIAL_LINKS['telegram_channel']}
 
-📸 <b>اینستاگرام:</b>
+📸 اینستاگرام:
 محتوا و نمونه کارها
 {SOCIAL_LINKS['instagram']}
 
-🌐 <b>وب‌سایت:</b>
+🌐 وب‌سایت:
 به زودی...
         """
         
@@ -539,12 +539,12 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_main_menu(self, query):
         """Show main menu"""
         text = """
-🏠 <b>منوی اصلی</b>
+🏠 منوی اصلی
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
         """
@@ -562,7 +562,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     # Registration flow methods
     async def start_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -571,7 +571,7 @@ class ProfessionalMathBot:
         await query.answer()
         
         text = """
-🆓 <b>ثبت‌نام در کلاس‌های رایگان</b>
+🆓 ثبت‌نام در کلاس‌های رایگان
 
 لطفاً کلاس مورد نظر خود را انتخاب کنید:
         """
@@ -586,7 +586,7 @@ class ProfessionalMathBot:
         keyboard.append([InlineKeyboardButton("❌ انصراف", callback_data="cancel")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return CHOOSING_COURSE
 
     async def start_paid_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -595,7 +595,7 @@ class ProfessionalMathBot:
         await query.answer()
         
         text = """
-💎 <b>ثبت‌نام در کلاس‌های ویژه پولی</b>
+💎 ثبت‌نام در کلاس‌های ویژه پولی
 
 لطفاً کلاس مورد نظر خود را انتخاب کنید:
         """
@@ -611,7 +611,7 @@ class ProfessionalMathBot:
         keyboard.append([InlineKeyboardButton("❌ انصراف", callback_data="cancel")])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return CHOOSING_COURSE
 
     async def choose_course(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -623,7 +623,7 @@ class ProfessionalMathBot:
         context.user_data['selected_course'] = course_name
         
         text = f"""
-📝 <b>ثبت‌نام در کلاس: {course_name}</b>
+📝 ثبت‌نام در کلاس: {course_name}
 
 لطفاً نام و نام خانوادگی خود را وارد کنید:
         """
@@ -631,7 +631,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("❌ انصراف", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return ENTERING_NAME
 
     async def enter_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -639,7 +639,7 @@ class ProfessionalMathBot:
         context.user_data['name'] = update.message.text
         
         text = """
-📱 <b>شماره تلفن خود را وارد کنید:</b>
+📱 شماره تلفن خود را وارد کنید:
 
 مثال: ۰۹۱۲۳۴۵۶۷۸۹
         """
@@ -647,7 +647,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("❌ انصراف", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
         return ENTERING_PHONE
 
     async def enter_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -655,7 +655,7 @@ class ProfessionalMathBot:
         context.user_data['phone'] = update.message.text
         
         text = """
-🎓 <b>پایه تحصیلی خود را انتخاب کنید:</b>
+🎓 پایه تحصیلی خود را انتخاب کنید:
         """
         
         keyboard = [
@@ -666,7 +666,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
         return ENTERING_GRADE
 
     async def enter_grade(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -678,7 +678,7 @@ class ProfessionalMathBot:
         context.user_data['grade'] = grade
         
         text = """
-📱 <b>شماره تلفن والدین را وارد کنید:</b>
+📱 شماره تلفن والدین را وارد کنید:
 
 مثال: ۰۹۱۲۳۴۵۶۷۸۹
         """
@@ -686,7 +686,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("❌ انصراف", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return ENTERING_PARENT_PHONE
 
     async def enter_parent_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -711,16 +711,16 @@ class ProfessionalMathBot:
         course = context.user_data.get('selected_course', '')
         
         text = f"""
-✅ <b>تأیید اطلاعات ثبت‌نام</b>
+✅ تأیید اطلاعات ثبت‌نام
 
-📝 <b>اطلاعات شما:</b>
+📝 اطلاعات شما:
 👤 نام: {name}
 📱 تلفن: {phone}
 🎓 پایه: {grade}
 📱 تلفن والدین: {parent_phone}
 📚 کلاس: {course}
 
-💰 <b>هزینه:</b> رایگان
+💰 هزینه: رایگان
 
 آیا اطلاعات فوق صحیح است؟
         """
@@ -731,7 +731,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
         return CONFIRMING_REGISTRATION
 
     async def show_payment_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -750,9 +750,9 @@ class ProfessionalMathBot:
                 break
         
         text = f"""
-💎 <b>تأیید اطلاعات ثبت‌نام کلاس پولی</b>
+💎 تأیید اطلاعات ثبت‌نام کلاس پولی
 
-📝 <b>اطلاعات شما:</b>
+📝 اطلاعات شما:
 👤 نام: {name}
 📱 تلفن: {phone}
 🎓 پایه: {grade}
@@ -760,7 +760,7 @@ class ProfessionalMathBot:
 📚 کلاس: {course}
 💰 هزینه: {course_price}
 
-⚠️ <b>نکته مهم:</b>
+⚠️ نکته مهم:
 پس از تأیید، ادمین‌ها اطلاع‌رسانی می‌شوند و مراحل پرداخت انجام خواهد شد.
 
 آیا اطلاعات فوق صحیح است؟
@@ -772,7 +772,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
         return CONFIRMING_REGISTRATION
 
     async def confirm_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -802,33 +802,33 @@ class ProfessionalMathBot:
             # Notify admins for payment
             await self.notify_admins_payment(student_data)
             text = """
-💎 <b>ثبت‌نام کلاس پولی با موفقیت انجام شد!</b>
+💎 ثبت‌نام کلاس پولی با موفقیت انجام شد!
 
-✅ <b>مراحل بعدی:</b>
+✅ مراحل بعدی:
 1️⃣ ادمین‌ها اطلاع‌رسانی شدند
 2️⃣ منتظر تماس برای پرداخت باشید
 3️⃣ پس از پرداخت، محصول ارسال می‌شود
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
 
-🔙 <b>بازگشت به منوی اصلی:</b>
+🔙 بازگشت به منوی اصلی:
         """
         else:
             student_data['type'] = 'free'
             student_data['status'] = 'confirmed'
             text = """
-✅ <b>ثبت‌نام کلاس رایگان با موفقیت انجام شد!</b>
+✅ ثبت‌نام کلاس رایگان با موفقیت انجام شد!
 
-🎓 <b>اطلاعات کلاس:</b>
+🎓 اطلاعات کلاس:
 • لینک کلاس صبح همان روز ارسال می‌شود
 • حضور به موقع الزامی است
 • با نرم‌افزار کروم وارد شوید
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
 
-🔙 <b>بازگشت به منوی اصلی:</b>
+🔙 بازگشت به منوی اصلی:
         """
         
         # Save to database
@@ -837,31 +837,31 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return ConversationHandler.END
 
     async def notify_admins_payment(self, student_data):
         """Notify admins about payment with immediate delivery"""
         notification_text = f"""
-💎 <b>درخواست پرداخت جدید</b>
+💎 درخواست پرداخت جدید
 
-👤 <b>اطلاعات دانش‌آموز:</b>
+👤 اطلاعات دانش‌آموز:
 نام: {student_data['name']}
 تلفن: {student_data['phone']}
 پایه: {student_data['grade']}
 کلاس: {student_data['course']}
 
-📱 <b>اطلاعات کاربر:</b>
+📱 اطلاعات کاربر:
 ID: {student_data['user_id']}
 Username: @{student_data['username']}
 
-⏰ <b>تاریخ ثبت‌نام:</b>
+⏰ تاریخ ثبت‌نام:
 {student_data['registration_date']}
 
-🔗 <b>برای تماس:</b>
+🔗 برای تماس:
 https://t.me/{student_data['username'] if student_data['username'] else 'user' + str(student_data['user_id'])}
 
-⚠️ <b>اقدامات لازم:</b>
+⚠️ اقدامات لازم:
 1️⃣ تماس با خریدار برای پرداخت
 2️⃣ تأیید پرداخت
 3️⃣ ارسال محصول به تلگرام خریدار
@@ -884,21 +884,21 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         try:
             user_id = student_data['user_id']
             confirmation_text = f"""
-✅ <b>ثبت‌نام شما با موفقیت انجام شد!</b>
+✅ ثبت‌نام شما با موفقیت انجام شد!
 
-📝 <b>اطلاعات ثبت‌نام:</b>
+📝 اطلاعات ثبت‌نام:
 کلاس: {student_data['course']}
 تاریخ: {student_data['registration_date']}
 
-💎 <b>مراحل بعدی:</b>
+💎 مراحل بعدی:
 1️⃣ ادمین‌ها اطلاع‌رسانی شدند
 2️⃣ منتظر تماس برای پرداخت باشید
 3️⃣ پس از پرداخت، محصول بلافاصله ارسال می‌شود
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
 
-🎁 <b>هدیه رایگان:</b>
+🎁 هدیه رایگان:
 دسترسی به کانال یوتیوب برای آموزش‌های رایگان
         """
             
@@ -916,12 +916,12 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
             text = "❌ ثبت‌نام لغو شد."
             keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            await query.edit_message_text(text, reply_markup=reply_markup)
         else:
             text = "❌ ثبت‌نام لغو شد."
             keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            await update.message.reply_text(text, reply_markup=reply_markup, )
         
         return ConversationHandler.END
 
@@ -934,26 +934,26 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         
         if not user_registrations:
             text = """
-❌ <b>هیچ ثبت‌نامی یافت نشد!</b>
+❌ هیچ ثبت‌نامی یافت نشد!
 
-📝 <b>برای ثبت‌نام:</b>
+📝 برای ثبت‌نام:
 /register
             """
         else:
             text = """
-📊 <b>وضعیت ثبت‌نام شما:</b>
+📊 وضعیت ثبت‌نام شما:
 
 """
             for reg in user_registrations:
                 status_emoji = "✅" if reg.get('status') == 'confirmed' else "⏳"
-                text += f"{status_emoji} <b>{reg.get('course', 'نامشخص')}</b>\n"
+                text += f"{status_emoji} {reg.get('course', 'نامشخص')}\n"
                 text += f"📅 {reg.get('registration_date', 'نامشخص')}\n"
                 text += f"📊 وضعیت: {reg.get('status', 'نامشخص')}\n\n"
         
         keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
 
     async def admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Admin command for bot management"""
@@ -971,8 +971,8 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
                 break
         
         if not is_admin:
-            text = "❌ <b>دسترسی غیرمجاز!</b>"
-            await update.message.reply_text(text, parse_mode='HTML')
+            text = "❌ دسترسی غیرمجاز!"
+            await update.message.reply_text(text, )
             return
         
         # Admin panel
@@ -981,21 +981,21 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         pending_payments = len([s for s in students if s.get('status') == 'pending_payment'])
         
         text = f"""
-🔧 <b>پنل مدیریت ربات</b>
+🔧 پنل مدیریت ربات
 
-📊 <b>آمار کلی:</b>
+📊 آمار کلی:
 👥 کل دانش‌آموزان: {total_students}
 💎 در انتظار پرداخت: {pending_payments}
 
-📈 <b>وضعیت ربات:</b>
+📈 وضعیت ربات:
 ✅ فعال و آماده
 🟢 تمام سرویس‌ها در دسترس
 
-🔧 <b>تنظیمات:</b>
+🔧 تنظیمات:
 • پشتیبان‌گیری خودکار: {'فعال' if AUTO_BACKUP_ENABLED else 'غیرفعال'}
 • اطلاع‌رسانی: {'فعال' if NOTIFICATION_ENABLED else 'غیرفعال'}
 
-📢 <b>ویژگی‌های مدیریت:</b>
+📢 ویژگی‌های مدیریت:
 • ارسال اطلاعیه به همه کاربران
 • مدیریت پرداخت‌ها
 • مشاهده آمار کامل
@@ -1009,7 +1009,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await update.message.reply_text(text, reply_markup=reply_markup, )
 
     async def send_notification_to_users(self, message_text, course_filter=None):
         """Send notification to all users or specific course users"""
@@ -1026,11 +1026,11 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
                 if user_id:
                     # Send notification to user
                     notification_text = f"""
-📢 <b>اطلاعیه مهم</b>
+📢 اطلاعیه مهم
 
 {message_text}
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
                     """
                     
@@ -1054,41 +1054,41 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         if payment_type == 'confirm':
             # Payment confirmed by admin
             text = """
-✅ <b>پرداخت تأیید شد!</b>
+✅ پرداخت تأیید شد!
 
-🎁 <b>محصول شما ارسال شد:</b>
+🎁 محصول شما ارسال شد:
 • لینک کلاس
 • مواد آموزشی
 • دسترسی به کانال خصوصی
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
 
-🔙 <b>بازگشت به منوی اصلی:</b>
+🔙 بازگشت به منوی اصلی:
             """
         elif payment_type == 'pending':
             text = """
-⏳ <b>پرداخت در حال بررسی</b>
+⏳ پرداخت در حال بررسی
 
 لطفاً منتظر تأیید ادمین باشید.
 
-📞 <b>برای سوالات:</b>
+📞 برای سوالات:
 {CONTACT_INFO['phone']}
             """
         else:
             text = """
-❌ <b>خطا در پرداخت</b>
+❌ خطا در پرداخت
 
 لطفاً با پشتیبانی تماس بگیرید.
 
-📞 <b>پشتیبانی:</b>
+📞 پشتیبانی:
 {CONTACT_INFO['phone']}
             """
         
         keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
         return ConversationHandler.END
 
     async def show_admin_panel(self, query):
@@ -1107,10 +1107,10 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
                 break
         
         if not is_admin:
-            text = "❌ <b>دسترسی غیرمجاز!</b>"
+            text = "❌ دسترسی غیرمجاز!"
             keyboard = [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            await query.edit_message_text(text, reply_markup=reply_markup)
             return
         
         # Admin panel
@@ -1119,21 +1119,21 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         pending_payments = len([s for s in students if s.get('status') == 'pending_payment'])
         
         text = f"""
-🔧 <b>پنل مدیریت ربات</b>
+🔧 پنل مدیریت ربات
 
-📊 <b>آمار کلی:</b>
+📊 آمار کلی:
 👥 کل دانش‌آموزان: {total_students}
 💎 در انتظار پرداخت: {pending_payments}
 
-📈 <b>وضعیت ربات:</b>
+📈 وضعیت ربات:
 ✅ فعال و آماده
 🟢 تمام سرویس‌ها در دسترس
 
-🔧 <b>تنظیمات:</b>
+🔧 تنظیمات:
 • پشتیبان‌گیری خودکار: {'فعال' if AUTO_BACKUP_ENABLED else 'غیرفعال'}
 • اطلاع‌رسانی: {'فعال' if NOTIFICATION_ENABLED else 'غیرفعال'}
 
-📢 <b>ویژگی‌های مدیریت:</b>
+📢 ویژگی‌های مدیریت:
 • ارسال اطلاعیه به همه کاربران
 • مدیریت پرداخت‌ها
 • مشاهده آمار کامل
@@ -1147,12 +1147,12 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_admin_broadcast(self, query):
         """Show admin broadcast interface"""
         text = """
-📢 <b>ارسال اطلاعیه به کاربران</b>
+📢 ارسال اطلاعیه به کاربران
 
 لطفاً نوع اطلاعیه را انتخاب کنید:
         """
@@ -1165,7 +1165,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_admin_stats(self, query):
         """Show detailed admin statistics"""
@@ -1184,22 +1184,22 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
             course_stats[course] = course_stats.get(course, 0) + 1
         
         text = f"""
-📊 <b>آمار کامل ربات</b>
+📊 آمار کامل ربات
 
-👥 <b>آمار کلی:</b>
+👥 آمار کلی:
 • کل دانش‌آموزان: {total_students}
 • کلاس‌های رایگان: {free_students}
 • کلاس‌های پولی: {paid_students}
 • در انتظار پرداخت: {pending_payments}
 
-📚 <b>آمار کلاس‌ها:</b>
+📚 آمار کلاس‌ها:
 """
         
         for course, count in course_stats.items():
             text += f"• {course}: {count} نفر\n"
         
         text += f"""
-📈 <b>نرخ تبدیل:</b>
+📈 نرخ تبدیل:
 • تبدیل رایگان به پولی: {(paid_students/total_students*100):.1f}% (از کل ثبت‌نام‌ها)
         """
         
@@ -1209,7 +1209,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def show_admin_payments(self, query):
         """Show payment management interface"""
@@ -1217,16 +1217,16 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         pending_payments = [s for s in students if s.get('status') == 'pending_payment']
         
         text = f"""
-💎 <b>مدیریت پرداخت‌ها</b>
+💎 مدیریت پرداخت‌ها
 
-⏳ <b>در انتظار پرداخت:</b> {len(pending_payments)} مورد
+⏳ در انتظار پرداخت: {len(pending_payments)} مورد
 
 """
         
         if pending_payments:
             for i, student in enumerate(pending_payments[:5], 1):  # Show first 5
                 text += f"""
-{i}. <b>{student.get('name', 'نامشخص')}</b>
+{i}. {student.get('name', 'نامشخص')}
    📱 {student.get('phone', 'نامشخص')}
    📚 {student.get('course', 'نامشخص')}
    📅 {student.get('registration_date', 'نامشخص')}
@@ -1240,24 +1240,24 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='HTML')
+        await query.edit_message_text(text, reply_markup=reply_markup)
 
     async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle errors professionally"""
         logger.error(f"Exception while handling an update: {context.error}")
         
         if update and update.effective_message:
-            text = """
-❌ <b>خطایی رخ داد!</b>
+            text = f"""
+❌ خطایی رخ داد!
 
 لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.
 
-📞 <b>پشتیبانی:</b>
+📞 پشتیبانی:
 {CONTACT_INFO['phone']}
             """
             keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.effective_message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
+            await update.effective_message.reply_text(text, reply_markup=reply_markup)
 
 def main():
     """Main function to run the bot"""

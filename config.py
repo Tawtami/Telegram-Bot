@@ -4,8 +4,10 @@ Configuration file for Math Course Registration Bot
 فایل تنظیمات ربات ثبت‌نام کلاس‌های ریاضی
 """
 
+import os
+
 # Bot Configuration
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your actual bot token from @BotFather
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")  # Get from environment variable
 BOT_NAME = "Ostad Hatami Bot"
 BOT_USERNAME = "OstadHatami_bot"
 
