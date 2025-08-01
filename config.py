@@ -200,11 +200,11 @@ BACKUP_INTERVAL_HOURS = 24
 SUPPORTED_LANGUAGES = ["fa", "en"]
 DEFAULT_LANGUAGE = "fa"
 
-# AI/ML Features
-AI_ENABLED = True
-SENTIMENT_ANALYSIS_ENABLED = True
-PERSONALIZATION_ENABLED = True
-PREDICTIVE_RESPONSES_ENABLED = True
+# Core Features (AI/ML features removed)
+AI_ENABLED = False
+SENTIMENT_ANALYSIS_ENABLED = False
+PERSONALIZATION_ENABLED = False
+PREDICTIVE_RESPONSES_ENABLED = False
 
 # Advanced UI/UX Features
 RICH_MENUS_ENABLED = True
@@ -297,12 +297,10 @@ SOCIAL_FEATURES_CONFIG = {
     "community_forums": True
 }
 
-# AI/ML Models Configuration
-AI_MODELS_CONFIG = {
-    "language_model": "gpt-3.5-turbo",
-    "sentiment_analyzer": "vader",
-    "recommendation_engine": "collaborative_filtering",
-    "personalization_model": "user_based"
+# Core Models Configuration (AI/ML removed)
+CORE_MODELS_CONFIG = {
+    "recommendation_engine": "rule_based",
+    "personalization_model": "basic_preferences"
 }
 
 # Advanced Security Features
