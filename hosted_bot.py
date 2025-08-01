@@ -373,6 +373,8 @@ class ProfessionalMathBot:
             await self.show_registration_menu(query)
         elif query.data == "paid_registration":
             await self.start_paid_registration(update, context)
+        elif query.data == "free_registration":
+            await self.start_registration(update, context)
         elif query.data == "youtube":
             await self.show_youtube(query)
         elif query.data == "announcements":
@@ -764,7 +766,7 @@ class ProfessionalMathBot:
         keyboard = [[InlineKeyboardButton("❌ انصراف", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
         return ENTERING_PHONE
 
     async def enter_phone(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -783,7 +785,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
         return ENTERING_GRADE
 
     async def enter_grade(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -873,7 +875,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
         return CONFIRMING_REGISTRATION
 
     async def show_payment_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -916,7 +918,7 @@ class ProfessionalMathBot:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
         return CONFIRMING_REGISTRATION
 
     async def confirm_registration(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1092,7 +1094,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
             text = "❌ ثبت‌نام لغو شد."
             keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(text, reply_markup=reply_markup, )
+            await update.message.reply_text(text, reply_markup=reply_markup)
         
         return ConversationHandler.END
 
@@ -1124,7 +1126,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
 
     async def admin_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Admin command for bot management"""
@@ -1143,7 +1145,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         
         if not is_admin:
             text = "❌ دسترسی غیرمجاز!"
-            await update.message.reply_text(text, )
+            await update.message.reply_text(text)
             return
         
         # Admin panel
@@ -1181,7 +1183,7 @@ https://t.me/{student_data['username'] if student_data['username'] else 'user' +
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(text, reply_markup=reply_markup, )
+        await update.message.reply_text(text, reply_markup=reply_markup)
 
     async def export_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Export user data for admin"""
