@@ -36,7 +36,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Conversation states for comprehensive registration
-CHOOSING_COURSE, ENTERING_NAME, ENTERING_PHONE, ENTERING_GRADE, ENTERING_PARENT_PHONE, CONFIRMING_REGISTRATION, PAYMENT_PROCESS = range(7)
+CHOOSING_COURSE, ENTERING_NAME, ENTERING_PHONE, ENTERING_GRADE, ENTERING_FIELD, ENTERING_PARENT_PHONE, CONFIRMING_REGISTRATION, PAYMENT_PROCESS = range(8)
 
 class ProfessionalDataManager:
     """Professional data management with encryption, backup, and security"""
@@ -165,7 +165,11 @@ class ProfessionalMathBot:
                     CallbackQueryHandler(self.cancel_registration, pattern='^cancel$')
                 ],
                 ENTERING_GRADE: [
-                    MessageHandler(filters.TEXT & ~filters.COMMAND, self.enter_grade),
+                    CallbackQueryHandler(self.enter_grade, pattern='^grade_'),
+                    CallbackQueryHandler(self.cancel_registration, pattern='^cancel$')
+                ],
+                ENTERING_FIELD: [
+                    CallbackQueryHandler(self.enter_field, pattern='^field_'),
                     CallbackQueryHandler(self.cancel_registration, pattern='^cancel$')
                 ],
                 ENTERING_PARENT_PHONE: [
@@ -189,9 +193,16 @@ class ProfessionalMathBot:
         self.application.add_error_handler(self.error_handler)
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Enhanced start command with comprehensive menu"""
+        """Enhanced start command with registration check"""
         user = update.effective_user
-        welcome_text = f"""
+        
+        # Check if user is already registered
+        students = self.data_manager.load_students()
+        user_registered = any(student.get('user_id') == user.id for student in students)
+        
+        if not user_registered:
+            # User is not registered - show registration first
+            welcome_text = f"""
 🎓 به ربات کلاس‌های ریاضی خوش آمدید!
 
 سلام {user.first_name} عزیز! 👋
@@ -200,13 +211,43 @@ class ProfessionalMathBot:
 
 🎯 کلاس‌های رایگان آنلاین در حال برگزاری است!
 
-📝 برای ثبت‌نام فوری: /register
+⚠️ برای استفاده از ربات، ابتدا باید ثبت‌نام کنید.
+
+📝 لطفاً اطلاعات خود را وارد کنید:
+        """
+            
+            keyboard = [
+                [InlineKeyboardButton("📝 ثبت‌نام در کلاس", callback_data="start_registration")],
+                [InlineKeyboardButton("💎 ثبت‌نام کلاس پولی", callback_data="paid_registration")],
+                [InlineKeyboardButton("📖 اطلاعات کتاب", callback_data="book_info")],
+                [InlineKeyboardButton("📞 اطلاعات تماس", callback_data="contact_info")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(welcome_text, reply_markup=reply_markup)
+        else:
+            # User is registered - show full menu
+            await self.show_full_menu(update, context)
+    
+    async def show_full_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show full menu for registered users"""
+        user = update.effective_user
+        welcome_text = f"""
+🎓 به ربات کلاس‌های ریاضی خوش آمدید!
+
+سلام {user.first_name} عزیز! 👋
+
+✅ شما قبلاً ثبت‌نام کرده‌اید.
+
+📚 این ربات برای ثبت‌نام در کلاس‌های ریاضی طراحی شده است.
+
+🎯 کلاس‌های رایگان آنلاین در حال برگزاری است!
 
 لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
         """
         
         keyboard = [
-            [InlineKeyboardButton("📝 ثبت‌نام در کلاس", callback_data="start_registration")],
+            [InlineKeyboardButton("📝 ثبت‌نام در کلاس جدید", callback_data="start_registration")],
             [InlineKeyboardButton("📢 اطلاعیه‌های جدید", callback_data="announcements")],
             [InlineKeyboardButton("🎓 کلاس‌های ویژه رایگان", callback_data="special_courses")],
             [InlineKeyboardButton("📅 برنامه کلاس‌ها", callback_data="schedule")],
@@ -260,6 +301,8 @@ class ProfessionalMathBot:
         
         if query.data == "start_registration":
             await self.show_registration_menu(query)
+        elif query.data == "paid_registration":
+            await self.start_paid_registration(update, context)
         elif query.data == "youtube":
             await self.show_youtube(query)
         elif query.data == "announcements":
@@ -678,6 +721,29 @@ class ProfessionalMathBot:
         context.user_data['grade'] = grade
         
         text = """
+🎯 رشته تحصیلی خود را انتخاب کنید:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("ریاضی", callback_data="field_math")],
+            [InlineKeyboardButton("تجربی", callback_data="field_bio")],
+            [InlineKeyboardButton("انسانی", callback_data="field_human")],
+            [InlineKeyboardButton("❌ انصراف", callback_data="cancel")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(text, reply_markup=reply_markup)
+        return ENTERING_FIELD
+
+    async def enter_field(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle field selection"""
+        query = update.callback_query
+        await query.answer()
+        
+        field = query.data.replace('field_', '')
+        context.user_data['field'] = field
+        
+        text = """
 📱 شماره تلفن والدین را وارد کنید:
 
 مثال: ۰۹۱۲۳۴۵۶۷۸۹
@@ -707,6 +773,7 @@ class ProfessionalMathBot:
         name = context.user_data.get('name', '')
         phone = context.user_data.get('phone', '')
         grade = context.user_data.get('grade', '')
+        field = context.user_data.get('field', '')
         parent_phone = context.user_data.get('parent_phone', '')
         course = context.user_data.get('selected_course', '')
         
@@ -714,11 +781,12 @@ class ProfessionalMathBot:
 ✅ تأیید اطلاعات ثبت‌نام
 
 📝 اطلاعات شما:
-👤 نام: {name}
-📱 تلفن: {phone}
-🎓 پایه: {grade}
+👤 نام و نام خانوادگی: {name}
+📱 شماره تلفن: {phone}
+🎓 پایه تحصیلی: {grade}
+🎯 رشته تحصیلی: {field}
 📱 تلفن والدین: {parent_phone}
-📚 کلاس: {course}
+📚 کلاس انتخاب شده: {course}
 
 💰 هزینه: رایگان
 
@@ -739,6 +807,7 @@ class ProfessionalMathBot:
         name = context.user_data.get('name', '')
         phone = context.user_data.get('phone', '')
         grade = context.user_data.get('grade', '')
+        field = context.user_data.get('field', '')
         parent_phone = context.user_data.get('parent_phone', '')
         course = context.user_data.get('selected_course', '')
         
@@ -753,11 +822,12 @@ class ProfessionalMathBot:
 💎 تأیید اطلاعات ثبت‌نام کلاس پولی
 
 📝 اطلاعات شما:
-👤 نام: {name}
-📱 تلفن: {phone}
-🎓 پایه: {grade}
+👤 نام و نام خانوادگی: {name}
+📱 شماره تلفن: {phone}
+🎓 پایه تحصیلی: {grade}
+🎯 رشته تحصیلی: {field}
 📱 تلفن والدین: {parent_phone}
-📚 کلاس: {course}
+📚 کلاس انتخاب شده: {course}
 💰 هزینه: {course_price}
 
 ⚠️ نکته مهم:
@@ -785,6 +855,7 @@ class ProfessionalMathBot:
             'name': context.user_data.get('name', ''),
             'phone': context.user_data.get('phone', ''),
             'grade': context.user_data.get('grade', ''),
+            'field': context.user_data.get('field', ''),
             'parent_phone': context.user_data.get('parent_phone', ''),
             'course': context.user_data.get('selected_course', ''),
             'user_id': update.effective_user.id,
@@ -828,17 +899,41 @@ class ProfessionalMathBot:
 📞 برای سوالات:
 {CONTACT_INFO['phone']}
 
-🔙 بازگشت به منوی اصلی:
+🎉 حالا می‌توانید از تمام امکانات ربات استفاده کنید!
         """
         
         # Save to database
         self.data_manager.add_student(student_data)
         
-        keyboard = [[InlineKeyboardButton("🏠 بازگشت به منو", callback_data="main_menu")]]
+        # Show full menu after successful registration
+        await query.edit_message_text(text)
+        await self.show_full_menu_after_registration(query)
+        return ConversationHandler.END
+
+    async def show_full_menu_after_registration(self, query):
+        """Show full menu after successful registration"""
+        welcome_text = """
+🎉 ثبت‌نام شما با موفقیت انجام شد!
+
+✅ حالا می‌توانید از تمام امکانات ربات استفاده کنید.
+
+لطفاً یکی از گزینه‌های زیر را انتخاب کنید:
+        """
+        
+        keyboard = [
+            [InlineKeyboardButton("📝 ثبت‌نام در کلاس جدید", callback_data="start_registration")],
+            [InlineKeyboardButton("📢 اطلاعیه‌های جدید", callback_data="announcements")],
+            [InlineKeyboardButton("🎓 کلاس‌های ویژه رایگان", callback_data="special_courses")],
+            [InlineKeyboardButton("📅 برنامه کلاس‌ها", callback_data="schedule")],
+            [InlineKeyboardButton("📚 کلاس‌های موجود", callback_data="courses")],
+            [InlineKeyboardButton("📖 اطلاعات کتاب", callback_data="book_info")],
+            [InlineKeyboardButton("📞 اطلاعات تماس", callback_data="contact_info")],
+            [InlineKeyboardButton("🔗 شبکه‌های اجتماعی", callback_data="social_links")],
+            [InlineKeyboardButton("📺 کانال یوتیوب رایگان", callback_data="youtube")]
+        ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await query.edit_message_text(text, reply_markup=reply_markup)
-        return ConversationHandler.END
+        await query.message.reply_text(welcome_text, reply_markup=reply_markup)
 
     async def notify_admins_payment(self, student_data):
         """Notify admins about payment with immediate delivery"""
@@ -846,10 +941,12 @@ class ProfessionalMathBot:
 💎 درخواست پرداخت جدید
 
 👤 اطلاعات دانش‌آموز:
-نام: {student_data['name']}
-تلفن: {student_data['phone']}
-پایه: {student_data['grade']}
-کلاس: {student_data['course']}
+نام و نام خانوادگی: {student_data['name']}
+شماره تلفن: {student_data['phone']}
+پایه تحصیلی: {student_data['grade']}
+رشته تحصیلی: {student_data['field']}
+تلفن والدین: {student_data['parent_phone']}
+کلاس انتخاب شده: {student_data['course']}
 
 📱 اطلاعات کاربر:
 ID: {student_data['user_id']}
