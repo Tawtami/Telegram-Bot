@@ -1,0 +1,43 @@
+# Core Telegram Bot
+python-telegram-bot==21.7
+
+# Environment and Configuration
+python-dotenv==1.0.0
+
+# Performance & Caching
+redis==5.0.1
+aioredis==2.0.1
+cachetools==5.3.2
+
+# Database & ORM
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.23
+alembic==1.13.1
+
+# Async & Background Tasks
+aiohttp==3.9.1
+celery==5.3.4
+asyncio-throttle==1.0.2
+
+# Rate Limiting & Security
+slowapi==0.1.9
+cryptography==41.0.8
+
+# Monitoring & Analytics
+prometheus-client==0.19.0
+structlog==23.2.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.25.2
+
+# Utilities
+pydantic==2.5.2
+click==8.1.7
+rich==13.7.0
+
+# Development & Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.12.1
+flake8==6.1.0 
