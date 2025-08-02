@@ -14,6 +14,8 @@ A professional Telegram bot for registering students in free online math classes
 - **JSON-based data storage** with individual user files
 - **Edit functionality** for all registered fields
 - **Contact sharing** support for phone numbers
+- **Admin notifications** for new registrations
+- **YouTube channel integration** for free tutorials
 
 ## 🚀 Quick Start
 
@@ -36,14 +38,15 @@ python bot.py
 ## 📁 Project Structure
 
 ```
-📦 Bot/
-├── 📄 bot.py              # Main bot file
-├── 📄 requirements.txt     # Dependencies
-├── 📄 env.txt             # Environment template
-├── 📄 README.md           # This file
-└── 📁 users/              # User data storage
-    ├── user_123456789.json
-    └── ...
+📦 Telegram-Bot/
+├── 🐍 bot.py              # Main optimized bot (28KB)
+├── 📄 requirements.txt     # Essential dependencies only
+├── ⚙️ env.txt             # Environment configuration
+├── 📖 README.md           # Complete documentation
+├── 🚫 .gitignore          # Proper Git ignore rules
+├── 📊 data/               # User data storage
+│   └── students.json      # Student registrations
+└── 🐍 .venv/              # Virtual environment
 ```
 
 ## 🔄 Bot Flow
