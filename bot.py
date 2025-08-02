@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Skyroom Registration Bot for Ostad Hatami's Free Math Classes
-ربات ثبت‌نام کلاس‌های رایگان استاد حاتمی در اسکای‌روم
+Ostad Hatami Math Classes Registration Bot
+ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی
 """
 
 import json
@@ -10,7 +10,7 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from pathlib import Path
 
 from aiogram import Bot, Dispatcher, types, Router
@@ -18,9 +18,8 @@ from aiogram.fsm import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import (
-    InlineKeyboardMarkup, InlineKeyboardButton,
-    ReplyKeyboardMarkup, KeyboardButton,
-    ReplyKeyboardRemove
+    InlineKeyboardMarkup, ReplyKeyboardMarkup, 
+    KeyboardButton, ReplyKeyboardRemove
 )
 from aiogram.filters import Command, StateFilter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -34,7 +33,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('skyroom_bot.log', encoding='utf-8'),
+        logging.FileHandler('bot.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -52,10 +51,10 @@ dp = Dispatcher(storage=storage)
 router = Router()
 
 # ============================================================================
-# FSM STATES FOR REGISTRATION
+# FSM STATES
 # ============================================================================
 class RegistrationStates(StatesGroup):
-    """States for user registration process"""
+    """Registration process states"""
     waiting_for_first_name = State()
     waiting_for_last_name = State()
     waiting_for_grade = State()
@@ -67,9 +66,9 @@ class RegistrationStates(StatesGroup):
     editing = State()
 
 # ============================================================================
-# DATA VALIDATION
+# VALIDATION
 # ============================================================================
-class DataValidator:
+class Validator:
     """Data validation utilities"""
     
     @staticmethod
@@ -77,31 +76,25 @@ class DataValidator:
         """Validate Persian/Arabic names"""
         if not name or len(name.strip()) < 2:
             return False
-        # Allow Persian, Arabic, and English characters
         pattern = r'^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z\s]+$'
         return bool(re.match(pattern, name.strip()))
     
     @staticmethod
     def validate_phone(phone: str) -> bool:
         """Validate Iranian phone numbers"""
-        # Remove spaces and dashes
         phone = re.sub(r'[\s\-]', '', phone)
-        
-        # Patterns for Iranian phone numbers
         patterns = [
-            r'^\+98[0-9]{10}$',  # +98xxxxxxxxxx
-            r'^09[0-9]{9}$',     # 09xxxxxxxxx
-            r'^9[0-9]{9}$',      # 9xxxxxxxxx
-            r'^0[0-9]{10}$'      # 0xxxxxxxxxx
+            r'^\+98[0-9]{10}$',
+            r'^09[0-9]{9}$',
+            r'^9[0-9]{9}$',
+            r'^0[0-9]{10}$'
         ]
-        
         return any(re.match(pattern, phone) for pattern in patterns)
     
     @staticmethod
     def normalize_phone(phone: str) -> str:
         """Normalize phone number to standard format"""
         phone = re.sub(r'[\s\-]', '', phone)
-        
         if phone.startswith('+98'):
             return phone
         elif phone.startswith('09'):
@@ -116,8 +109,8 @@ class DataValidator:
 # ============================================================================
 # DATA STORAGE
 # ============================================================================
-class UserDataManager:
-    """Manage user data storage and retrieval"""
+class DataManager:
+    """User data storage management"""
     
     def __init__(self):
         self.users_dir = Path("users")
@@ -136,8 +129,6 @@ class UserDataManager:
                 return False
             
             file_path = self.get_user_file_path(user_id)
-            
-            # Add timestamp
             user_data['registration_date'] = datetime.now().isoformat()
             user_data['last_updated'] = datetime.now().isoformat()
             
@@ -167,52 +158,14 @@ class UserDataManager:
     def user_exists(self, user_id: int) -> bool:
         """Check if user exists"""
         return self.get_user_file_path(user_id).exists()
-    
-    def update_user_data(self, user_id: int, updates: Dict[str, Any]) -> bool:
-        """Update specific fields in user data"""
-        try:
-            user_data = self.load_user_data(user_id)
-            if not user_data:
-                return False
-            
-            user_data.update(updates)
-            user_data['last_updated'] = datetime.now().isoformat()
-            
-            return self.save_user_data(user_data)
-            
-        except Exception as e:
-            logger.error(f"Error updating user data: {e}")
-            return False
 
 # ============================================================================
-# CONSTANTS AND CONFIGURATION
+# CONSTANTS
 # ============================================================================
-GRADES = {
-    "دهم": "دهم",
-    "یازدهم": "یازدهم", 
-    "دوازدهم": "دوازدهم"
-}
-
-MAJORS = {
-    "ریاضی": "ریاضی",
-    "تجربی": "تجربی",
-    "انسانی": "انسانی",
-    "هنر": "هنر"
-}
-
-PROVINCES = {
-    "تهران": "تهران",
-    "خراسان رضوی": "خراسان رضوی",
-    "اصفهان": "اصفهان",
-    "فارس": "فارس",
-    "آذربایجان شرقی": "آذربایجان شرقی",
-    "مازندران": "مازندران",
-    "گیلان": "گیلان",
-    "خوزستان": "خوزستان",
-    "قم": "قم",
-    "البرز": "البرز",
-    "سایر": "سایر"
-}
+GRADES = ["دهم", "یازدهم", "دوازدهم"]
+MAJORS = ["ریاضی", "تجربی", "انسانی", "هنر"]
+PROVINCES = ["تهران", "خراسان رضوی", "اصفهان", "فارس", "آذربایجان شرقی", 
+             "مازندران", "گیلان", "خوزستان", "قم", "البرز", "سایر"]
 
 CITIES_BY_PROVINCE = {
     "تهران": ["تهران", "شهریار", "ورامین", "دماوند", "فیروزکوه"],
@@ -229,16 +182,16 @@ CITIES_BY_PROVINCE = {
 }
 
 # ============================================================================
-# KEYBOARD BUILDERS
+# KEYBOARDS
 # ============================================================================
-class KeyboardBuilder:
-    """Build various keyboards for the bot"""
+class Keyboards:
+    """Keyboard builders"""
     
     @staticmethod
     def get_grade_keyboard() -> InlineKeyboardMarkup:
         """Build grade selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for grade in GRADES.keys():
+        for grade in GRADES:
             builder.button(text=grade, callback_data=f"grade:{grade}")
         builder.adjust(1)
         return builder.as_markup()
@@ -247,7 +200,7 @@ class KeyboardBuilder:
     def get_major_keyboard() -> InlineKeyboardMarkup:
         """Build major selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for major in MAJORS.keys():
+        for major in MAJORS:
             builder.button(text=major, callback_data=f"major:{major}")
         builder.adjust(2)
         return builder.as_markup()
@@ -256,7 +209,7 @@ class KeyboardBuilder:
     def get_province_keyboard() -> InlineKeyboardMarkup:
         """Build province selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for province in PROVINCES.keys():
+        for province in PROVINCES:
             builder.button(text=province, callback_data=f"province:{province}")
         builder.adjust(2)
         return builder.as_markup()
@@ -322,10 +275,10 @@ class KeyboardBuilder:
         return builder.as_markup()
 
 # ============================================================================
-# MESSAGE TEMPLATES
+# MESSAGES
 # ============================================================================
-class MessageTemplates:
-    """Message templates for the bot"""
+class Messages:
+    """Message templates"""
     
     @staticmethod
     def get_welcome_message(first_name: str) -> str:
@@ -378,50 +331,26 @@ class MessageTemplates:
 • در صورت عدم حضور، از لیست حذف خواهید شد
 • سوالات خود را از طریق ربات مطرح کنید"""
 
-    @staticmethod
-    def get_update_success() -> str:
-        """Get update success message"""
-        return "✅ **اطلاعات با موفقیت به‌روزرسانی شد!**"
-
 # ============================================================================
-# BOT HANDLERS
+# HANDLERS
 # ============================================================================
 @router.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
     """Handle /start command"""
     user = message.from_user
+    data_manager = DataManager()
     
-    # Check if user already exists
-    data_manager = UserDataManager()
     if data_manager.user_exists(user.id):
-        # User already registered, show main menu
         await show_main_menu(message)
         return
     
-    # Clear any existing state
     await state.clear()
-    
-    # Send welcome message and start registration directly
-    welcome_text = MessageTemplates.get_welcome_message(user.first_name)
+    welcome_text = Messages.get_welcome_message(user.first_name)
     await message.answer(welcome_text)
     
-    # Start registration process immediately
     await state.set_state(RegistrationStates.waiting_for_first_name)
-    
     await message.answer(
-        MessageTemplates.get_registration_start() + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید"
-    )
-
-@router.callback_query(lambda c: c.data == "start_registration")
-async def start_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Start registration process"""
-    await callback.answer()
-    
-    # Set initial state
-    await state.set_state(RegistrationStates.waiting_for_first_name)
-    
-    await callback.message.edit_text(
-        MessageTemplates.get_registration_start() + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید"
+        Messages.get_registration_start() + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید"
     )
 
 @router.message(StateFilter(RegistrationStates.waiting_for_first_name))
@@ -429,16 +358,12 @@ async def process_first_name(message: types.Message, state: FSMContext):
     """Process first name input"""
     first_name = message.text.strip()
     
-    if not DataValidator.validate_name(first_name):
-        await message.answer(
-            "❌ نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف)."
-        )
+    if not Validator.validate_name(first_name):
+        await message.answer("❌ نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف).")
         return
     
-    # Store first name
     await state.update_data(first_name=first_name)
     await state.set_state(RegistrationStates.waiting_for_last_name)
-    
     await message.answer("✅ نام ثبت شد.\n\n🔹 **مرحله ۲:** نام خانوادگی خود را وارد نمایید")
 
 @router.message(StateFilter(RegistrationStates.waiting_for_last_name))
@@ -446,68 +371,60 @@ async def process_last_name(message: types.Message, state: FSMContext):
     """Process last name input"""
     last_name = message.text.strip()
     
-    if not DataValidator.validate_name(last_name):
-        await message.answer(
-            "❌ نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید."
-        )
+    if not Validator.validate_name(last_name):
+        await message.answer("❌ نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید.")
         return
     
-    # Store last name
     await state.update_data(last_name=last_name)
     await state.set_state(RegistrationStates.waiting_for_grade)
-    
     await message.answer(
         "✅ نام خانوادگی ثبت شد.\n\n🔹 **مرحله ۳:** پایه تحصیلی خود را مشخص نمایید",
-        reply_markup=KeyboardBuilder.get_grade_keyboard()
+        reply_markup=Keyboards.get_grade_keyboard()
     )
 
 @router.callback_query(lambda c: c.data.startswith("grade:"))
 async def process_grade(callback: types.CallbackQuery, state: FSMContext):
     """Process grade selection"""
     await callback.answer()
-    
     grade = callback.data.split(":")[1]
     await state.update_data(grade=grade)
     await state.set_state(RegistrationStates.waiting_for_major)
     
     await callback.message.edit_text(
         f"✅ پایه تحصیلی ثبت شد: {grade}\n\n🔹 **مرحله ۴:** رشته تحصیلی خود را انتخاب کنید",
-        reply_markup=KeyboardBuilder.get_major_keyboard()
+        reply_markup=Keyboards.get_major_keyboard()
     )
 
 @router.callback_query(lambda c: c.data.startswith("major:"))
 async def process_major(callback: types.CallbackQuery, state: FSMContext):
     """Process major selection"""
     await callback.answer()
-    
     major = callback.data.split(":")[1]
     await state.update_data(major=major)
     await state.set_state(RegistrationStates.waiting_for_province)
     
     await callback.message.edit_text(
         f"✅ رشته تحصیلی ثبت شد: {major}\n\n🔹 **مرحله ۵:** استان خود را انتخاب کنید",
-        reply_markup=KeyboardBuilder.get_province_keyboard()
+        reply_markup=Keyboards.get_province_keyboard()
     )
 
 @router.callback_query(lambda c: c.data.startswith("province:"))
 async def process_province(callback: types.CallbackQuery, state: FSMContext):
     """Process province selection"""
     await callback.answer()
-    
     province = callback.data.split(":")[1]
     await state.update_data(province=province)
     await state.set_state(RegistrationStates.waiting_for_city)
     
     await callback.message.edit_text(
         f"✅ استان ثبت شد: {province}\n\n🔹 **مرحله ۶:** شهر خود را انتخاب کنید",
-        reply_markup=KeyboardBuilder.get_city_keyboard(province)
+        reply_markup=Keyboards.get_city_keyboard(province)
     )
 
 @router.callback_query(lambda c: c.data.startswith("city:"))
 async def process_city(callback: types.CallbackQuery, state: FSMContext):
     """Process city selection"""
     await callback.answer()
-    
     city = callback.data.split(":")[1]
     await state.update_data(city=city)
     await state.set_state(RegistrationStates.waiting_for_phone)
@@ -519,7 +436,7 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
     
     await callback.message.answer(
         "📱 لطفاً شماره تلفن خود را وارد کنید:",
-        reply_markup=KeyboardBuilder.get_phone_keyboard()
+        reply_markup=Keyboards.get_phone_keyboard()
     )
 
 @router.message(StateFilter(RegistrationStates.waiting_for_phone))
@@ -527,33 +444,23 @@ async def process_phone(message: types.Message, state: FSMContext):
     """Process phone number input"""
     phone = message.text.strip()
     
-    # Handle contact sharing
     if message.contact:
         phone = message.contact.phone_number
     
-    # Validate phone number
-    if not DataValidator.validate_phone(phone):
-        await message.answer(
-            "❌ شماره تلفن نامعتبر است. لطفاً شماره معتبر وارد کنید (مثال: 09121234567)"
-        )
+    if not Validator.validate_phone(phone):
+        await message.answer("❌ شماره تلفن نامعتبر است. لطفاً شماره معتبر وارد کنید (مثال: 09121234567)")
         return
     
-    # Normalize phone number
-    normalized_phone = DataValidator.normalize_phone(phone)
-    
-    # Store phone number
+    normalized_phone = Validator.normalize_phone(phone)
     await state.update_data(phone=normalized_phone)
     
-    # Get all collected data
     user_data = await state.get_data()
     user_data['user_id'] = message.from_user.id
     
-    # Show confirmation
     await state.set_state(RegistrationStates.confirmation)
-    
     await message.answer(
-        MessageTemplates.get_profile_summary(user_data),
-        reply_markup=KeyboardBuilder.get_confirmation_keyboard(),
+        Messages.get_profile_summary(user_data),
+        reply_markup=Keyboards.get_confirmation_keyboard(),
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -562,97 +469,80 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
     """Confirm registration"""
     await callback.answer()
     
-    # Get user data
     user_data = await state.get_data()
     user_data['user_id'] = callback.from_user.id
     
-    # Save to JSON file
-    data_manager = UserDataManager()
+    data_manager = DataManager()
     if data_manager.save_user_data(user_data):
-        await callback.message.edit_text(MessageTemplates.get_success_message())
-        
-        # Show main menu
+        await callback.message.edit_text(Messages.get_success_message())
         await show_main_menu_after_registration(callback.message)
     else:
-        await callback.message.edit_text(
-            "❌ خطا در ثبت‌نام. لطفاً دوباره تلاش کنید."
-        )
+        await callback.message.edit_text("❌ خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.")
 
 @router.callback_query(lambda c: c.data == "edit_registration")
 async def edit_registration(callback: types.CallbackQuery, state: FSMContext):
     """Show edit options"""
     await callback.answer()
-    
     await state.set_state(RegistrationStates.editing)
     await callback.message.edit_text(
         "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
-        reply_markup=KeyboardBuilder.get_edit_keyboard()
+        reply_markup=Keyboards.get_edit_keyboard()
     )
 
 @router.callback_query(lambda c: c.data.startswith("edit_"))
 async def handle_edit_field(callback: types.CallbackQuery, state: FSMContext):
     """Handle field editing"""
     await callback.answer()
-    
     field = callback.data.split("_", 1)[1]
     
     if field == "first_name":
         await state.set_state(RegistrationStates.waiting_for_first_name)
         await callback.message.edit_text("🔹 نام جدید خود را وارد نمایید:")
-    
     elif field == "last_name":
         await state.set_state(RegistrationStates.waiting_for_last_name)
         await callback.message.edit_text("🔹 نام خانوادگی جدید خود را وارد نمایید:")
-    
     elif field == "grade":
         await state.set_state(RegistrationStates.waiting_for_grade)
         await callback.message.edit_text(
             "🔹 پایه تحصیلی جدید خود را انتخاب کنید:",
-            reply_markup=KeyboardBuilder.get_grade_keyboard()
+            reply_markup=Keyboards.get_grade_keyboard()
         )
-    
     elif field == "major":
         await state.set_state(RegistrationStates.waiting_for_major)
         await callback.message.edit_text(
             "🔹 رشته تحصیلی جدید خود را انتخاب کنید:",
-            reply_markup=KeyboardBuilder.get_major_keyboard()
+            reply_markup=Keyboards.get_major_keyboard()
         )
-    
     elif field == "province":
         await state.set_state(RegistrationStates.waiting_for_province)
         await callback.message.edit_text(
             "🔹 استان جدید خود را انتخاب کنید:",
-            reply_markup=KeyboardBuilder.get_province_keyboard()
+            reply_markup=Keyboards.get_province_keyboard()
         )
-    
     elif field == "city":
-        # Need to get province first
         user_data = await state.get_data()
         province = user_data.get('province', 'تهران')
         await state.set_state(RegistrationStates.waiting_for_city)
         await callback.message.edit_text(
             "🔹 شهر جدید خود را انتخاب کنید:",
-            reply_markup=KeyboardBuilder.get_city_keyboard(province)
+            reply_markup=Keyboards.get_city_keyboard(province)
         )
-    
     elif field == "phone":
         await state.set_state(RegistrationStates.waiting_for_phone)
         await callback.message.edit_text(
             "🔹 شماره تلفن جدید خود را وارد نمایید:",
-            reply_markup=KeyboardBuilder.get_phone_keyboard()
+            reply_markup=Keyboards.get_phone_keyboard()
         )
 
 @router.callback_query(lambda c: c.data == "back_to_confirmation")
 async def back_to_confirmation(callback: types.CallbackQuery, state: FSMContext):
     """Go back to confirmation"""
     await callback.answer()
-    
     user_data = await state.get_data()
     await state.set_state(RegistrationStates.confirmation)
-    
     await callback.message.edit_text(
-        MessageTemplates.get_profile_summary(user_data),
-        reply_markup=KeyboardBuilder.get_confirmation_keyboard()
+        Messages.get_profile_summary(user_data),
+        reply_markup=Keyboards.get_confirmation_keyboard()
     )
 
 # ============================================================================
@@ -662,21 +552,20 @@ async def show_main_menu(message: types.Message):
     """Show main menu for registered users"""
     await message.answer(
         "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
-        reply_markup=KeyboardBuilder.get_main_menu_keyboard()
+        reply_markup=Keyboards.get_main_menu_keyboard()
     )
 
 async def show_main_menu_after_registration(message: types.Message):
     """Show main menu after successful registration"""
     await message.answer(
         "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
-        reply_markup=KeyboardBuilder.get_main_menu_keyboard()
+        reply_markup=Keyboards.get_main_menu_keyboard()
     )
 
 @router.callback_query(lambda c: c.data == "view_classes")
 async def view_classes(callback: types.CallbackQuery):
     """Show available classes"""
     await callback.answer()
-    
     classes_text = """🗓 **کلاس‌های قابل ثبت‌نام:**
 
 📚 **کلاس‌های ریاضی:**
@@ -695,14 +584,12 @@ async def view_classes(callback: types.CallbackQuery):
 • محتوای تکمیلی
 
 📝 **برای ثبت‌نام در کلاس‌ها، منتظر اطلاع‌رسانی باشید.**"""
-    
     await callback.message.edit_text(classes_text)
 
 @router.callback_query(lambda c: c.data == "buy_book")
 async def buy_book(callback: types.CallbackQuery):
     """Show book information"""
     await callback.answer()
-    
     book_text = """📘 **کتاب انفجار خلاقیت**
 
 ✍️ **نویسنده:** استاد حاتمی
@@ -719,14 +606,12 @@ async def buy_book(callback: types.CallbackQuery):
 • تماس: ۰۹۱۲۳۴۵۶۷۸۹
 • تلگرام: @Ostad_Hatami
 • ایمیل: info@ostadhatami.ir"""
-    
     await callback.message.edit_text(book_text)
 
 @router.callback_query(lambda c: c.data == "contact_teacher")
 async def contact_teacher(callback: types.CallbackQuery):
     """Show contact information"""
     await callback.answer()
-    
     contact_text = """🧑‍🏫 **ارتباط با استاد حاتمی**
 
 📞 **شماره تماس:** ۰۹۱۲۳۴۵۶۷۸۹
@@ -742,34 +627,26 @@ async def contact_teacher(callback: types.CallbackQuery):
 • سوالات درسی خود را مطرح کنید
 • برای مشاوره تحصیلی تماس بگیرید
 • درخواست کلاس خصوصی داشته باشید"""
-    
     await callback.message.edit_text(contact_text)
 
 @router.callback_query(lambda c: c.data == "edit_profile")
 async def edit_profile(callback: types.CallbackQuery, state: FSMContext):
     """Edit user profile"""
     await callback.answer()
-    
-    # Load user data
-    data_manager = UserDataManager()
+    data_manager = DataManager()
     user_data = data_manager.load_user_data(callback.from_user.id)
     
     if not user_data:
         await callback.message.edit_text("❌ اطلاعات کاربری یافت نشد.")
         return
     
-    # Set state and show edit options
     await state.set_state(RegistrationStates.editing)
     await state.update_data(**user_data)
-    
     await callback.message.edit_text(
         "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
-        reply_markup=KeyboardBuilder.get_edit_keyboard()
+        reply_markup=Keyboards.get_edit_keyboard()
     )
 
-# ============================================================================
-# ERROR HANDLERS
-# ============================================================================
 @router.message()
 async def handle_unknown_message(message: types.Message):
     """Handle unknown messages"""
@@ -782,11 +659,8 @@ async def handle_unknown_message(message: types.Message):
 # ============================================================================
 async def main():
     """Main function"""
-    # Include router
     dp.include_router(router)
-    
-    # Start polling
-    logger.info("🚀 Skyroom Registration Bot starting...")
+    logger.info("🚀 Ostad Hatami Bot starting...")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

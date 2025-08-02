@@ -1,5 +1,0 @@
-# Bot Configuration
-BOT_TOKEN=your_bot_token_here
-
-# Logging
-LOG_LEVEL=INFO 
