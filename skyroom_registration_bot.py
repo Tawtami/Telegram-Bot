@@ -334,7 +334,9 @@ class MessageTemplates:
 
 به ربات ثبت‌نام کلاس‌های رایگان استاد حاتمی خوش آمدید.
 
-برای استفاده از خدمات، لطفاً ابتدا ثبت‌نام کنید.
+🎓 **کلاس‌های رایگان ریاضی در حال برگزاری است!**
+
+برای استفاده از خدمات، لطفاً اطلاعات خود را وارد کنید.
 دقت فرمایید اطلاعات به‌درستی وارد شود."""
 
     @staticmethod
@@ -399,14 +401,16 @@ async def cmd_start(message: types.Message, state: FSMContext):
     # Clear any existing state
     await state.clear()
     
-    # Send welcome message
+    # Send welcome message and start registration directly
     welcome_text = MessageTemplates.get_welcome_message(user.first_name)
+    await message.answer(welcome_text)
     
-    # Create start registration button
-    builder = InlineKeyboardBuilder()
-    builder.button(text="شروع ثبت‌نام", callback_data="start_registration")
+    # Start registration process immediately
+    await state.set_state(RegistrationStates.waiting_for_first_name)
     
-    await message.answer(welcome_text, reply_markup=builder.as_markup())
+    await message.answer(
+        MessageTemplates.get_registration_start() + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید"
+    )
 
 @router.callback_query(lambda c: c.data == "start_registration")
 async def start_registration(callback: types.CallbackQuery, state: FSMContext):
