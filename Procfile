@@ -1,1 +1,0 @@
-worker: python hosted_bot.py 
