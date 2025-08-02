@@ -1,4 +1,4 @@
-# Core dependencies
+# Core dependencies for Telegram Bot
 aiogram==3.4.1
 python-dotenv==1.0.0 
  
