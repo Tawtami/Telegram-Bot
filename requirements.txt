@@ -1,4 +1,4 @@
 # Optimized dependencies for high-performance Telegram Bot
-aiogram==3.4.1
+aiogram>=3.0.0,<4.0.0
 python-dotenv==1.0.0
  
