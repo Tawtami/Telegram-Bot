@@ -5,11 +5,28 @@ Ostad Hatami Math Classes Registration Bot - Optimized Version
 ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 """
 
-import asyncio
+import json
 import logging
+import os
+import re
+import asyncio
 import time
+import gzip
+import pickle
+import statistics
+from collections import defaultdict, OrderedDict
+from datetime import datetime, timedelta
+from typing import Dict, Any, Optional, Set, List, Tuple
+from pathlib import Path
 from functools import wraps
-from typing import Dict, Any, Optional
+from dataclasses import dataclass, asdict
+from enum import Enum
+import html
+import hashlib
+import hmac
+import base64
+import secrets
+from traceback import format_exc
 
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.fsm import State, StatesGroup
@@ -23,51 +40,71 @@ from aiogram.types import (
 )
 from aiogram.filters import Command, StateFilter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Import optimized modules
-from config import config
+from config import Config
 from database import DataManager
-from database.models import UserData, UserStatus
 from utils import (
     Validator,
-    cache_manager,
-    rate_limiter,
-    monitor,
-    error_handler,
+    SimpleCache,
+    RateLimiter,
+    PerformanceMonitor,
+    BotErrorHandler,
     SecurityUtils,
 )
 
-# Configure logging
+# Configure advanced logging
 logging.basicConfig(
-    level=getattr(logging, config.logging.level),
-    format=config.logging.format,
+    level=getattr(logging, Config.logging.level),
+    format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
     handlers=[
         (
             logging.FileHandler("bot.log", encoding="utf-8")
-            if config.logging.file_enabled
-            else None
+            if Config.logging.file_enabled
+            else logging.NullHandler()
         ),
-        logging.StreamHandler() if config.logging.console_enabled else None,
+        (
+            logging.StreamHandler()
+            if Config.logging.console_enabled
+            else logging.NullHandler()
+        ),
     ],
 )
 logger = logging.getLogger(__name__)
 
 # Performance logger
-if config.logging.performance_log_enabled:
+if Config.logging.performance_log_enabled:
     perf_logger = logging.getLogger("performance")
     perf_handler = logging.FileHandler("performance.log", encoding="utf-8")
     perf_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
     perf_logger.addHandler(perf_handler)
     perf_logger.setLevel(logging.INFO)
 
-# Initialize bot and dispatcher
-bot = Bot(token=config.bot_token, parse_mode="HTML")
+# Bot token from environment
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN environment variable is required")
+
+# Initialize optimized components
+config = Config()
+data_manager = DataManager()
+cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
+rate_limiter = RateLimiter(
+    max_requests=config.performance.max_requests_per_minute, window_seconds=60
+)
+monitor = PerformanceMonitor()
+error_handler = BotErrorHandler()
+security_utils = SecurityUtils()
+
+# Initialize bot and dispatcher with optimizations
+bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 router = Router()
-
-# Initialize data manager
-data_manager = DataManager()
 
 
 # ============================================================================
@@ -96,25 +133,14 @@ def performance_monitor(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.time()
-        user_id = None
-
-        # Extract user_id from args
-        for arg in args:
-            if hasattr(arg, "from_user"):
-                user_id = arg.from_user.id
-                break
-            elif hasattr(arg, "message") and hasattr(arg.message, "from_user"):
-                user_id = arg.message.from_user.id
-                break
-
         try:
             result = await func(*args, **kwargs)
             duration = time.time() - start_time
-            await monitor.log_request_time(func.__name__, duration, user_id)
+            monitor.log_request_time(func.__name__, duration)
             return result
         except Exception as e:
-            await monitor.log_error(type(e).__name__, func.__name__, user_id)
-            await error_handler.handle_error(e, func.__name__, user_id)
+            monitor.log_error(type(e).__name__)
+            logger.error(f"Error in {func.__name__}: {e}")
             raise
 
     return wrapper
@@ -133,17 +159,15 @@ def rate_limit(func):
         ):
             user_id = message_or_callback.message.from_user.id
 
-        if user_id:
-            # Check rate limit
-            is_allowed = await rate_limiter.is_allowed(str(user_id))
-            if not is_allowed:
-                await error_handler.handle_user_error(
-                    message_or_callback, "⚠️ لطفاً کمی صبر کنید و دوباره تلاش کنید."
+        if user_id and not rate_limiter.is_allowed(user_id):
+            if hasattr(message_or_callback, "answer"):
+                await message_or_callback.answer(
+                    "⚠️ لطفاً کمی صبر کنید و دوباره تلاش کنید.", show_alert=True
                 )
-                return
+            return
 
-            # Log user activity
-            await monitor.log_user_activity(user_id)
+        if user_id:
+            monitor.log_user_activity(user_id)
 
         return await func(message_or_callback, *args, **kwargs)
 
@@ -154,23 +178,16 @@ def maintenance_mode(func):
     """Decorator to check maintenance mode"""
 
     @wraps(func)
-    async def wrapper(message_or_callback, *args, **kwargs):
+    async def wrapper(*args, **kwargs):
         if config.bot.maintenance_mode:
-            user_id = None
-            if hasattr(message_or_callback, "from_user"):
-                user_id = message_or_callback.from_user.id
-
-            # Allow admin users during maintenance
-            if user_id in config.bot.admin_user_ids:
-                return await func(message_or_callback, *args, **kwargs)
-
-            await error_handler.handle_user_error(
-                message_or_callback,
-                "🔧 ربات در حال تعمیر و نگهداری است. لطفاً بعداً تلاش کنید.",
-            )
+            message_or_callback = args[0] if args else None
+            if hasattr(message_or_callback, "answer"):
+                await message_or_callback.answer(
+                    "🔧 ربات در حال تعمیر و نگهداری است. لطفاً کمی صبر کنید.",
+                    show_alert=True,
+                )
             return
-
-        return await func(message_or_callback, *args, **kwargs)
+        return await func(*args, **kwargs)
 
     return wrapper
 
@@ -185,7 +202,7 @@ class Keyboards:
     def get_grade_keyboard() -> InlineKeyboardMarkup:
         """Build grade selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for grade in config.grades:
+        for grade in config.educational.grades:
             builder.button(text=grade, callback_data=f"grade:{grade}")
         builder.adjust(1)
         return builder.as_markup()
@@ -194,7 +211,7 @@ class Keyboards:
     def get_major_keyboard() -> InlineKeyboardMarkup:
         """Build major selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for major in config.majors:
+        for major in config.educational.majors:
             builder.button(text=major, callback_data=f"major:{major}")
         builder.adjust(2)
         return builder.as_markup()
@@ -203,7 +220,7 @@ class Keyboards:
     def get_province_keyboard() -> InlineKeyboardMarkup:
         """Build province selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for province in config.provinces:
+        for province in config.educational.provinces:
             builder.button(text=province, callback_data=f"province:{province}")
         builder.adjust(2)
         return builder.as_markup()
@@ -212,7 +229,7 @@ class Keyboards:
     def get_city_keyboard(province: str) -> InlineKeyboardMarkup:
         """Build city selection keyboard for a province"""
         builder = InlineKeyboardBuilder()
-        cities = config.cities_by_province.get(province, ["سایر"])
+        cities = config.educational.cities_by_province.get(province, ["سایر"])
         for city in cities:
             builder.button(text=city, callback_data=f"city:{city}")
         builder.adjust(2)
@@ -271,7 +288,6 @@ class Keyboards:
             text="🧑‍🏫 ارتباط با استاد حاتمی", callback_data="contact_teacher"
         )
         builder.button(text="⚙️ ویرایش اطلاعات", callback_data="edit_profile")
-        builder.button(text="📊 آمار و اطلاعات", callback_data="view_stats")
         builder.adjust(1)
         return builder.as_markup()
 
@@ -285,7 +301,14 @@ class Messages:
     @staticmethod
     def get_welcome_message(first_name: str) -> str:
         """Get welcome message"""
-        return config.bot.welcome_message_template.format(first_name=first_name)
+        return f"""سلام {first_name} عزیز! 🌟
+
+به ربات ثبت‌نام کلاس‌های رایگان استاد حاتمی خوش آمدید.
+
+🎓 **کلاس‌های رایگان ریاضی در حال برگزاری است!**
+
+برای استفاده از خدمات، لطفاً اطلاعات خود را وارد کنید.
+دقت فرمایید اطلاعات به‌درستی وارد شود."""
 
     @staticmethod
     def get_registration_start() -> str:
@@ -296,16 +319,16 @@ class Messages:
 هر مرحله را با دقت تکمیل نمایید."""
 
     @staticmethod
-    def get_profile_summary(user_data: UserData) -> str:
+    def get_profile_summary(user_data: Dict[str, Any]) -> str:
         """Get profile summary message"""
         return f"""📝 **اطلاعات ثبت‌شده:**
 
-👤 **نام:** {user_data.first_name}
-👤 **نام خانوادگی:** {user_data.last_name}
-🎓 **پایه:** {user_data.grade}
-📚 **رشته:** {user_data.major}
-📍 **شهر:** {user_data.city}، {user_data.province}
-📞 **شماره:** {user_data.phone}
+👤 **نام:** {user_data.get('first_name', '')}
+👤 **نام خانوادگی:** {user_data.get('last_name', '')}
+🎓 **پایه:** {user_data.get('grade', '')}
+📚 **رشته:** {user_data.get('major', '')}
+📍 **شهر:** {user_data.get('city', '')}، {user_data.get('province', '')}
+📞 **شماره:** {user_data.get('phone', '')}
 
 لطفاً اطلاعات را بررسی کرده و تایید کنید."""
 
@@ -339,7 +362,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     try:
         user = message.from_user
 
-        # Check if user exists
+        # Check if user exists with caching
         if await data_manager.user_exists(user.id):
             await show_main_menu(message)
             return
@@ -363,20 +386,22 @@ async def cmd_start(message: types.Message, state: FSMContext):
 @router.message(StateFilter(RegistrationStates.waiting_for_first_name))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_first_name(message: types.Message, state: FSMContext):
-    """Process first name input with enhanced validation"""
+    """Process first name input with validation and error handling"""
     try:
         if not message.text:
             await error_handler.handle_user_error(message, "لطفاً نام خود را وارد کنید.")
             return
 
-        # Validate and sanitize input
-        is_valid, result = Validator.validate_name(message.text, "نام")
-        if not is_valid:
-            await error_handler.handle_user_error(message, result)
-            return
+        first_name = message.text.strip()
 
-        first_name = result  # result contains the sanitized name
+        if not Validator.validate_name(first_name, config.security):
+            await error_handler.handle_user_error(
+                message,
+                "نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف).",
+            )
+            return
 
         await state.update_data(first_name=first_name)
         await state.set_state(RegistrationStates.waiting_for_last_name)
@@ -393,8 +418,9 @@ async def process_first_name(message: types.Message, state: FSMContext):
 @router.message(StateFilter(RegistrationStates.waiting_for_last_name))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_last_name(message: types.Message, state: FSMContext):
-    """Process last name input with enhanced validation"""
+    """Process last name input with validation and error handling"""
     try:
         if not message.text:
             await error_handler.handle_user_error(
@@ -402,13 +428,14 @@ async def process_last_name(message: types.Message, state: FSMContext):
             )
             return
 
-        # Validate and sanitize input
-        is_valid, result = Validator.validate_name(message.text, "نام خانوادگی")
-        if not is_valid:
-            await error_handler.handle_user_error(message, result)
-            return
+        last_name = message.text.strip()
 
-        last_name = result
+        if not Validator.validate_name(last_name, config.security):
+            await error_handler.handle_user_error(
+                message,
+                "نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید.",
+            )
+            return
 
         await state.update_data(last_name=last_name)
         await state.set_state(RegistrationStates.waiting_for_grade)
@@ -426,8 +453,9 @@ async def process_last_name(message: types.Message, state: FSMContext):
 @router.callback_query(lambda c: c.data.startswith("grade:"))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_grade(callback: types.CallbackQuery, state: FSMContext):
-    """Process grade selection"""
+    """Process grade selection with error handling"""
     try:
         await callback.answer()
 
@@ -436,9 +464,10 @@ async def process_grade(callback: types.CallbackQuery, state: FSMContext):
             return
 
         grade = callback.data.split(":")[1]
-        is_valid, result = Validator.validate_grade(grade)
-        if not is_valid:
-            await error_handler.handle_user_error(callback, result)
+        if grade not in config.educational.grades:
+            await error_handler.handle_user_error(
+                callback, "پایه تحصیلی انتخاب شده نامعتبر است."
+            )
             return
 
         await state.update_data(grade=grade)
@@ -458,17 +487,12 @@ async def process_grade(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(lambda c: c.data.startswith("major:"))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_major(callback: types.CallbackQuery, state: FSMContext):
     """Process major selection"""
     try:
         await callback.answer()
         major = callback.data.split(":")[1]
-
-        is_valid, result = Validator.validate_major(major)
-        if not is_valid:
-            await error_handler.handle_user_error(callback, result)
-            return
-
         await state.update_data(major=major)
         await state.set_state(RegistrationStates.waiting_for_province)
 
@@ -476,7 +500,6 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
             f"✅ رشته تحصیلی ثبت شد: {major}\n\n🔹 **مرحله ۵:** استان خود را انتخاب کنید",
             reply_markup=Keyboards.get_province_keyboard(),
         )
-
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_major")
 
@@ -484,17 +507,12 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(lambda c: c.data.startswith("province:"))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_province(callback: types.CallbackQuery, state: FSMContext):
     """Process province selection"""
     try:
         await callback.answer()
         province = callback.data.split(":")[1]
-
-        is_valid, result = Validator.validate_province(province)
-        if not is_valid:
-            await error_handler.handle_user_error(callback, result)
-            return
-
         await state.update_data(province=province)
         await state.set_state(RegistrationStates.waiting_for_city)
 
@@ -502,7 +520,6 @@ async def process_province(callback: types.CallbackQuery, state: FSMContext):
             f"✅ استان ثبت شد: {province}\n\n🔹 **مرحله ۶:** شهر خود را انتخاب کنید",
             reply_markup=Keyboards.get_city_keyboard(province),
         )
-
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_province")
 
@@ -510,20 +527,12 @@ async def process_province(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(lambda c: c.data.startswith("city:"))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_city(callback: types.CallbackQuery, state: FSMContext):
     """Process city selection"""
     try:
         await callback.answer()
         city = callback.data.split(":")[1]
-
-        user_data = await state.get_data()
-        province = user_data.get("province", "تهران")
-
-        is_valid, result = Validator.validate_city(city, province)
-        if not is_valid:
-            await error_handler.handle_user_error(callback, result)
-            return
-
         await state.update_data(city=city)
         await state.set_state(RegistrationStates.waiting_for_phone)
 
@@ -535,7 +544,6 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
             "📱 لطفاً شماره تلفن خود را وارد کنید:",
             reply_markup=Keyboards.get_phone_keyboard(),
         )
-
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_city")
 
@@ -543,6 +551,7 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(RegistrationStates.waiting_for_phone))
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def process_phone(message: types.Message, state: FSMContext):
     """Process phone number input with comprehensive validation"""
     try:
@@ -560,33 +569,21 @@ async def process_phone(message: types.Message, state: FSMContext):
             )
             return
 
-        # Validate phone number
-        is_valid, result = Validator.validate_phone(phone)
-        if not is_valid:
-            await error_handler.handle_user_error(message, result)
+        if not Validator.validate_phone(phone):
+            await error_handler.handle_user_error(
+                message,
+                "شماره تلفن نامعتبر است. لطفاً شماره معتبر وارد کنید (مثال: 09121234567)",
+            )
             return
 
-        normalized_phone = result  # result contains the normalized phone
+        normalized_phone = Validator.normalize_phone(phone)
         await state.update_data(phone=normalized_phone)
 
-        # Get all user data
-        user_data_dict = await state.get_data()
-        user_data_dict["user_id"] = message.from_user.id
-
-        # Create UserData object
-        user_data = UserData(
-            user_id=message.from_user.id,
-            first_name=user_data_dict["first_name"],
-            last_name=user_data_dict["last_name"],
-            grade=user_data_dict["grade"],
-            major=user_data_dict["major"],
-            province=user_data_dict["province"],
-            city=user_data_dict["city"],
-            phone=normalized_phone,
-            status=UserStatus.PENDING,
-        )
+        user_data = await state.get_data()
+        user_data["user_id"] = message.from_user.id
 
         await state.set_state(RegistrationStates.confirmation)
+        # Send confirmation message with keyboard removal
         await message.answer("📝 اطلاعات شما:", reply_markup=ReplyKeyboardRemove())
 
         await message.answer(
@@ -603,41 +600,42 @@ async def process_phone(message: types.Message, state: FSMContext):
 @router.callback_query(lambda c: c.data == "confirm_registration")
 @performance_monitor
 @rate_limit
+@maintenance_mode
 async def confirm_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Confirm registration with comprehensive validation"""
+    """Confirm registration with comprehensive error handling"""
     try:
         await callback.answer()
 
-        user_data_dict = await state.get_data()
-        if not user_data_dict:
+        user_data = await state.get_data()
+        if not user_data:
             await error_handler.handle_user_error(
                 callback, "اطلاعات ثبت‌نام یافت نشد. لطفاً مجدداً ثبت‌نام کنید."
             )
             return
 
+        user_data["user_id"] = callback.from_user.id
+
         # Validate all required fields
-        is_valid, errors = Validator.validate_user_data(user_data_dict)
-        if not is_valid:
-            error_message = "\n".join(errors[:3])  # Show first 3 errors
+        required_fields = [
+            "first_name",
+            "last_name",
+            "grade",
+            "major",
+            "province",
+            "city",
+            "phone",
+        ]
+        missing_fields = [
+            field for field in required_fields if not user_data.get(field)
+        ]
+
+        if missing_fields:
             await error_handler.handle_user_error(
-                callback, f"اطلاعات ناقص:\n{error_message}"
+                callback,
+                f"اطلاعات ناقص: {', '.join(missing_fields)}. لطفاً ویرایش کنید.",
             )
             return
 
-        # Create UserData object
-        user_data = UserData(
-            user_id=callback.from_user.id,
-            first_name=user_data_dict["first_name"],
-            last_name=user_data_dict["last_name"],
-            grade=user_data_dict["grade"],
-            major=user_data_dict["major"],
-            province=user_data_dict["province"],
-            city=user_data_dict["city"],
-            phone=user_data_dict["phone"],
-            status=UserStatus.ACTIVE,
-        )
-
-        # Save user data
         success = await data_manager.save_user_data(user_data)
 
         if success:
@@ -657,12 +655,93 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
         await error_handler.handle_system_error(callback, e, "confirm_registration")
 
 
+@router.callback_query(lambda c: c.data == "edit_registration")
+@maintenance_mode
+async def edit_registration(callback: types.CallbackQuery, state: FSMContext):
+    """Show edit options"""
+    try:
+        await callback.answer()
+        await state.set_state(RegistrationStates.editing)
+        await callback.message.edit_text(
+            "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
+            reply_markup=Keyboards.get_edit_keyboard(),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "edit_registration")
+
+
+@router.callback_query(lambda c: c.data.startswith("edit_"))
+@maintenance_mode
+async def handle_edit_field(callback: types.CallbackQuery, state: FSMContext):
+    """Handle field editing"""
+    try:
+        await callback.answer()
+        field = callback.data.split("_", 1)[1]
+
+        if field == "first_name":
+            await state.set_state(RegistrationStates.waiting_for_first_name)
+            await callback.message.edit_text("🔹 نام جدید خود را وارد نمایید:")
+        elif field == "last_name":
+            await state.set_state(RegistrationStates.waiting_for_last_name)
+            await callback.message.edit_text("🔹 نام خانوادگی جدید خود را وارد نمایید:")
+        elif field == "grade":
+            await state.set_state(RegistrationStates.waiting_for_grade)
+            await callback.message.edit_text(
+                "🔹 پایه تحصیلی جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_grade_keyboard(),
+            )
+        elif field == "major":
+            await state.set_state(RegistrationStates.waiting_for_major)
+            await callback.message.edit_text(
+                "🔹 رشته تحصیلی جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_major_keyboard(),
+            )
+        elif field == "province":
+            await state.set_state(RegistrationStates.waiting_for_province)
+            await callback.message.edit_text(
+                "🔹 استان جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_province_keyboard(),
+            )
+        elif field == "city":
+            user_data = await state.get_data()
+            province = user_data.get("province", "تهران")
+            await state.set_state(RegistrationStates.waiting_for_city)
+            await callback.message.edit_text(
+                "🔹 شهر جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_city_keyboard(province),
+            )
+        elif field == "phone":
+            await state.set_state(RegistrationStates.waiting_for_phone)
+            await callback.message.edit_text(
+                "🔹 شماره تلفن جدید خود را وارد نمایید:",
+                reply_markup=Keyboards.get_phone_keyboard(),
+            )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "handle_edit_field")
+
+
+@router.callback_query(lambda c: c.data == "back_to_confirmation")
+@maintenance_mode
+async def back_to_confirmation(callback: types.CallbackQuery, state: FSMContext):
+    """Go back to confirmation"""
+    try:
+        await callback.answer()
+        user_data = await state.get_data()
+        await state.set_state(RegistrationStates.confirmation)
+        await callback.message.edit_text(
+            Messages.get_profile_summary(user_data),
+            reply_markup=Keyboards.get_confirmation_keyboard(),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "back_to_confirmation")
+
+
 # ============================================================================
 # MAIN MENU HANDLERS
 # ============================================================================
 @performance_monitor
 async def show_main_menu(message: types.Message):
-    """Show main menu for registered users"""
+    """Show main menu for registered users with error handling"""
     try:
         await message.answer(
             "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
@@ -675,7 +754,7 @@ async def show_main_menu(message: types.Message):
 
 @performance_monitor
 async def show_main_menu_after_registration(message: types.Message):
-    """Show main menu after successful registration"""
+    """Show main menu after successful registration with error handling"""
     try:
         await message.answer(
             "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
@@ -689,8 +768,7 @@ async def show_main_menu_after_registration(message: types.Message):
 
 
 @router.callback_query(lambda c: c.data == "view_classes")
-@performance_monitor
-@rate_limit
+@maintenance_mode
 async def view_classes(callback: types.CallbackQuery):
     """Show available classes"""
     try:
@@ -714,47 +792,158 @@ async def view_classes(callback: types.CallbackQuery):
 
 📝 **برای ثبت‌نام در کلاس‌ها، منتظر اطلاع‌رسانی باشید.**"""
         await callback.message.edit_text(classes_text)
-
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "view_classes")
 
 
-@router.callback_query(lambda c: c.data == "view_stats")
-@performance_monitor
-@rate_limit
-async def view_stats(callback: types.CallbackQuery):
-    """Show user statistics (admin only)"""
+@router.callback_query(lambda c: c.data == "buy_book")
+@maintenance_mode
+async def buy_book(callback: types.CallbackQuery):
+    """Show book information"""
     try:
         await callback.answer()
+        book_text = """📘 **کتاب انفجار خلاقیت**
 
-        user_id = callback.from_user.id
-        if user_id not in config.bot.admin_user_ids:
-            await error_handler.handle_user_error(callback, "دسترسی غیرمجاز.")
+✍️ **نویسنده:** استاد حاتمی
+📄 **تعداد صفحات:** ۴۰۰ صفحه
+💰 **قیمت:** ۲۵۰,۰۰۰ تومان
+
+✨ **ویژگی‌های کتاب:**
+• مثال‌های حل شده
+• تمرینات متنوع
+• نمونه سوالات کنکور
+• پاسخ تشریحی
+
+📞 **برای سفارش کتاب:**
+• تماس: ۰۹۱۲۳۴۵۶۷۸۹
+• تلگرام: @Ostad_Hatami
+• ایمیل: info@ostadhatami.ir"""
+        await callback.message.edit_text(book_text)
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "buy_book")
+
+
+@router.callback_query(lambda c: c.data == "contact_teacher")
+@maintenance_mode
+async def contact_teacher(callback: types.CallbackQuery):
+    """Show contact information"""
+    try:
+        await callback.answer()
+        contact_text = """🧑‍🏫 **ارتباط با استاد حاتمی**
+
+📞 **شماره تماس:** ۰۹۱۲۳۴۵۶۷۸۹
+💬 **تلگرام:** @Ostad_Hatami
+📧 **ایمیل:** info@ostadhatami.ir
+🌐 **وب‌سایت:** www.ostadhatami.ir
+
+⏰ **ساعات پاسخگویی:**
+• شنبه تا چهارشنبه: ۹ صبح تا ۶ عصر
+• جمعه: ۹ صبح تا ۲ عصر
+
+💡 **نکات مهم:**
+• سوالات درسی خود را مطرح کنید
+• برای مشاوره تحصیلی تماس بگیرید
+• درخواست کلاس خصوصی داشته باشید"""
+        await callback.message.edit_text(contact_text)
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "contact_teacher")
+
+
+@router.callback_query(lambda c: c.data == "edit_profile")
+@maintenance_mode
+async def edit_profile(callback: types.CallbackQuery, state: FSMContext):
+    """Edit user profile"""
+    try:
+        await callback.answer()
+        user_data = await data_manager.load_user_data(callback.from_user.id)
+
+        if not user_data:
+            await callback.message.edit_text("❌ اطلاعات کاربری یافت نشد.")
             return
 
-        # Get statistics
-        stats = await data_manager.get_database_stats()
+        await state.set_state(RegistrationStates.editing)
+        await state.update_data(**user_data)
+        await callback.message.edit_text(
+            "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
+            reply_markup=Keyboards.get_edit_keyboard(),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "edit_profile")
+
+
+@router.message(Command("stats"))
+@maintenance_mode
+async def view_stats(message: types.Message):
+    """Admin command to view system statistics"""
+    try:
+        user_id = message.from_user.id
+
+        # Check if user is admin
+        if str(user_id) not in config.bot.admin_user_ids:
+            await message.answer("❌ شما مجاز به استفاده از این دستور نیستید.")
+            return
+
+        # Get system statistics
+        cache_stats = cache_manager.get_stats()
+        rate_limit_stats = rate_limiter.get_stats()
+        monitor_stats = monitor.get_stats()
+        db_stats = await data_manager.get_database_stats()
 
         stats_text = f"""📊 **آمار سیستم:**
 
-👥 **کاربران:**
-• کل کاربران: {stats['users']['total_users']}
-• کاربران فعال: {stats['users']['active_users']}
-• ثبت‌نام‌های اخیر: {stats['users']['recent_registrations']}
+🗄️ **دیتابیس:**
+• تعداد کاربران: {db_stats.get('total_users', 0)}
+• حجم فایل‌ها: {db_stats.get('total_size_mb', 0):.2f} MB
+• آخرین پشتیبان: {db_stats.get('last_backup', 'N/A')}
 
 💾 **کش:**
-• ضربه‌های کش: {stats['cache']['hits']}
-• عدم ضربه‌های کش: {stats['cache']['misses']}
-• نرخ ضربه: {stats['cache']['hit_rate_percent']}%
+• تعداد آیتم‌ها: {cache_stats.get('total_items', 0)}
+• نرخ موفقیت: {cache_stats.get('hit_rate', 0):.1f}%
+• تعداد حذف‌ها: {cache_stats.get('evictions', 0)}
 
-🗄️ **پشتیبان:**
-• تعداد پشتیبان‌ها: {stats['backup']['count']}
-• آخرین پشتیبان: {stats['backup']['last_backup'] or 'هیچ'}"""
+🚦 **محدودیت نرخ:**
+• کاربران فعال: {rate_limit_stats.get('active_users', 0)}
+• درخواست‌های مسدود شده: {rate_limit_stats.get('blocked_requests', 0)}
 
-        await callback.message.edit_text(stats_text)
+📈 **عملکرد:**
+• درخواست‌های کل: {monitor_stats.get('total_requests', 0)}
+• کاربران فعال: {monitor_stats.get('active_users', 0)}
+• زمان پاسخ متوسط: {monitor_stats.get('average_response_time', 0):.3f}s"""
+
+        await message.answer(stats_text)
+        logger.info(f"Admin {user_id} viewed system statistics")
 
     except Exception as e:
-        await error_handler.handle_system_error(callback, e, "view_stats")
+        await error_handler.handle_system_error(message, e, "view_stats")
+
+
+@router.message()
+@performance_monitor
+@rate_limit
+@maintenance_mode
+async def handle_unknown_message(message: types.Message):
+    """Handle unknown messages with better user guidance"""
+    try:
+        user_id = message.from_user.id
+
+        # Check if user is registered
+        if await data_manager.user_exists(user_id):
+            await message.answer(
+                "❓ پیام شما قابل تشخیص نیست.\n\n"
+                + "برای دسترسی به منوی اصلی، دستور /start را ارسال کنید."
+            )
+        else:
+            await message.answer(
+                "❓ پیام شما قابل تشخیص نیست.\n\n"
+                + "برای شروع ثبت‌نام، دستور /start را ارسال کنید."
+            )
+
+        logger.info(
+            f"Unknown message from user {user_id}: {message.text[:50] if message.text else 'No text'}"
+        )
+
+    except Exception as e:
+        await error_handler.handle_system_error(message, e, "handle_unknown_message")
 
 
 # ============================================================================
@@ -765,21 +954,21 @@ async def cleanup_task():
     while True:
         try:
             # Clean up expired cache entries
-            await cache_manager.clear_all()
+            await cache_manager.clear_expired()
 
             # Clean up old rate limiter entries
-            await rate_limiter.cleanup_old_entries()
+            rate_limiter.cleanup_old_requests()
 
-            # Clear old performance data
-            await monitor.clear_old_data()
+            # Check performance alerts
+            monitor.check_alerts()
 
             # Create backup if enabled
             if config.database.backup_enabled:
                 await data_manager.create_backup()
 
             # Log performance stats
-            stats = await monitor.get_stats()
-            if config.logging.performance_log_enabled:
+            stats = monitor.get_stats()
+            if Config.logging.performance_log_enabled:
                 perf_logger.info(f"Performance stats: {stats}")
 
             # Wait before next cleanup
@@ -796,25 +985,13 @@ async def cleanup_task():
 async def main():
     """Main function with graceful shutdown and health monitoring"""
     try:
-        # Validate configuration
-        config.validate()
-
-        # Include router
         dp.include_router(router)
 
-        # Start cleanup task
-        cleanup_task_handle = asyncio.create_task(cleanup_task())
-
-        # Start rate limiter cleanup
-        await rate_limiter.start_cleanup_task()
-
         logger.info("🚀 Ostad Hatami Bot starting with optimizations...")
-        logger.info(f"✅ Configuration: {config.to_dict()}")
         logger.info("✅ Rate limiting enabled")
         logger.info("✅ Caching system active")
         logger.info("✅ Performance monitoring enabled")
-        logger.info("✅ Enhanced error handling active")
-        logger.info("✅ Security features enabled")
+        logger.info("✅ Advanced error handling active")
 
         # Start polling
         await dp.start_polling(bot)
@@ -826,19 +1003,16 @@ async def main():
         raise
     finally:
         # Cleanup
-        if "cleanup_task_handle" in locals():
-            cleanup_task_handle.cancel()
-
-        await rate_limiter.stop_cleanup_task()
-
         # Log final stats
-        final_stats = await monitor.get_stats()
+        final_stats = monitor.get_stats()
         logger.info(f"📊 Final performance stats: {final_stats}")
 
         logger.info("🔄 Bot shutdown completed")
 
 
 if __name__ == "__main__":
+    import asyncio
+
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

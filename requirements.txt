@@ -1,9 +1,4 @@
 # Optimized dependencies for high-performance Telegram Bot
 aiogram==3.4.1
 python-dotenv==1.0.0
-# Performance and security enhancements
-gzip
-pickle
-statistics
-# Built-in modules used: asyncio, logging, time, json, pathlib, dataclasses, enum, collections, typing, functools, re, html, hashlib, hmac, base64, secrets, datetime, traceback 
  

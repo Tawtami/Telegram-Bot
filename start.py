@@ -7,12 +7,46 @@ Ensures proper initialization and error handling
 import os
 import sys
 import logging
+import asyncio
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import json
 
 # Configure basic logging for startup
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Simple health check handler for Railway"""
+
+    def do_GET(self):
+        if self.path == "/":
+            self.send_response(200)
+            self.send_header("Content-type", "application/json")
+            self.end_headers()
+            response = {
+                "status": "healthy",
+                "service": "Ostad Hatami Bot",
+                "version": "2.0.0",
+            }
+            self.wfile.write(json.dumps(response).encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+
+def start_health_server():
+    """Start health check server in background"""
+    try:
+        port = int(os.environ.get("PORT", 5000))
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        logger.info(f"Health check server started on port {port}")
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"Failed to start health server: {e}")
 
 
 def main():
@@ -29,9 +63,12 @@ def main():
         logger.info("✅ Environment variables loaded")
         logger.info("✅ Dependencies verified")
 
+        # Start health check server in background
+        health_thread = threading.Thread(target=start_health_server, daemon=True)
+        health_thread.start()
+
         # Import and run the main bot
-        from bot import main as bot_main
-        import asyncio
+        from bot_optimized import main as bot_main
 
         # Run the bot
         asyncio.run(bot_main())
