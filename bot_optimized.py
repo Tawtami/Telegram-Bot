@@ -204,7 +204,7 @@ class Keyboards:
     def get_grade_keyboard() -> InlineKeyboardMarkup:
         """Build grade selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for grade in config.educational.grades:
+        for grade in config.grades:
             builder.button(text=grade, callback_data=f"grade:{grade}")
         builder.adjust(1)
         return builder.as_markup()
@@ -213,7 +213,7 @@ class Keyboards:
     def get_major_keyboard() -> InlineKeyboardMarkup:
         """Build major selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for major in config.educational.majors:
+        for major in config.majors:
             builder.button(text=major, callback_data=f"major:{major}")
         builder.adjust(2)
         return builder.as_markup()
@@ -222,7 +222,7 @@ class Keyboards:
     def get_province_keyboard() -> InlineKeyboardMarkup:
         """Build province selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for province in config.educational.provinces:
+        for province in config.provinces:
             builder.button(text=province, callback_data=f"province:{province}")
         builder.adjust(2)
         return builder.as_markup()
@@ -231,7 +231,7 @@ class Keyboards:
     def get_city_keyboard(province: str) -> InlineKeyboardMarkup:
         """Build city selection keyboard for a province"""
         builder = InlineKeyboardBuilder()
-        cities = config.educational.cities_by_province.get(province, ["سایر"])
+        cities = config.cities_by_province.get(province, ["سایر"])
         for city in cities:
             builder.button(text=city, callback_data=f"city:{city}")
         builder.adjust(2)
@@ -398,7 +398,7 @@ async def process_first_name(message: types.Message, state: FSMContext):
 
         first_name = message.text.strip()
 
-        if not Validator.validate_name(first_name, config.security):
+        if not Validator.validate_name(first_name):
             await error_handler.handle_user_error(
                 message,
                 "نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف).",
@@ -432,7 +432,7 @@ async def process_last_name(message: types.Message, state: FSMContext):
 
         last_name = message.text.strip()
 
-        if not Validator.validate_name(last_name, config.security):
+        if not Validator.validate_name(last_name):
             await error_handler.handle_user_error(
                 message,
                 "نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید.",
@@ -466,7 +466,7 @@ async def process_grade(callback: types.CallbackQuery, state: FSMContext):
             return
 
         grade = callback.data.split(":")[1]
-        if grade not in config.educational.grades:
+        if grade not in config.grades:
             await error_handler.handle_user_error(
                 callback, "پایه تحصیلی انتخاب شده نامعتبر است."
             )
