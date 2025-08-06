@@ -57,19 +57,22 @@ from utils import (
     SecurityUtils,
 )
 
+# Initialize config first
+config = Config()
+
 # Configure advanced logging
 logging.basicConfig(
-    level=getattr(logging, Config.logging.level),
+    level=getattr(logging, config.logging.level),
     format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
     handlers=[
         (
             logging.FileHandler("bot.log", encoding="utf-8")
-            if Config.logging.file_enabled
+            if config.logging.file_enabled
             else logging.NullHandler()
         ),
         (
             logging.StreamHandler()
-            if Config.logging.console_enabled
+            if config.logging.console_enabled
             else logging.NullHandler()
         ),
     ],
@@ -77,7 +80,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Performance logger
-if Config.logging.performance_log_enabled:
+if config.logging.performance_log_enabled:
     perf_logger = logging.getLogger("performance")
     perf_handler = logging.FileHandler("performance.log", encoding="utf-8")
     perf_handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
@@ -90,7 +93,6 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable is required")
 
 # Initialize optimized components
-config = Config()
 data_manager = DataManager()
 cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
 rate_limiter = RateLimiter(
