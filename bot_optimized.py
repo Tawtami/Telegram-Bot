@@ -5,28 +5,12 @@ Ostad Hatami Math Classes Registration Bot - Optimized Version
 ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 """
 
-import json
 import logging
 import os
-import re
 import asyncio
 import time
-import gzip
-import pickle
-import statistics
-from collections import defaultdict, OrderedDict
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, Set, List, Tuple
-from pathlib import Path
+from typing import Dict, Any
 from functools import wraps
-from dataclasses import dataclass, asdict
-from enum import Enum
-import html
-import hashlib
-import hmac
-import base64
-import secrets
-from traceback import format_exc
 
 from aiogram import Bot, Dispatcher, types, Router
 from aiogram.fsm.state import State, StatesGroup
@@ -60,7 +44,7 @@ from utils import (
 # Initialize config first
 config = Config()
 
-# Configure advanced logging
+# Configure logging
 logging.basicConfig(
     level=getattr(logging, config.logging.level),
     format="%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
@@ -102,7 +86,7 @@ monitor = PerformanceMonitor()
 error_handler = BotErrorHandler()
 security_utils = SecurityUtils()
 
-# Initialize bot and dispatcher with optimizations
+# Initialize bot and dispatcher
 bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
@@ -1013,8 +997,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
