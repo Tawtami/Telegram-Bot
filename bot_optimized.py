@@ -41,8 +41,16 @@ logging.basicConfig(
     level=getattr(logging, config.logging.level),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("bot.log", encoding="utf-8") if config.logging.file_enabled else logging.NullHandler(),
-        logging.StreamHandler() if config.logging.console_enabled else logging.NullHandler(),
+        (
+            logging.FileHandler("bot.log", encoding="utf-8")
+            if config.logging.file_enabled
+            else logging.NullHandler()
+        ),
+        (
+            logging.StreamHandler()
+            if config.logging.console_enabled
+            else logging.NullHandler()
+        ),
     ],
 )
 logger = logging.getLogger(__name__)
@@ -55,7 +63,9 @@ if not BOT_TOKEN:
 # Initialize components
 data_manager = DataManager()
 cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
-rate_limiter = RateLimiter(max_requests=config.performance.max_requests_per_minute, window_seconds=60)
+rate_limiter = RateLimiter(
+    max_requests=config.performance.max_requests_per_minute, window_seconds=60
+)
 error_handler = BotErrorHandler()
 
 # Initialize bot
@@ -70,6 +80,7 @@ router = Router()
 # ============================================================================
 class RegistrationStates(StatesGroup):
     """Registration process states"""
+
     waiting_for_first_name = State()
     waiting_for_last_name = State()
     waiting_for_grade = State()
@@ -86,33 +97,44 @@ class RegistrationStates(StatesGroup):
 # ============================================================================
 def rate_limit(func):
     """Rate limiting decorator"""
+
     @wraps(func)
     async def wrapper(message_or_callback, *args, **kwargs):
         user_id = None
         if hasattr(message_or_callback, "from_user"):
             user_id = message_or_callback.from_user.id
-        elif hasattr(message_or_callback, "message") and hasattr(message_or_callback.message, "from_user"):
+        elif hasattr(message_or_callback, "message") and hasattr(
+            message_or_callback.message, "from_user"
+        ):
             user_id = message_or_callback.message.from_user.id
 
         if user_id and not rate_limiter.is_allowed(user_id):
             if hasattr(message_or_callback, "answer"):
-                await message_or_callback.answer("⚠️ لطفاً کمی صبر کنید و دوباره تلاش کنید.", show_alert=True)
+                await message_or_callback.answer(
+                    "⚠️ لطفاً کمی صبر کنید و دوباره تلاش کنید.", show_alert=True
+                )
             return
 
         return await func(message_or_callback, *args, **kwargs)
+
     return wrapper
 
 
 def maintenance_mode(func):
     """Maintenance mode decorator"""
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         if config.bot.maintenance_mode:
             message_or_callback = args[0] if args else None
             if hasattr(message_or_callback, "answer"):
-                await message_or_callback.answer("🔧 ربات در حال تعمیر و نگهداری است. لطفاً کمی صبر کنید.", show_alert=True)
+                await message_or_callback.answer(
+                    "🔧 ربات در حال تعمیر و نگهداری است. لطفاً کمی صبر کنید.",
+                    show_alert=True,
+                )
             return
         return await func(*args, **kwargs)
+
     return wrapper
 
 
@@ -121,7 +143,7 @@ def maintenance_mode(func):
 # ============================================================================
 class Keyboards:
     """Keyboard builders"""
-    
+
     @staticmethod
     def get_grade_keyboard() -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
@@ -161,7 +183,9 @@ class Keyboards:
             [KeyboardButton(text="📱 ارسال شماره تلفن", request_contact=True)],
             [KeyboardButton(text="✏️ ورود دستی شماره")],
         ]
-        return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True)
+        return ReplyKeyboardMarkup(
+            keyboard=keyboard, resize_keyboard=True, one_time_keyboard=True
+        )
 
     @staticmethod
     def get_confirmation_keyboard() -> InlineKeyboardMarkup:
@@ -192,9 +216,13 @@ class Keyboards:
     @staticmethod
     def get_main_menu_keyboard() -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        builder.button(text="🗓 مشاهده کلاس‌های قابل ثبت‌نام", callback_data="view_classes")
+        builder.button(
+            text="🗓 مشاهده کلاس‌های قابل ثبت‌نام", callback_data="view_classes"
+        )
         builder.button(text="📘 تهیه کتاب انفجار خلاقیت", callback_data="buy_book")
-        builder.button(text="🧑‍🏫 ارتباط با استاد حاتمی", callback_data="contact_teacher")
+        builder.button(
+            text="🧑‍🏫 ارتباط با استاد حاتمی", callback_data="contact_teacher"
+        )
         builder.button(text="⚙️ ویرایش اطلاعات", callback_data="edit_profile")
         builder.adjust(1)
         return builder.as_markup()
@@ -205,7 +233,7 @@ class Keyboards:
 # ============================================================================
 class Messages:
     """Message templates"""
-    
+
     @staticmethod
     def get_welcome_message(first_name: str) -> str:
         return f"""سلام {first_name} عزیز! 🌟
@@ -272,7 +300,10 @@ async def cmd_start(message: types.Message, state: FSMContext):
         await message.answer(welcome_text)
 
         await state.set_state(RegistrationStates.waiting_for_first_name)
-        await message.answer(Messages.get_registration_start() + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید")
+        await message.answer(
+            Messages.get_registration_start()
+            + "\n\n🔹 **مرحله ۱:** نام خود را وارد نمایید"
+        )
 
         logger.info(f"New user started registration: {user.id}")
 
@@ -293,12 +324,17 @@ async def process_first_name(message: types.Message, state: FSMContext):
         first_name = message.text.strip()
 
         if not Validator.validate_name(first_name):
-            await error_handler.handle_user_error(message, "نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف).")
+            await error_handler.handle_user_error(
+                message,
+                "نام وارد شده نامعتبر است. لطفاً نام صحیح وارد کنید (حداقل ۲ حرف).",
+            )
             return
 
         await state.update_data(first_name=first_name)
         await state.set_state(RegistrationStates.waiting_for_last_name)
-        await message.answer("✅ نام ثبت شد.\n\n🔹 **مرحله ۲:** نام خانوادگی خود را وارد نمایید")
+        await message.answer(
+            "✅ نام ثبت شد.\n\n🔹 **مرحله ۲:** نام خانوادگی خود را وارد نمایید"
+        )
 
         logger.info(f"User {message.from_user.id} entered first name")
 
@@ -313,18 +349,26 @@ async def process_last_name(message: types.Message, state: FSMContext):
     """Process last name input"""
     try:
         if not message.text:
-            await error_handler.handle_user_error(message, "لطفاً نام خانوادگی خود را وارد کنید.")
+            await error_handler.handle_user_error(
+                message, "لطفاً نام خانوادگی خود را وارد کنید."
+            )
             return
 
         last_name = message.text.strip()
 
         if not Validator.validate_name(last_name):
-            await error_handler.handle_user_error(message, "نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید.")
+            await error_handler.handle_user_error(
+                message,
+                "نام خانوادگی وارد شده نامعتبر است. لطفاً نام خانوادگی صحیح وارد کنید.",
+            )
             return
 
         await state.update_data(last_name=last_name)
         await state.set_state(RegistrationStates.waiting_for_grade)
-        await message.answer("✅ نام خانوادگی ثبت شد.\n\n🔹 **مرحله ۳:** پایه تحصیلی خود را مشخص نمایید", reply_markup=Keyboards.get_grade_keyboard())
+        await message.answer(
+            "✅ نام خانوادگی ثبت شد.\n\n🔹 **مرحله ۳:** پایه تحصیلی خود را مشخص نمایید",
+            reply_markup=Keyboards.get_grade_keyboard(),
+        )
 
         logger.info(f"User {message.from_user.id} entered last name")
 
@@ -346,13 +390,18 @@ async def process_grade(callback: types.CallbackQuery, state: FSMContext):
 
         grade = callback.data.split(":")[1]
         if grade not in config.grades:
-            await error_handler.handle_user_error(callback, "پایه تحصیلی انتخاب شده نامعتبر است.")
+            await error_handler.handle_user_error(
+                callback, "پایه تحصیلی انتخاب شده نامعتبر است."
+            )
             return
 
         await state.update_data(grade=grade)
         await state.set_state(RegistrationStates.waiting_for_major)
 
-        await callback.message.edit_text(f"✅ پایه تحصیلی ثبت شد: {grade}\n\n🔹 **مرحله ۴:** رشته تحصیلی خود را انتخاب کنید", reply_markup=Keyboards.get_major_keyboard())
+        await callback.message.edit_text(
+            f"✅ پایه تحصیلی ثبت شد: {grade}\n\n🔹 **مرحله ۴:** رشته تحصیلی خود را انتخاب کنید",
+            reply_markup=Keyboards.get_major_keyboard(),
+        )
 
         logger.info(f"User {callback.from_user.id} selected grade: {grade}")
 
@@ -371,7 +420,10 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(major=major)
         await state.set_state(RegistrationStates.waiting_for_province)
 
-        await callback.message.edit_text(f"✅ رشته تحصیلی ثبت شد: {major}\n\n🔹 **مرحله ۵:** استان خود را انتخاب کنید", reply_markup=Keyboards.get_province_keyboard())
+        await callback.message.edit_text(
+            f"✅ رشته تحصیلی ثبت شد: {major}\n\n🔹 **مرحله ۵:** استان خود را انتخاب کنید",
+            reply_markup=Keyboards.get_province_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_major")
 
@@ -387,7 +439,10 @@ async def process_province(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(province=province)
         await state.set_state(RegistrationStates.waiting_for_city)
 
-        await callback.message.edit_text(f"✅ استان ثبت شد: {province}\n\n🔹 **مرحله ۶:** شهر خود را انتخاب کنید", reply_markup=Keyboards.get_city_keyboard(province))
+        await callback.message.edit_text(
+            f"✅ استان ثبت شد: {province}\n\n🔹 **مرحله ۶:** شهر خود را انتخاب کنید",
+            reply_markup=Keyboards.get_city_keyboard(province),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_province")
 
@@ -403,8 +458,13 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(city=city)
         await state.set_state(RegistrationStates.waiting_for_phone)
 
-        await callback.message.edit_text(f"✅ شهر ثبت شد: {city}\n\n🔹 **مرحله ۷:** شماره تلفن همراه خود را وارد نمایید")
-        await callback.message.answer("📱 لطفاً شماره تلفن خود را وارد کنید:", reply_markup=Keyboards.get_phone_keyboard())
+        await callback.message.edit_text(
+            f"✅ شهر ثبت شد: {city}\n\n🔹 **مرحله ۷:** شماره تلفن همراه خود را وارد نمایید"
+        )
+        await callback.message.answer(
+            "📱 لطفاً شماره تلفن خود را وارد کنید:",
+            reply_markup=Keyboards.get_phone_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "process_city")
 
@@ -423,11 +483,16 @@ async def process_phone(message: types.Message, state: FSMContext):
         elif message.text:
             phone = message.text.strip()
         else:
-            await error_handler.handle_user_error(message, "لطفاً شماره تلفن خود را وارد کنید.")
+            await error_handler.handle_user_error(
+                message, "لطفاً شماره تلفن خود را وارد کنید."
+            )
             return
 
         if not Validator.validate_phone(phone):
-            await error_handler.handle_user_error(message, "شماره تلفن نامعتبر است. لطفاً شماره معتبر وارد کنید (مثال: 09121234567)")
+            await error_handler.handle_user_error(
+                message,
+                "شماره تلفن نامعتبر است. لطفاً شماره معتبر وارد کنید (مثال: 09121234567)",
+            )
             return
 
         normalized_phone = Validator.normalize_phone(phone)
@@ -438,7 +503,10 @@ async def process_phone(message: types.Message, state: FSMContext):
 
         await state.set_state(RegistrationStates.confirmation)
         await message.answer("📝 اطلاعات شما:", reply_markup=ReplyKeyboardRemove())
-        await message.answer(Messages.get_profile_summary(user_data), reply_markup=Keyboards.get_confirmation_keyboard())
+        await message.answer(
+            Messages.get_profile_summary(user_data),
+            reply_markup=Keyboards.get_confirmation_keyboard(),
+        )
 
         logger.info(f"User {message.from_user.id} entered phone number")
 
@@ -456,16 +524,31 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
 
         user_data = await state.get_data()
         if not user_data:
-            await error_handler.handle_user_error(callback, "اطلاعات ثبت‌نام یافت نشد. لطفاً مجدداً ثبت‌نام کنید.")
+            await error_handler.handle_user_error(
+                callback, "اطلاعات ثبت‌نام یافت نشد. لطفاً مجدداً ثبت‌نام کنید."
+            )
             return
 
         user_data["user_id"] = callback.from_user.id
 
-        required_fields = ["first_name", "last_name", "grade", "major", "province", "city", "phone"]
-        missing_fields = [field for field in required_fields if not user_data.get(field)]
+        required_fields = [
+            "first_name",
+            "last_name",
+            "grade",
+            "major",
+            "province",
+            "city",
+            "phone",
+        ]
+        missing_fields = [
+            field for field in required_fields if not user_data.get(field)
+        ]
 
         if missing_fields:
-            await error_handler.handle_user_error(callback, f"اطلاعات ناقص: {', '.join(missing_fields)}. لطفاً ویرایش کنید.")
+            await error_handler.handle_user_error(
+                callback,
+                f"اطلاعات ناقص: {', '.join(missing_fields)}. لطفاً ویرایش کنید.",
+            )
             return
 
         success = await data_manager.save_user_data(user_data)
@@ -474,9 +557,13 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
             await callback.message.edit_text(Messages.get_success_message())
             await show_main_menu_after_registration(callback.message)
             await state.clear()
-            logger.info(f"User {callback.from_user.id} registration completed successfully")
+            logger.info(
+                f"User {callback.from_user.id} registration completed successfully"
+            )
         else:
-            await error_handler.handle_user_error(callback, "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.")
+            await error_handler.handle_user_error(
+                callback, "خطا در ثبت‌نام. لطفاً دوباره تلاش کنید."
+            )
 
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "confirm_registration")
@@ -489,7 +576,10 @@ async def edit_registration(callback: types.CallbackQuery, state: FSMContext):
     try:
         await callback.answer()
         await state.set_state(RegistrationStates.editing)
-        await callback.message.edit_text("✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟", reply_markup=Keyboards.get_edit_keyboard())
+        await callback.message.edit_text(
+            "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
+            reply_markup=Keyboards.get_edit_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "edit_registration")
 
@@ -510,21 +600,36 @@ async def handle_edit_field(callback: types.CallbackQuery, state: FSMContext):
             await callback.message.edit_text("🔹 نام خانوادگی جدید خود را وارد نمایید:")
         elif field == "grade":
             await state.set_state(RegistrationStates.waiting_for_grade)
-            await callback.message.edit_text("🔹 پایه تحصیلی جدید خود را انتخاب کنید:", reply_markup=Keyboards.get_grade_keyboard())
+            await callback.message.edit_text(
+                "🔹 پایه تحصیلی جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_grade_keyboard(),
+            )
         elif field == "major":
             await state.set_state(RegistrationStates.waiting_for_major)
-            await callback.message.edit_text("🔹 رشته تحصیلی جدید خود را انتخاب کنید:", reply_markup=Keyboards.get_major_keyboard())
+            await callback.message.edit_text(
+                "🔹 رشته تحصیلی جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_major_keyboard(),
+            )
         elif field == "province":
             await state.set_state(RegistrationStates.waiting_for_province)
-            await callback.message.edit_text("🔹 استان جدید خود را انتخاب کنید:", reply_markup=Keyboards.get_province_keyboard())
+            await callback.message.edit_text(
+                "🔹 استان جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_province_keyboard(),
+            )
         elif field == "city":
             user_data = await state.get_data()
             province = user_data.get("province", "تهران")
             await state.set_state(RegistrationStates.waiting_for_city)
-            await callback.message.edit_text("🔹 شهر جدید خود را انتخاب کنید:", reply_markup=Keyboards.get_city_keyboard(province))
+            await callback.message.edit_text(
+                "🔹 شهر جدید خود را انتخاب کنید:",
+                reply_markup=Keyboards.get_city_keyboard(province),
+            )
         elif field == "phone":
             await state.set_state(RegistrationStates.waiting_for_phone)
-            await callback.message.edit_text("🔹 شماره تلفن جدید خود را وارد نمایید:", reply_markup=Keyboards.get_phone_keyboard())
+            await callback.message.edit_text(
+                "🔹 شماره تلفن جدید خود را وارد نمایید:",
+                reply_markup=Keyboards.get_phone_keyboard(),
+            )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "handle_edit_field")
 
@@ -537,7 +642,10 @@ async def back_to_confirmation(callback: types.CallbackQuery, state: FSMContext)
         await callback.answer()
         user_data = await state.get_data()
         await state.set_state(RegistrationStates.confirmation)
-        await callback.message.edit_text(Messages.get_profile_summary(user_data), reply_markup=Keyboards.get_confirmation_keyboard())
+        await callback.message.edit_text(
+            Messages.get_profile_summary(user_data),
+            reply_markup=Keyboards.get_confirmation_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "back_to_confirmation")
 
@@ -548,7 +656,10 @@ async def back_to_confirmation(callback: types.CallbackQuery, state: FSMContext)
 async def show_main_menu(message: types.Message):
     """Show main menu for registered users"""
     try:
-        await message.answer("🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:", reply_markup=Keyboards.get_main_menu_keyboard())
+        await message.answer(
+            "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
         logger.info(f"Main menu shown to user {message.from_user.id}")
     except Exception as e:
         await error_handler.handle_system_error(message, e, "show_main_menu")
@@ -557,10 +668,15 @@ async def show_main_menu(message: types.Message):
 async def show_main_menu_after_registration(message: types.Message):
     """Show main menu after successful registration"""
     try:
-        await message.answer("🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:", reply_markup=Keyboards.get_main_menu_keyboard())
+        await message.answer(
+            "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
         logger.info(f"Post-registration main menu shown to user {message.from_user.id}")
     except Exception as e:
-        await error_handler.handle_system_error(message, e, "show_main_menu_after_registration")
+        await error_handler.handle_system_error(
+            message, e, "show_main_menu_after_registration"
+        )
 
 
 @router.callback_query(lambda c: c.data == "view_classes")
@@ -659,7 +775,10 @@ async def edit_profile(callback: types.CallbackQuery, state: FSMContext):
 
         await state.set_state(RegistrationStates.editing)
         await state.update_data(**user_data)
-        await callback.message.edit_text("✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟", reply_markup=Keyboards.get_edit_keyboard())
+        await callback.message.edit_text(
+            "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
+            reply_markup=Keyboards.get_edit_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "edit_profile")
 
@@ -709,11 +828,17 @@ async def handle_unknown_message(message: types.Message):
         user_id = message.from_user.id
 
         if await data_manager.user_exists(user_id):
-            await message.answer("❓ پیام شما قابل تشخیص نیست.\n\nبرای دسترسی به منوی اصلی، دستور /start را ارسال کنید.")
+            await message.answer(
+                "❓ پیام شما قابل تشخیص نیست.\n\nبرای دسترسی به منوی اصلی، دستور /start را ارسال کنید."
+            )
         else:
-            await message.answer("❓ پیام شما قابل تشخیص نیست.\n\nبرای شروع ثبت‌نام، دستور /start را ارسال کنید.")
+            await message.answer(
+                "❓ پیام شما قابل تشخیص نیست.\n\nبرای شروع ثبت‌نام، دستور /start را ارسال کنید."
+            )
 
-        logger.info(f"Unknown message from user {user_id}: {message.text[:50] if message.text else 'No text'}")
+        logger.info(
+            f"Unknown message from user {user_id}: {message.text[:50] if message.text else 'No text'}"
+        )
 
     except Exception as e:
         await error_handler.handle_system_error(message, e, "handle_unknown_message")
