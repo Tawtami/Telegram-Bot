@@ -970,7 +970,7 @@ async def cleanup_task():
 
             # Log performance stats
             stats = monitor.get_stats()
-            if Config.logging.performance_log_enabled:
+            if config.logging.performance_log_enabled:
                 perf_logger.info(f"Performance stats: {stats}")
 
             # Wait before next cleanup
