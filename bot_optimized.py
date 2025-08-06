@@ -25,34 +25,41 @@ from aiogram.filters import Command, StateFilter
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables first
 load_dotenv()
 
-# Import modules
+# Configure basic logging first
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+    ],
+)
+
+# Now import modules after logging is configured
 from config import Config
 from database import DataManager
 from utils import Validator, SimpleCache, RateLimiter, BotErrorHandler
 
 # Initialize config
-config = Config()
+try:
+    config = Config()
+    
+    # Reconfigure logging with config settings
+    logging.getLogger().handlers.clear()  # Clear existing handlers
+    logging.basicConfig(
+        level=getattr(logging, config.logging.level),
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("bot.log", encoding="utf-8") if config.logging.file_enabled else logging.NullHandler(),
+            logging.StreamHandler() if config.logging.console_enabled else logging.NullHandler(),
+        ],
+    )
+except Exception as e:
+    logging.error(f"Failed to initialize config: {e}")
+    raise
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, config.logging.level),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[
-        (
-            logging.FileHandler("bot.log", encoding="utf-8")
-            if config.logging.file_enabled
-            else logging.NullHandler()
-        ),
-        (
-            logging.StreamHandler()
-            if config.logging.console_enabled
-            else logging.NullHandler()
-        ),
-    ],
-)
 logger = logging.getLogger(__name__)
 
 # Bot token
@@ -61,12 +68,16 @@ if not BOT_TOKEN:
     raise ValueError("BOT_TOKEN environment variable is required")
 
 # Initialize components
-data_manager = DataManager()
-cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
-rate_limiter = RateLimiter(
-    max_requests=config.performance.max_requests_per_minute, window_seconds=60
-)
-error_handler = BotErrorHandler()
+try:
+    data_manager = DataManager()
+    cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
+    rate_limiter = RateLimiter(
+        max_requests=config.performance.max_requests_per_minute, window_seconds=60
+    )
+    error_handler = BotErrorHandler()
+except Exception as e:
+    logger.error(f"Failed to initialize components: {e}")
+    raise
 
 # Initialize bot
 bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
