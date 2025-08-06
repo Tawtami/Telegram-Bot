@@ -11,8 +11,9 @@ import traceback
 from typing import Dict, List, Any, Optional, Callable, Union
 from dataclasses import dataclass
 from enum import Enum
-from config import config
-from .performance_monitor import monitor
+from config import Config
+
+# from .performance_monitor import monitor  # Will be initialized later
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -174,7 +175,7 @@ class ErrorHandler:
         )
 
         # Log to performance monitor
-        await monitor.log_error(error_info.error_type, handler_name, user_id)
+        # await monitor.log_error(error_info.error_type, handler_name, user_id)
 
         # Call category-specific handlers
         await self._call_error_handlers(error_info)

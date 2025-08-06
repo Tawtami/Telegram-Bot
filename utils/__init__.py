@@ -8,7 +8,7 @@ from .validators import Validator
 from .cache import SimpleCache
 from .rate_limiter import RateLimiter
 from .performance_monitor import PerformanceMonitor
-from .error_handler import BotErrorHandler
+from .error_handler import ErrorHandler as BotErrorHandler
 from .security import SecurityUtils
 
 __all__ = [
