@@ -1,121 +1,160 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Telegram Bot (python-telegram-bot v21) – Student Registration & Course Management
+Ostad Hatami Math Classes Bot - Main Entry Point
+Using python-telegram-bot v20+ with async syntax
 """
 
-import asyncio
-import logging
 import os
-from typing import List
+import sys
+import logging
+import asyncio
+from typing import Dict, Any
 
-from dotenv import load_dotenv
 from telegram import Update
-from telegram.constants import ParseMode
 from telegram.ext import (
     Application,
-    ApplicationBuilder,
-    AIORateLimiter,
-    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ConversationHandler,
     filters,
 )
 
-# Load envs early
-load_dotenv()
+from config import config
+from handlers.registration import build_registration_conversation
+from handlers.menu import (
+    send_main_menu,
+    handle_menu_selection,
+    handle_back_to_menu,
+)
+from handlers.courses import (
+    handle_free_courses,
+    handle_paid_courses,
+    handle_purchased_courses,
+    handle_course_registration,
+    handle_payment_receipt,
+)
+from handlers.books import build_book_purchase_conversation
+from handlers.social import handle_social_media
+from handlers.contact import handle_contact_us
+from utils.storage import StudentStorage
+from utils.error_handler import error_handler
+from utils.rate_limiter import rate_limiter
+from utils.performance_monitor import monitor
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
 )
-logger = logging.getLogger("bot")
+logger = logging.getLogger(__name__)
 
-# Local imports
-from config import Config
-from utils.storage import StudentStorage
-from handlers.registration import build_registration_conversation
-from handlers.menu import register_menu_handlers, ensure_registered
-from handlers.courses import register_course_handlers
-from handlers.books import register_book_handlers
-from handlers.social import register_social_handlers
-from handlers.contact import register_contact_handlers
+# Command handlers
+async def start_command(update: Update, context: Any) -> None:
+    """Handle /start command"""
+    await send_main_menu(update, context)
 
+async def students_command(update: Update, context: Any) -> None:
+    """Handle /students command - Admin only"""
+    user_id = update.effective_user.id
+    if user_id not in config.bot.admin_user_ids:
+        await update.message.reply_text("⛔️ این دستور فقط برای ادمین‌ها در دسترس است.")
+        return
 
-async def start(update: Update, context):
-    """Handle /start and show registration if needed."""
-    config = context.bot_data["config"]
     storage: StudentStorage = context.bot_data["storage"]
-
-    user_id = update.effective_user.id if update.effective_user else 0
-    first_name = update.effective_user.first_name if update.effective_user else "کاربر"
-
-    # Admins bypass registration
-    if user_id in config.bot.admin_user_ids:
-        await register_menu_handlers.send_main_menu(update, context)
+    students = storage.get_all_students()
+    
+    if not students:
+        await update.message.reply_text("هیچ دانش‌آموزی ثبت‌نام نکرده است.")
         return
 
-    student = storage.get_student(user_id)
-    if student:
-        await register_menu_handlers.send_main_menu(update, context)
+    # Create students.json file
+    import json
+    with open("data/students.json", "w", encoding="utf-8") as f:
+        json.dump({"students": students}, f, ensure_ascii=False, indent=2)
+
+    # Send file to admin
+    await update.message.reply_document(
+        document=open("data/students.json", "rb"),
+        caption=f"📊 اطلاعات {len(students)} دانش‌آموز",
+    )
+
+async def confirm_payment_command(update: Update, context: Any) -> None:
+    """Handle /confirm_payment command - Admin only"""
+    user_id = update.effective_user.id
+    if user_id not in config.bot.admin_user_ids:
+        await update.message.reply_text("⛔️ این دستور فقط برای ادمین‌ها در دسترس است.")
         return
 
-    # Show welcome with Register button
-    from utils.keyboards import build_register_keyboard
-    from ui.messages import Messages
+    try:
+        student_id = int(context.args[0])
+        storage: StudentStorage = context.bot_data["storage"]
+        
+        if not storage.confirm_payment(student_id):
+            await update.message.reply_text("❌ دانش‌آموز یافت نشد یا پرداختی در انتظار تایید ندارد.")
+            return
 
-    await update.effective_chat.send_message(
-        text=Messages.get_welcome_message(first_name),
-        reply_markup=build_register_keyboard(),
-        parse_mode=ParseMode.HTML,
-    )
+        # Notify student
+        await context.bot.send_message(
+            chat_id=student_id,
+            text="✅ پرداخت شما تایید شد. می‌توانید از منوی «دوره‌های خریداری‌شده» به محتوا دسترسی داشته باشید.",
+        )
 
+        await update.message.reply_text("✅ پرداخت با موفقیت تایید شد.")
 
-def build_application() -> Application:
-    config = Config()
-    bot_token = os.getenv("BOT_TOKEN")
-    if not bot_token:
-        raise ValueError("BOT_TOKEN environment variable is required")
+    except (ValueError, IndexError):
+        await update.message.reply_text(
+            "❌ فرمت دستور اشتباه است. نمونه صحیح:\n/confirm_payment 123456789"
+        )
 
-    storage = StudentStorage(json_path=os.path.join(config.database.path, "students.json"))
+def main() -> None:
+    """Initialize and start the bot"""
+    try:
+        # Initialize bot application
+        application = Application.builder().token(config.bot_token).build()
 
-    application: Application = (
-        ApplicationBuilder()
-        .token(bot_token)
-        .rate_limiter(AIORateLimiter())
-        .build()
-    )
+        # Initialize storage
+        storage = StudentStorage()
+        application.bot_data["storage"] = storage
+        application.bot_data["config"] = config
 
-    # Shared objects
-    application.bot_data["config"] = config
-    application.bot_data["storage"] = storage
+        # Add handlers
+        application.add_handler(CommandHandler("start", start_command))
+        application.add_handler(CommandHandler("students", students_command))
+        application.add_handler(CommandHandler("confirm_payment", confirm_payment_command))
 
-    # Core commands
-    application.add_handler(CommandHandler("start", start))
+        # Registration conversation
+        application.add_handler(build_registration_conversation())
 
-    # Registration conversation
-    application.add_handler(build_registration_conversation())
+        # Book purchase conversation
+        application.add_handler(build_book_purchase_conversation())
 
-    # Feature handlers (gated for registered users inside handlers)
-    register_menu_handlers(application)
-    register_course_handlers(application)
-    register_book_handlers(application)
-    register_social_handlers(application)
-    register_contact_handlers(application)
+        # Menu handlers
+        application.add_handler(CallbackQueryHandler(handle_menu_selection, pattern="^menu_"))
+        application.add_handler(CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$"))
 
-    return application
+        # Course handlers
+        application.add_handler(CallbackQueryHandler(handle_free_courses, pattern="^free_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_purchased_courses, pattern="^purchased_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_course_registration, pattern="^register_course_"))
+        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt))
 
+        # Other menu handlers
+        application.add_handler(CallbackQueryHandler(handle_social_media, pattern="^social_media$"))
+        application.add_handler(CallbackQueryHandler(handle_contact_us, pattern="^contact_us$"))
 
-async def main():
-    app = build_application()
-    logger.info("🚀 Starting Telegram Bot (python-telegram-bot)")
-    await app.run_polling(close_loop=False)
+        # Error handler
+        application.add_error_handler(error_handler)
 
+        # Start the bot
+        logger.info("🚀 Starting bot...")
+        application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    except Exception as e:
+        logger.error(f"❌ Error starting bot: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.info("🛑 Bot stopped by user")
+    main()

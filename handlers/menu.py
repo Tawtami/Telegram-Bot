@@ -1,77 +1,110 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CallbackQueryHandler, CallbackContext
+"""
+Main menu handlers for Ostad Hatami Bot
+"""
+
+from typing import Any
+
+from telegram import Update
+from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
-from utils.keyboards import build_main_menu_keyboard, build_register_keyboard
+from config import config
 from utils.storage import StudentStorage
-from ui.messages import Messages
+from ui.keyboards import build_main_menu_keyboard, build_register_keyboard
 
+async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send main menu message with appropriate keyboard"""
+    # Get effective chat and user
+    chat = update.effective_chat
+    user = update.effective_user
+    
+    if not chat or not user:
+        return
 
-async def ensure_registered(update: Update, context: CallbackContext) -> bool:
+    # Check if user is registered
     storage: StudentStorage = context.bot_data["storage"]
-    user_id = update.effective_user.id
-    if user_id in context.bot_data["config"].bot.admin_user_ids:
-        return True
-    return storage.get_student(user_id) is not None
+    student = storage.get_student(user.id)
+    
+    if not student and user.id not in config.bot.admin_user_ids:
+        # User needs to register first
+        welcome_text = config.bot.welcome_message_template.format(
+            first_name=user.first_name or "کاربر"
+        )
+        await chat.send_message(
+            text=welcome_text,
+            reply_markup=build_register_keyboard(),
+            parse_mode=ParseMode.MARKDOWN,
+        )
+        return
 
-
-async def send_main_menu(update: Update, context: CallbackContext):
-    # If not registered and not admin, show welcome with register button
-    user_id = update.effective_user.id
-    if user_id not in context.bot_data["config"].bot.admin_user_ids:
-        storage: StudentStorage = context.bot_data["storage"]
-        if not storage.get_student(user_id):
-            first_name = update.effective_user.first_name or "کاربر"
-            await update.effective_chat.send_message(
-                Messages.get_welcome_message(first_name),
-                reply_markup=build_register_keyboard(),
-                parse_mode=ParseMode.HTML,
-            )
-            return
-
-    await update.effective_chat.send_message(
-        "🏠 منوی اصلی",
+    # Show main menu
+    await chat.send_message(
+        text="🏠 منوی اصلی",
         reply_markup=build_main_menu_keyboard(),
         parse_mode=ParseMode.HTML,
     )
 
-
-async def back_to_main(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    # Reuse the same gating logic used for /start
-    # Convert callback context to a chat send by calling send_main_menu
-    await send_main_menu(update, context)
-
-
-async def profile(update: Update, context: CallbackContext):
-    if not await ensure_registered(update, context):
-        await update.callback_query.answer("لطفاً ابتدا ثبت‌نام کنید.", show_alert=True)
+async def handle_menu_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle main menu button selections"""
+    query = update.callback_query
+    if not query:
         return
+    
+    await query.answer()
+    
+    # Get user and check registration
+    user = update.effective_user
+    if not user:
+        return
+
     storage: StudentStorage = context.bot_data["storage"]
-    user_id = update.effective_user.id
-    s = storage.get_student(user_id)
-    if not s:
-        await update.callback_query.answer("ثبت‌نام یافت نشد.", show_alert=True)
+    student = storage.get_student(user.id)
+    
+    if not student and user.id not in config.bot.admin_user_ids:
+        await query.edit_message_text(
+            "⚠️ لطفاً ابتدا ثبت‌نام کنید:",
+            reply_markup=build_register_keyboard(),
+        )
         return
-    text = (
-        f"👤 پروفایل من\n\n"
-        f"نام: {s.first_name} {s.last_name}\n"
-        f"استان/شهر: {s.province} / {s.city}\n"
-        f"مقطع: {s.grade} – رشته: {s.field}\n"
-        f"دوره‌های رایگان: {len(s.free_courses)}\n"
-        f"دوره‌های خریداری‌شده: {len(s.purchased_courses)}\n"
-    )
-    kb = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
-    )
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text(text, reply_markup=kb)
 
+    # Handle menu options
+    option = query.data.replace("menu_", "")
+    
+    if option == "profile":
+        if not student:
+            await query.edit_message_text(
+                "❌ پروفایل شما یافت نشد.",
+                reply_markup=build_register_keyboard(),
+            )
+            return
+            
+        profile_text = (
+            "👤 پروفایل شما:\n\n"
+            f"نام: {student['first_name']}\n"
+            f"نام خانوادگی: {student['last_name']}\n"
+            f"استان: {student['province']}\n"
+            f"شهر: {student['city']}\n"
+            f"پایه تحصیلی: {student['grade']}\n"
+            f"رشته تحصیلی: {student['field']}\n\n"
+            f"تاریخ ثبت‌نام: {student['registration_date'][:10]}"
+        )
+        
+        await query.edit_message_text(
+            profile_text,
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return
 
-def register_menu_handlers(app: Application):
-    app.add_handler(CallbackQueryHandler(back_to_main, pattern=r"^back_to_main$"))
-    app.add_handler(CallbackQueryHandler(profile, pattern=r"^profile$"))
-    # Expose function for other modules
-    register_menu_handlers.send_main_menu = send_main_menu  # type: ignore
+    # Other menu options are handled by their respective handlers
+    # The callback patterns are matched in bot.py
+
+async def handle_back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle back to menu button"""
+    query = update.callback_query
+    if not query:
+        return
+        
+    await query.answer()
+    await send_main_menu(update, context)

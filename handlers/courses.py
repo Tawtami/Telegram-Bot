@@ -1,239 +1,259 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Course management handlers for Ostad Hatami Bot
+"""
+
+from typing import Any, Dict
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    Application,
-    CallbackQueryHandler,
-    CallbackContext,
-    ConversationHandler,
-    MessageHandler,
-    filters,
-)
+from telegram.ext import ContextTypes
+from telegram.constants import ParseMode
 
-from handlers.menu import ensure_registered
+from config import config
 from utils.storage import StudentStorage
+from ui.keyboards import build_main_menu_keyboard
 
-FREE_COURSE_ID = "free_friday"
-PAID_COURSES = {
-    "intensive_math": {
-        "title": "دوره فشرده ریاضی کنکور",
-        "price": 2500000,
-        "desc": "۳ ماهه – ۲۴ جلسه",
-    },
-    "advanced_test": {
-        "title": "دوره تست‌زنی پیشرفته",
-        "price": 1800000,
-        "desc": "۲ ماهه – ۱۶ جلسه",
-    },
-}
-
-WAIT_RECEIPT = range(1)
-
-
-async def free_courses(update: Update, context: CallbackContext):
-    if not await ensure_registered(update, context):
-        await update.callback_query.answer("لطفاً ابتدا ثبت‌نام کنید.", show_alert=True)
+async def handle_free_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle free courses menu"""
+    query = update.callback_query
+    if not query:
         return
-    text = (
-        "🎓 دوره‌های رایگان\n\n"
-        "📅 جمعه‌ها – کلاس آنلاین\n"
-        "برای ثبت‌نام دکمه زیر را بزنید"
-    )
-    kb = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "✅ ثبت‌نام در دوره رایگان",
-                    callback_data=f"enroll_free:{FREE_COURSE_ID}",
-                )
-            ],
-            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")],
-        ]
-    )
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text(text, reply_markup=kb)
-
-
-async def enroll_free(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    storage: StudentStorage = context.bot_data["storage"]
-    user_id = update.effective_user.id
-    storage.add_free_course(user_id, FREE_COURSE_ID)
-    await update.callback_query.message.edit_text(
-        "✅ ثبت‌نام شما در دوره رایگان انجام شد.",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
-        ),
-    )
-
-
-async def paid_courses(update: Update, context: CallbackContext):
-    if not await ensure_registered(update, context):
-        await update.callback_query.answer("لطفاً ابتدا ثبت‌نام کنید.", show_alert=True)
-        return
-
-    rows = []
-    text = "💼 دوره‌های پولی\n\nبرای مشاهده جزئیات، دوره را انتخاب کنید"
-    for cid, c in PAID_COURSES.items():
-        rows.append(
-            [
-                InlineKeyboardButton(
-                    f"{c['title']} – {c['price']:,} تومان", callback_data=f"paid:{cid}"
-                )
-            ]
-        )
-    rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")])
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text(
-        text, reply_markup=InlineKeyboardMarkup(rows)
-    )
-
-
-async def paid_detail(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    cid = update.callback_query.data.split(":", 1)[1]
-    c = PAID_COURSES.get(cid)
-    if not c:
-        await update.callback_query.message.reply_text("❌ دوره یافت نشد")
-        return
-    text = (
-        f"💼 {c['title']}\n{c['desc']}\nقیمت: {c['price']:,} تومان\n\n"
-        "برای خرید، فیش پرداخت را ارسال کنید."
-    )
-    kb = InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "📤 ارسال فیش", callback_data=f"send_receipt_course:{cid}"
-                )
-            ],
-            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_courses")],
-        ]
-    )
-    await update.callback_query.message.edit_text(text, reply_markup=kb)
-
-
-async def send_receipt_course(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    cid = update.callback_query.data.split(":", 1)[1]
-    context.user_data["pending_course_id"] = cid
-    await update.callback_query.message.edit_text(
-        "📸 لطفاً عکس فیش پرداخت دوره را ارسال کنید"
-    )
-    return WAIT_RECEIPT
-
-
-async def receive_course_receipt(update: Update, context: CallbackContext):
-    if not update.message.photo:
-        await update.message.reply_text("❌ لطفاً عکس فیش را ارسال کنید.")
-        return WAIT_RECEIPT
-    user_id = update.effective_user.id
-    cid = context.user_data.get("pending_course_id")
-    photo_id = update.message.photo[-1].file_id
-
-    # Forward to all admins with approve/reject buttons
-    admins = context.bot_data["config"].bot.admin_user_ids
-    if admins:
-        kb = InlineKeyboardMarkup(
-            [
-                [
-                    InlineKeyboardButton(
-                        "✅ تایید", callback_data=f"approve_course:{user_id}:{cid}"
-                    ),
-                    InlineKeyboardButton(
-                        "❌ رد", callback_data=f"reject_course:{user_id}:{cid}"
-                    ),
-                ]
-            ]
-        )
-        for admin_id in admins:
-            await context.bot.send_photo(
-                chat_id=admin_id,
-                photo=photo_id,
-                caption=f"فیش پرداخت دوره برای کاربر {user_id} ({cid})",
-                reply_markup=kb,
+    
+    await query.answer()
+    
+    # Example free courses (in production, load from database)
+    free_courses = [
+        {
+            "id": "free1",
+            "title": "کلاس رایگان هفتگی ریاضی",
+            "description": "هر جمعه ساعت ۱۶ الی ۱۸",
+            "capacity": 100,
+        },
+        {
+            "id": "free2",
+            "title": "حل تست کنکور رایگان",
+            "description": "سه‌شنبه‌ها ساعت ۱۷ الی ۱۹",
+            "capacity": 50,
+        }
+    ]
+    
+    # Build course list with registration buttons
+    keyboard = []
+    for course in free_courses:
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"📚 {course['title']}",
+                callback_data=f"register_course_free_{course['id']}"
             )
-
-    await update.message.reply_text("✅ فیش دریافت شد. منتظر تایید ادمین بمانید.")
-    return ConversationHandler.END
-
-
-async def approve_course(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    _, user_id_str, cid = update.callback_query.data.split(":", 2)
-    user_id = int(user_id_str)
-    storage: StudentStorage = context.bot_data["storage"]
-    storage.add_purchased_course(user_id, cid)
-
-    # Notify user
-    try:
-        c = PAID_COURSES.get(cid)
-        title = c["title"] if c else cid
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=f"✅ خرید دوره '{title}' تایید شد.",
-        )
-    except Exception:
-        pass
-
-    await update.callback_query.message.edit_text(
-        "✅ تایید شد و به لیست خرید اضافه گردید."
+        ])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
+    
+    await query.edit_message_text(
+        "📚 دوره‌های رایگان:\n\n"
+        "برای ثبت‌نام در هر دوره روی آن کلیک کنید:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.HTML,
     )
 
-
-async def reject_course(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text("❌ پرداخت رد شد.")
-
-
-async def purchased_courses(update: Update, context: CallbackContext):
-    if not await ensure_registered(update, context):
-        await update.callback_query.answer("لطفاً ابتدا ثبت‌نام کنید.", show_alert=True)
+async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle paid courses menu"""
+    query = update.callback_query
+    if not query:
         return
-    storage: StudentStorage = context.bot_data["storage"]
-    user_id = update.effective_user.id
-    student = storage.get_student(user_id)
-    courses = student.purchased_courses if student else []
-    if not courses:
-        await update.callback_query.answer()
-        await update.callback_query.message.edit_text(
-            "😔 هنوز دوره‌ای خریداری نکرده‌اید.",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
-            ),
+    
+    await query.answer()
+    
+    # Example paid courses (in production, load from database)
+    paid_courses = [
+        {
+            "id": "paid1",
+            "title": "دوره جامع ریاضی کنکور",
+            "description": "۵۰ جلسه آموزش + حل تست",
+            "price": 2000000,
+        },
+        {
+            "id": "paid2",
+            "title": "دوره فشرده هندسه",
+            "description": "۲۰ جلسه مباحث پرتکرار",
+            "price": 1000000,
+        }
+    ]
+    
+    # Build course list with details and registration buttons
+    keyboard = []
+    message_text = "💼 دوره‌های تخصصی:\n\n"
+    
+    for i, course in enumerate(paid_courses, 1):
+        message_text += (
+            f"{i}. {course['title']}\n"
+            f"توضیحات: {course['description']}\n"
+            f"قیمت: {course['price']:,} تومان\n\n"
         )
-        return
-    text = "🛒 دوره‌های خریداری‌شده:\n\n" + "\n".join([f"✅ {cid}" for cid in courses])
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
-        ),
+        keyboard.append([
+            InlineKeyboardButton(
+                text=f"📝 ثبت‌نام در {course['title']}",
+                callback_data=f"register_course_paid_{course['id']}"
+            )
+        ])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
+    
+    await query.edit_message_text(
+        message_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.HTML,
     )
 
-
-def register_course_handlers(app: Application):
-    app.add_handler(CallbackQueryHandler(free_courses, pattern=r"^free_courses$"))
-    app.add_handler(CallbackQueryHandler(enroll_free, pattern=r"^enroll_free:.*"))
-    app.add_handler(CallbackQueryHandler(paid_courses, pattern=r"^paid_courses$"))
-    app.add_handler(CallbackQueryHandler(paid_detail, pattern=r"^paid:.*"))
-    app.add_handler(
-        ConversationHandler(
-            entry_points=[
-                CallbackQueryHandler(
-                    send_receipt_course, pattern=r"^send_receipt_course:.*"
+async def handle_purchased_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle purchased courses menu"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    await query.answer()
+    
+    # Get user's purchased courses
+    storage: StudentStorage = context.bot_data["storage"]
+    student = storage.get_student(query.from_user.id)
+    
+    if not student or not student.get("purchased_courses"):
+        await query.edit_message_text(
+            "🛒 دوره‌های خریداری‌شده:\n\n"
+            "شما هنوز هیچ دوره‌ای خریداری نکرده‌اید.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")
+            ]]),
+        )
+        return
+    
+    # Example course details (in production, load from database)
+    course_details = {
+        "paid1": {
+            "title": "دوره جامع ریاضی کنکور",
+            "link": "https://skyroom.online/course1",
+        },
+        "paid2": {
+            "title": "دوره فشرده هندسه",
+            "link": "https://skyroom.online/course2",
+        }
+    }
+    
+    # Build purchased courses list
+    message_text = "🛒 دوره‌های خریداری‌شده:\n\n"
+    keyboard = []
+    
+    for course_id in student["purchased_courses"]:
+        if course_id in course_details:
+            course = course_details[course_id]
+            message_text += f"📚 {course['title']}\n"
+            keyboard.append([
+                InlineKeyboardButton(
+                    text=f"🔗 ورود به {course['title']}",
+                    url=course['link']
                 )
-            ],
-            states={
-                WAIT_RECEIPT: [MessageHandler(filters.PHOTO, receive_course_receipt)],
-            },
-            fallbacks=[],
-            allow_reentry=True,
+            ])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
+    
+    await query.edit_message_text(
+        message_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.HTML,
+    )
+
+async def handle_course_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle course registration"""
+    query = update.callback_query
+    if not query:
+        return
+    
+    await query.answer()
+    
+    # Parse course type and ID
+    _, course_type, course_id = query.data.split("_", 2)
+    storage: StudentStorage = context.bot_data["storage"]
+    
+    if course_type == "free":
+        # Register for free course
+        if storage.save_course_registration(query.from_user.id, course_id):
+            await query.edit_message_text(
+                "✅ ثبت‌نام شما در دوره رایگان با موفقیت انجام شد.\n\n"
+                "جزئیات دوره به زودی برای شما ارسال خواهد شد.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+        else:
+            await query.edit_message_text(
+                "❌ خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+    else:
+        # Show payment info for paid course
+        await query.edit_message_text(
+            "💳 اطلاعات پرداخت:\n\n"
+            "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
+            "6037-9974-1234-5678\n"
+            "به نام: استاد حاتمی\n\n"
+            "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
+            "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 انصراف", callback_data="back_to_menu")
+            ]]),
         )
+        
+        # Store course ID for payment verification
+        context.user_data["pending_course"] = course_id
+
+async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle payment receipt photo"""
+    if not context.user_data.get("pending_course"):
+        await update.message.reply_text(
+            "❌ هیچ دوره‌ای در انتظار پرداخت نیست.",
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return
+    
+    course_id = context.user_data["pending_course"]
+    storage: StudentStorage = context.bot_data["storage"]
+    
+    # Add to pending payments
+    if not storage.add_pending_payment(update.effective_user.id, course_id):
+        await update.message.reply_text(
+            "❌ خطا در ثبت پرداخت. لطفاً دوباره تلاش کنید.",
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return
+    
+    # Forward receipt to admins
+    student = storage.get_student(update.effective_user.id)
+    caption = (
+        f"🧾 رسید پرداخت دوره\n\n"
+        f"کاربر: {student['first_name']} {student['last_name']}\n"
+        f"شناسه کاربری: {update.effective_user.id}\n"
+        f"شناسه دوره: {course_id}\n\n"
+        f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
+        f"/confirm_payment {update.effective_user.id}"
     )
-    app.add_handler(
-        CallbackQueryHandler(purchased_courses, pattern=r"^purchased_courses$")
+    
+    for admin_id in config.bot.admin_user_ids:
+        try:
+            await context.bot.forward_message(
+                chat_id=admin_id,
+                from_chat_id=update.effective_chat.id,
+                message_id=update.message.message_id,
+            )
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=caption,
+            )
+        except Exception as e:
+            logger.error(f"Error forwarding receipt to admin {admin_id}: {e}")
+    
+    # Clear pending course
+    del context.user_data["pending_course"]
+    
+    await update.message.reply_text(
+        "✅ رسید پرداخت شما دریافت شد.\n\n"
+        "پس از تایید توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.",
+        reply_markup=build_main_menu_keyboard(),
     )
-    app.add_handler(CallbackQueryHandler(approve_course, pattern=r"^approve_course:.*"))
-    app.add_handler(CallbackQueryHandler(reject_course, pattern=r"^reject_course:.*"))

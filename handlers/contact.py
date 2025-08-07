@@ -1,25 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Contact information handlers for Ostad Hatami Bot
+"""
+
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CallbackQueryHandler, CallbackContext
+from telegram.ext import ContextTypes
 
-from handlers.menu import ensure_registered
+from config import config
+from ui.keyboards import build_main_menu_keyboard
 
-
-async def contact_us(update: Update, context: CallbackContext):
-    if not await ensure_registered(update, context):
-        await update.callback_query.answer("لطفاً ابتدا ثبت‌نام کنید.", show_alert=True)
+async def handle_contact_us(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle contact us menu"""
+    query = update.callback_query
+    if not query:
         return
-    text = (
-        "📞 ارتباط با ما\n\n"
-        "تلگرام: @Ostad_Hatami\nایمیل: info@ostadhatami.ir\nوب‌سایت: ostadhatami.ir"
+    
+    await query.answer()
+    
+    contact_info = config.contact_info
+    message_text = (
+        "☎️ اطلاعات تماس:\n\n"
+        f"📱 تلفن: {contact_info['phone']}\n"
+        f"📧 ایمیل: {contact_info['email']}\n"
+        f"🌐 وبسایت: {contact_info['website']}\n"
+        f"📱 تلگرام: {contact_info['telegram']}\n\n"
+        "⏰ ساعات پاسخگویی:\n"
+        "شنبه تا چهارشنبه: ۹ الی ۱۸\n"
+        "پنجشنبه: ۹ الی ۱۳"
     )
-    kb = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
+    
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
+    ]
+    
+    await query.edit_message_text(
+        message_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text(text, reply_markup=kb)
-
-
-def register_contact_handlers(app: Application):
-    app.add_handler(CallbackQueryHandler(contact_us, pattern=r"^contact_us$"))

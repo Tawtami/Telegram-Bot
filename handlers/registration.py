@@ -1,192 +1,262 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Registration flow using python-telegram-bot (async)
-Flow: first_name -> last_name -> province -> city -> grade -> field -> confirm
+Registration handlers for Ostad Hatami Bot
+Implements 6-step registration process with validation
 """
-from __future__ import annotations
 
+import re
+from enum import Enum
 from typing import Dict, Any
-from telegram import Update
-from telegram.constants import ParseMode
+
+from telegram import Update, InlineKeyboardMarkup
 from telegram.ext import (
+    ContextTypes,
     ConversationHandler,
-    CallbackContext,
-    CallbackQueryHandler,
-    MessageHandler,
     CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
     filters,
 )
 
-from utils.storage import Student, StudentStorage
-from utils.keyboards import (
+from config import config
+from utils.storage import StudentStorage
+from ui.keyboards import (
     build_register_keyboard,
-    build_back_keyboard,
-    build_provinces_keyboard,
-    build_cities_keyboard,
     build_grades_keyboard,
     build_majors_keyboard,
-    build_main_menu_keyboard,
+    build_provinces_keyboard,
+    build_cities_keyboard,
+    build_confirmation_keyboard,
 )
-from ui.messages import Messages
-from config import Config
 
-FIRST_NAME, LAST_NAME, PROVINCE, CITY, GRADE, FIELD, CONFIRM = range(7)
-
+# States for the registration conversation
+class RegistrationStates(Enum):
+    FIRST_NAME = 1
+    LAST_NAME = 2
+    PROVINCE = 3
+    CITY = 4
+    GRADE = 5
+    FIELD = 6
+    CONFIRM = 7
 
 def _is_persian_text(text: str) -> bool:
-    import re
+    """Validate Persian text input"""
+    if not text or len(text) < 2 or len(text) > 50:
+        return False
+    return bool(re.fullmatch(r"[\u0600-\u06FF\s]{2,50}", text))
 
-    return bool(re.fullmatch(r"[\u0600-\u06FF\s]{2,50}", text or ""))
-
-
-async def start_registration(update: Update, context: CallbackContext):
+async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Start registration process"""
+    context.user_data.clear()  # Clear any previous registration data
     await update.callback_query.answer()
-    await update.callback_query.message.edit_text(
-        "📝 نام خود را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg")
+    await update.callback_query.edit_message_text(
+        "👋 به فرآیند ثبت‌نام خوش آمدید!\n\n"
+        "لطفاً نام خود را به فارسی وارد کنید:",
     )
-    return FIRST_NAME
+    return RegistrationStates.FIRST_NAME
 
-
-async def first_name(update: Update, context: CallbackContext):
-    name = (update.message.text or "").strip()
-    if not _is_persian_text(name):
-        await update.message.reply_text("❌ نام باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.")
-        return FIRST_NAME
-    context.user_data["first_name"] = name
-    await update.message.reply_text(
-        "📝 نام خانوادگی را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg")
-    )
-    return LAST_NAME
-
-
-async def last_name(update: Update, context: CallbackContext):
-    name = (update.message.text or "").strip()
+async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle first name input"""
+    name = update.message.text.strip()
     if not _is_persian_text(name):
         await update.message.reply_text(
-            "❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد."
+            "❌ نام باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.\n"
+            "لطفاً دوباره وارد کنید:"
         )
-        return LAST_NAME
-    context.user_data["last_name"] = name
+        return RegistrationStates.FIRST_NAME
 
-    config: Config = context.bot_data["config"]
+    context.user_data["first_name"] = name
+    await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
+    return RegistrationStates.LAST_NAME
+
+async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle last name input"""
+    name = update.message.text.strip()
+    if not _is_persian_text(name):
+        await update.message.reply_text(
+            "❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.\n"
+            "لطفاً دوباره وارد کنید:"
+        )
+        return RegistrationStates.LAST_NAME
+
+    context.user_data["last_name"] = name
     await update.message.reply_text(
-        "🏛️ استان خود را انتخاب کنید:",
+        "لطفاً استان خود را انتخاب کنید:",
         reply_markup=build_provinces_keyboard(config.provinces),
     )
-    return PROVINCE
+    return RegistrationStates.PROVINCE
 
+async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle province selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    province = query.data.replace("province:", "")
+    if province not in config.provinces:
+        await query.edit_message_text(
+            "❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:",
+            reply_markup=build_provinces_keyboard(config.provinces),
+        )
+        return RegistrationStates.PROVINCE
 
-async def province(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    province = update.callback_query.data.split(":", 1)[1]
     context.user_data["province"] = province
-
-    config: Config = context.bot_data["config"]
-    await update.callback_query.message.edit_text(
-        f"🏙️ شهر خود را انتخاب کنید (استان: {province}):",
-        reply_markup=build_cities_keyboard(config.cities_by_province.get(province, [])),
+    await query.edit_message_text(
+        f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
+        reply_markup=build_cities_keyboard(config.cities_by_province[province]),
     )
-    return CITY
+    return RegistrationStates.CITY
 
+async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle city selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    city = query.data.replace("city:", "")
+    province = context.user_data.get("province", "")
+    if not province or city not in config.cities_by_province[province]:
+        await query.edit_message_text(
+            "❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:",
+            reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+        )
+        return RegistrationStates.CITY
 
-async def city(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    city = update.callback_query.data.split(":", 1)[1]
     context.user_data["city"] = city
-
-    config: Config = context.bot_data["config"]
-    await update.callback_query.message.edit_text(
-        "🎓 مقطع تحصیلی را انتخاب کنید:",
+    await query.edit_message_text(
+        "لطفاً پایه تحصیلی خود را انتخاب کنید:",
         reply_markup=build_grades_keyboard(config.grades),
     )
-    return GRADE
+    return RegistrationStates.GRADE
 
+async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle grade selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    grade = query.data.replace("grade:", "")
+    if grade not in config.grades:
+        await query.edit_message_text(
+            "❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:",
+            reply_markup=build_grades_keyboard(config.grades),
+        )
+        return RegistrationStates.GRADE
 
-async def grade(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    grade = update.callback_query.data.split(":", 1)[1]
     context.user_data["grade"] = grade
-
-    config: Config = context.bot_data["config"]
-    await update.callback_query.message.edit_text(
-        "📚 رشته تحصیلی را انتخاب کنید:",
-        reply_markup=build_majors_keyboard(["تجربی", "ریاضی", "انسانی"]),
+    await query.edit_message_text(
+        "لطفاً رشته تحصیلی خود را انتخاب کنید:",
+        reply_markup=build_majors_keyboard(config.majors),
     )
-    return FIELD
+    return RegistrationStates.FIELD
 
+async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle field of study selection"""
+    query = update.callback_query
+    await query.answer()
+    
+    field = query.data.replace("major:", "")
+    if field not in config.majors:
+        await query.edit_message_text(
+            "❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:",
+            reply_markup=build_majors_keyboard(config.majors),
+        )
+        return RegistrationStates.FIELD
 
-async def field(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    field = update.callback_query.data.split(":", 1)[1]
     context.user_data["field"] = field
-
-    data = context.user_data
-    summary = (
-        f"📋 خلاصه اطلاعات:\n\n"
-        f"👤 {data.get('first_name')} {data.get('last_name')}\n"
-        f"🏛️ {data.get('province')} - 🏙️ {data.get('city')}\n"
-        f"🎓 {data.get('grade')} - 📚 {data.get('field')}\n\n"
-        f"✅ برای تایید ثبت‌نام، دکمه زیر را بزنید."
+    
+    # Show confirmation message with all data
+    user_data = context.user_data
+    confirmation_text = (
+        "📋 لطفاً اطلاعات وارد شده را تایید کنید:\n\n"
+        f"👤 نام: {user_data['first_name']}\n"
+        f"👤 نام خانوادگی: {user_data['last_name']}\n"
+        f"📍 استان: {user_data['province']}\n"
+        f"🏙 شهر: {user_data['city']}\n"
+        f"📚 پایه تحصیلی: {user_data['grade']}\n"
+        f"🎓 رشته تحصیلی: {user_data['field']}\n\n"
+        "آیا اطلاعات فوق صحیح است؟"
     )
-    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
-    kb = InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("✅ تایید", callback_data="confirm_reg")],
-            [InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")],
-        ]
+    
+    await query.edit_message_text(
+        confirmation_text,
+        reply_markup=build_confirmation_keyboard(),
     )
-    await update.callback_query.message.edit_text(summary, reply_markup=kb)
-    return CONFIRM
+    return RegistrationStates.CONFIRM
 
+async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle registration confirmation"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "cancel_reg":
+        await query.edit_message_text(
+            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+            reply_markup=build_register_keyboard(),
+        )
+        return ConversationHandler.END
 
-async def confirm(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
+    # Save user data
     storage: StudentStorage = context.bot_data["storage"]
-    user_id = update.effective_user.id
+    user_data = {
+        "user_id": update.effective_user.id,
+        **context.user_data
+    }
+    
+    if not storage.save_student(user_data):
+        await query.edit_message_text(
+            "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:",
+            reply_markup=build_register_keyboard(),
+        )
+        return ConversationHandler.END
 
-    student = Student(
-        user_id=user_id,
-        first_name=context.user_data.get("first_name", ""),
-        last_name=context.user_data.get("last_name", ""),
-        province=context.user_data.get("province", ""),
-        city=context.user_data.get("city", ""),
-        grade=context.user_data.get("grade", ""),
-        field=context.user_data.get("field", ""),
+    await query.edit_message_text(
+        "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
+        "اکنون می‌توانید از امکانات ربات استفاده کنید.",
     )
-    storage.upsert_student(student)
-
-    from utils.keyboards import build_main_menu_keyboard
-
-    await update.callback_query.message.edit_text(
-        Messages.get_success_message(), reply_markup=build_main_menu_keyboard()
-    )
+    
+    # Show main menu
+    from handlers.menu import send_main_menu
+    await send_main_menu(update, context)
+    
     return ConversationHandler.END
 
-
-async def cancel(update: Update, context: CallbackContext):
-    await update.callback_query.answer()
-    await update.callback_query.message.edit_text("❌ ثبت‌نام لغو شد.")
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Cancel registration"""
+    await update.message.reply_text(
+        "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+        reply_markup=build_register_keyboard(),
+    )
     return ConversationHandler.END
-
 
 def build_registration_conversation() -> ConversationHandler:
+    """Build the registration conversation handler"""
     return ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(start_registration, pattern=r"^start_registration$")
+            CallbackQueryHandler(start_registration, pattern="^start_registration$")
         ],
         states={
-            FIRST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, first_name)],
-            LAST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, last_name)],
-            PROVINCE: [CallbackQueryHandler(province, pattern=r"^province:.*")],
-            CITY: [CallbackQueryHandler(city, pattern=r"^city:.*")],
-            GRADE: [CallbackQueryHandler(grade, pattern=r"^grade:.*")],
-            FIELD: [CallbackQueryHandler(field, pattern=r"^major:.*")],
-            CONFIRM: [CallbackQueryHandler(confirm, pattern=r"^confirm_reg$")],
+            RegistrationStates.FIRST_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, first_name)
+            ],
+            RegistrationStates.LAST_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, last_name)
+            ],
+            RegistrationStates.PROVINCE: [
+                CallbackQueryHandler(province, pattern="^province:")
+            ],
+            RegistrationStates.CITY: [
+                CallbackQueryHandler(city, pattern="^city:")
+            ],
+            RegistrationStates.GRADE: [
+                CallbackQueryHandler(grade, pattern="^grade:")
+            ],
+            RegistrationStates.FIELD: [
+                CallbackQueryHandler(field, pattern="^major:")
+            ],
+            RegistrationStates.CONFIRM: [
+                CallbackQueryHandler(confirm, pattern="^(confirm|cancel)_reg$")
+            ],
         },
-        fallbacks=[
-            CallbackQueryHandler(cancel, pattern=r"^(cancel_reg|back_to_main)$")
-        ],
-        allow_reentry=True,
+        fallbacks=[CommandHandler("cancel", cancel)],
+        name="registration",
+        persistent=False,
     )
