@@ -45,5 +45,6 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")],
         [InlineKeyboardButton(text="🌐 شبکه‌های اجتماعی", callback_data="social_media")],
         [InlineKeyboardButton(text="☎️ ارتباط با ما", callback_data="contact_us")],
+        [InlineKeyboardButton(text="👤 پروفایل من", callback_data="profile")],
     ]
     return InlineKeyboardMarkup(rows)
