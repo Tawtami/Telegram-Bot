@@ -55,16 +55,21 @@ class DataManager:
         self._initialize_files()
 
     def _initialize_files(self):
-        """Initialize JSON files with empty arrays"""
-        files = [
-            self.users_file,
+        """Initialize JSON files with proper structure"""
+        # Initialize users file with 'students' wrapper as per specification
+        if not self.users_file.exists():
+            with open(self.users_file, "w", encoding="utf-8") as f:
+                json.dump({"students": []}, f, ensure_ascii=False, indent=2)
+
+        # Initialize other files with empty arrays
+        other_files = [
             self.courses_file,
             self.purchases_file,
             self.notifications_file,
             self.books_file,
         ]
 
-        for file_path in files:
+        for file_path in other_files:
             if not file_path.exists():
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump([], f, ensure_ascii=False, indent=2)
@@ -75,7 +80,15 @@ class DataManager:
             if not file_path.exists():
                 return []
             with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                # Handle users file with 'students' wrapper
+                if (
+                    file_path == self.users_file
+                    and isinstance(data, dict)
+                    and "students" in data
+                ):
+                    return data["students"]
+                return data if isinstance(data, list) else []
         except (json.JSONDecodeError, FileNotFoundError):
             return []
 
@@ -83,22 +96,30 @@ class DataManager:
         """Save JSON file safely"""
         try:
             with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                # Handle users file with 'students' wrapper
+                if file_path == self.users_file:
+                    json.dump({"students": data}, f, ensure_ascii=False, indent=2)
+                else:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Error saving {file_path}: {e}")
 
     # ============================================================================
     # USER MANAGEMENT
     # ============================================================================
-    async def save_user_data(self, user_data: Dict[str, Any]) -> bool:
+    def save_user_data(self, user_data: Dict[str, Any]) -> bool:
         """Save user registration data"""
         try:
             users_data = self._load_json(self.users_file)
-            
+
             # Check if user already exists
             existing_user = next(
-                (user for user in users_data if user.get("user_id") == user_data["user_id"]),
-                None
+                (
+                    user
+                    for user in users_data
+                    if user.get("user_id") == user_data["user_id"]
+                ),
+                None,
             )
 
             if existing_user:
@@ -115,15 +136,14 @@ class DataManager:
             print(f"Error saving user data: {e}")
             return False
 
-    async def load_user_data(self, user_id: int) -> Optional[UserData]:
+    def load_user_data(self, user_id: int) -> Optional[UserData]:
         """Load user data by user ID"""
         try:
             users_data = self._load_json(self.users_file)
             user_dict = next(
-                (user for user in users_data if user.get("user_id") == user_id),
-                None
+                (user for user in users_data if user.get("user_id") == user_id), None
             )
-            
+
             if user_dict:
                 return UserData.from_dict(user_dict)
             return None
@@ -132,7 +152,7 @@ class DataManager:
             print(f"Error loading user data: {e}")
             return None
 
-    async def user_exists(self, user_id: int) -> bool:
+    def user_exists(self, user_id: int) -> bool:
         """Check if user exists"""
         try:
             users_data = self._load_json(self.users_file)
@@ -149,7 +169,9 @@ class DataManager:
             print(f"Error loading all users: {e}")
             return []
 
-    async def update_user_courses(self, user_id: int, course_id: str, action: str = "add"):
+    async def update_user_courses(
+        self, user_id: int, course_id: str, action: str = "add"
+    ):
         """Update user's enrolled courses"""
         try:
             user = await self.load_user_data(user_id)
@@ -175,11 +197,11 @@ class DataManager:
         """Save course data"""
         try:
             courses_data = self._load_json(self.courses_file)
-            
+
             # Check if course already exists
             existing_course = next(
                 (c for c in courses_data if c.get("course_id") == course.course_id),
-                None
+                None,
             )
 
             if existing_course:
@@ -201,10 +223,9 @@ class DataManager:
         try:
             courses_data = self._load_json(self.courses_file)
             course_dict = next(
-                (c for c in courses_data if c.get("course_id") == course_id),
-                None
+                (c for c in courses_data if c.get("course_id") == course_id), None
             )
-            
+
             if course_dict:
                 return CourseData.from_dict(course_dict)
             return None
@@ -213,15 +234,17 @@ class DataManager:
             print(f"Error loading course: {e}")
             return None
 
-    async def get_all_courses(self, course_type: Optional[CourseType] = None) -> List[CourseData]:
+    async def get_all_courses(
+        self, course_type: Optional[CourseType] = None
+    ) -> List[CourseData]:
         """Get all courses, optionally filtered by type"""
         try:
             courses_data = self._load_json(self.courses_file)
             courses = [CourseData.from_dict(c) for c in courses_data]
-            
+
             if course_type:
                 courses = [c for c in courses if c.course_type == course_type]
-            
+
             return courses
 
         except Exception as e:
@@ -263,10 +286,9 @@ class DataManager:
         try:
             purchases_data = self._load_json(self.purchases_file)
             purchase_dict = next(
-                (p for p in purchases_data if p.get("purchase_id") == purchase_id),
-                None
+                (p for p in purchases_data if p.get("purchase_id") == purchase_id), None
             )
-            
+
             if purchase_dict:
                 return PurchaseData.from_dict(purchase_dict)
             return None
@@ -275,22 +297,34 @@ class DataManager:
             print(f"Error loading purchase: {e}")
             return None
 
-    async def get_user_purchases(self, user_id: int, status: Optional[PurchaseStatus] = None) -> List[PurchaseData]:
+    async def get_user_purchases(
+        self, user_id: int, status: Optional[PurchaseStatus] = None
+    ) -> List[PurchaseData]:
         """Get user's purchases"""
         try:
             purchases_data = self._load_json(self.purchases_file)
-            purchases = [PurchaseData.from_dict(p) for p in purchases_data if p.get("user_id") == user_id]
-            
+            purchases = [
+                PurchaseData.from_dict(p)
+                for p in purchases_data
+                if p.get("user_id") == user_id
+            ]
+
             if status:
                 purchases = [p for p in purchases if p.status == status]
-            
+
             return purchases
 
         except Exception as e:
             print(f"Error loading user purchases: {e}")
             return []
 
-    async def update_purchase_status(self, purchase_id: str, status: PurchaseStatus, admin_id: Optional[int] = None, notes: str = ""):
+    async def update_purchase_status(
+        self,
+        purchase_id: str,
+        status: PurchaseStatus,
+        admin_id: Optional[int] = None,
+        notes: str = "",
+    ):
         """Update purchase status"""
         try:
             purchase = await self.get_purchase(purchase_id)
@@ -300,7 +334,7 @@ class DataManager:
             purchase.status = status
             purchase.admin_id = admin_id
             purchase.admin_notes = notes
-            
+
             if status == PurchaseStatus.APPROVED:
                 purchase.approved_date = datetime.now().isoformat()
 
@@ -365,10 +399,9 @@ class DataManager:
         """Save book data"""
         try:
             books_data = self._load_json(self.books_file)
-            
+
             existing_book = next(
-                (b for b in books_data if b.get("book_id") == book.book_id),
-                None
+                (b for b in books_data if b.get("book_id") == book.book_id), None
             )
 
             if existing_book:
@@ -388,10 +421,9 @@ class DataManager:
         try:
             books_data = self._load_json(self.books_file)
             book_dict = next(
-                (b for b in books_data if b.get("book_id") == book_id),
-                None
+                (b for b in books_data if b.get("book_id") == book_id), None
             )
-            
+
             if book_dict:
                 return BookData.from_dict(book_dict)
             return None
@@ -422,8 +454,13 @@ class DataManager:
             notifications = await self.get_unread_notifications()
 
             total_size = 0
-            for file_path in [self.users_file, self.courses_file, self.purchases_file, 
-                            self.notifications_file, self.books_file]:
+            for file_path in [
+                self.users_file,
+                self.courses_file,
+                self.purchases_file,
+                self.notifications_file,
+                self.books_file,
+            ]:
                 if file_path.exists():
                     total_size += file_path.stat().st_size
 
@@ -432,7 +469,7 @@ class DataManager:
                 "total_courses": len(courses),
                 "total_purchases": len(purchases),
                 "unread_notifications": len(notifications),
-                "total_size_mb": total_size / (1024 * 1024)
+                "total_size_mb": total_size / (1024 * 1024),
             }
 
         except Exception as e:
@@ -450,7 +487,7 @@ class DataManager:
             backup_path.mkdir(exist_ok=True)
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
+
             files_to_backup = [
                 self.users_file,
                 self.courses_file,

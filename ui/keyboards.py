@@ -20,17 +20,19 @@ class Keyboards:
     # Educational data
     GRADES = ["دهم", "یازدهم", "دوازدهم"]
     MAJORS = ["ریاضی", "تجربی", "انسانی"]
-    
+
     # Import from config
     @staticmethod
     def get_provinces():
         from config import Config
+
         config = Config()
         return config.provinces
-    
+
     @staticmethod
     def get_cities_by_province():
         from config import Config
+
         config = Config()
         return config.cities_by_province
 
@@ -70,24 +72,11 @@ class Keyboards:
         cities = cities_by_province.get(province, [])
         for city in cities:
             builder.button(text=f"🏙️ {city}", callback_data=f"city:{city}")
-        
+
         # Add back button
         builder.button(text="🔙 بازگشت", callback_data="back_to_province")
         builder.adjust(2)
         return builder.as_markup()
-
-    @staticmethod
-    def get_phone_keyboard() -> ReplyKeyboardMarkup:
-        """Get phone number keyboard"""
-        keyboard = [
-            [KeyboardButton(text="📱 ارسال شماره تلفن", request_contact=True)]
-        ]
-        return ReplyKeyboardMarkup(
-            keyboard=keyboard,
-            resize_keyboard=True,
-            one_time_keyboard=True,
-            input_field_placeholder="شماره تلفن خود را وارد کنید"
-        )
 
     @staticmethod
     def get_confirmation_keyboard() -> InlineKeyboardMarkup:
@@ -108,37 +97,34 @@ class Keyboards:
         builder.button(text="📚 رشته", callback_data="edit_major")
         builder.button(text="🏛️ استان", callback_data="edit_province")
         builder.button(text="🏙️ شهر", callback_data="edit_city")
-        builder.button(text="📱 تلفن", callback_data="edit_phone")
+
         builder.button(text="🔙 بازگشت", callback_data="back_to_confirmation")
         builder.adjust(2)
         return builder.as_markup()
 
     @staticmethod
     def get_main_menu_keyboard() -> InlineKeyboardMarkup:
-        """Get main menu keyboard with improved design"""
+        """Get main menu keyboard matching specification exactly"""
         builder = InlineKeyboardBuilder()
-        
-        # Main features
+
+        # Main menu options as per specification
         builder.button(text="🎓 دوره‌های رایگان", callback_data="free_courses")
-        builder.button(text="💎 دوره‌های تخصصی", callback_data="paid_courses")
+        builder.button(text="💎 دوره‌های تخصصی (پولی)", callback_data="paid_courses")
         builder.button(text="📚 دوره‌های خریداری شده", callback_data="purchased_courses")
-        
-        # Book and social
-        builder.button(text="📖 آشنایی و تهیه کتاب انفجار خلاقیت", callback_data="book_info")
-        builder.button(text="📱 فضای مجازی", callback_data="social_media")
+        builder.button(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")
+        builder.button(text="📱 شبکه‌های اجتماعی", callback_data="social_media")
         builder.button(text="📞 ارتباط با ما", callback_data="contact_us")
-        
-        # Profile management
-        builder.button(text="👤 ویرایش پروفایل", callback_data="edit_profile")
-        
-        builder.adjust(2, 2, 1, 1)
+
+        builder.adjust(1, 1, 1, 1, 1, 1)  # Each button on its own row for clarity
         return builder.as_markup()
 
     @staticmethod
     def get_free_course_register_keyboard() -> InlineKeyboardMarkup:
         """Get free course registration keyboard"""
         builder = InlineKeyboardBuilder()
-        builder.button(text="✅ ثبت‌نام در دوره رایگان", callback_data="register_free_course")
+        builder.button(
+            text="✅ ثبت‌نام در دوره رایگان", callback_data="register_free_course"
+        )
         builder.button(text="🔙 بازگشت", callback_data="back_to_main")
         builder.adjust(1)
         return builder.as_markup()
@@ -147,9 +133,15 @@ class Keyboards:
     def get_paid_courses_keyboard() -> InlineKeyboardMarkup:
         """Get paid courses selection keyboard"""
         builder = InlineKeyboardBuilder()
-        builder.button(text="🔥 دوره فشرده ریاضی", callback_data="course:intensive_math")
-        builder.button(text="⚡ دوره تست‌زنی پیشرفته", callback_data="course:advanced_test")
-        builder.button(text="🎯 حل تست‌های دشوار", callback_data="course:difficult_tests")
+        builder.button(
+            text="🔥 دوره فشرده ریاضی", callback_data="course:intensive_math"
+        )
+        builder.button(
+            text="⚡ دوره تست‌زنی پیشرفته", callback_data="course:advanced_test"
+        )
+        builder.button(
+            text="🎯 حل تست‌های دشوار", callback_data="course:difficult_tests"
+        )
         builder.button(text="🔙 بازگشت", callback_data="back_to_main")
         builder.adjust(1)
         return builder.as_markup()
@@ -167,7 +159,9 @@ class Keyboards:
     def get_social_media_keyboard() -> InlineKeyboardMarkup:
         """Get social media links keyboard"""
         builder = InlineKeyboardBuilder()
-        builder.button(text="📸 اینستاگرام", url="https://instagram.com/ostadhatami_official")
+        builder.button(
+            text="📸 اینستاگرام", url="https://instagram.com/ostadhatami_official"
+        )
         builder.button(text="🎬 یوتوب", url="https://youtube.com/@ostadhatami")
         builder.button(text="📢 کانال تلگرام", url="https://t.me/OstadHatamiChannel")
         builder.button(text="👥 گروه تلگرام", url="https://t.me/OstadHatamiGroup")
@@ -190,18 +184,16 @@ class Keyboards:
     def get_course_keyboard(course_id: str, course_type: str) -> InlineKeyboardMarkup:
         """Get course action keyboard"""
         builder = InlineKeyboardBuilder()
-        
+
         if course_type == "free":
             builder.button(
-                text="✅ ثبت‌نام در دوره", 
-                callback_data=f"enroll_course:{course_id}"
+                text="✅ ثبت‌نام در دوره", callback_data=f"enroll_course:{course_id}"
             )
         else:
             builder.button(
-                text="💳 خرید دوره", 
-                callback_data=f"purchase_course:{course_id}"
+                text="💳 خرید دوره", callback_data=f"purchase_course:{course_id}"
             )
-        
+
         builder.button(text="🔙 بازگشت", callback_data="back_to_main")
         builder.adjust(1, 1)
         return builder.as_markup()
@@ -211,8 +203,7 @@ class Keyboards:
         """Get payment keyboard"""
         builder = InlineKeyboardBuilder()
         builder.button(
-            text="📸 ارسال فیش واریزی", 
-            callback_data=f"send_receipt:{purchase_id}"
+            text="📸 ارسال فیش واریزی", callback_data=f"send_receipt:{purchase_id}"
         )
         builder.button(text="🔙 بازگشت", callback_data="back_to_main")
         builder.adjust(1, 1)
