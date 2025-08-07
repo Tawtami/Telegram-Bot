@@ -1,4 +1,8 @@
-# Telegram bot dependencies (python-telegram-bot)
+# Core dependencies
 python-telegram-bot>=21.0.0
 python-dotenv>=1.0.0
- 
+
+# Utility packages
+aiohttp>=3.8.0
+python-json-logger>=2.0.0
+pytz  # For timezone handling
