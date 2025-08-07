@@ -32,15 +32,17 @@ async def send_main_menu(update: Update, context: CallbackContext):
             return
 
     await update.effective_chat.send_message(
-        "🏠 منوی اصلی", reply_markup=build_main_menu_keyboard(), parse_mode=ParseMode.HTML
+        "🏠 منوی اصلی",
+        reply_markup=build_main_menu_keyboard(),
+        parse_mode=ParseMode.HTML,
     )
 
 
 async def back_to_main(update: Update, context: CallbackContext):
     await update.callback_query.answer()
-    await update.callback_query.message.edit_text(
-        "🏠 منوی اصلی", reply_markup=build_main_menu_keyboard()
-    )
+    # Reuse the same gating logic used for /start
+    # Convert callback context to a chat send by calling send_main_menu
+    await send_main_menu(update, context)
 
 
 async def profile(update: Update, context: CallbackContext):
@@ -61,7 +63,9 @@ async def profile(update: Update, context: CallbackContext):
         f"دوره‌های رایگان: {len(s.free_courses)}\n"
         f"دوره‌های خریداری‌شده: {len(s.purchased_courses)}\n"
     )
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]])
+    kb = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
+    )
     await update.callback_query.answer()
     await update.callback_query.message.edit_text(text, reply_markup=kb)
 
