@@ -250,9 +250,16 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
             registration_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-        # Save user data
+                # Save user data
         data_manager.save_user_data(user_data)
-
+        
+        # Notify admin about new registration
+        await notify_admin(
+            f"🎓 **ثبت‌نام جدید**\n\n"
+            f"کاربر جدیدی در ربات ثبت‌نام کرد.",
+            user_data=user_data
+        )
+        
         await callback.message.edit_text(
             Messages.get_registration_success(user_data),
             reply_markup=Keyboards.get_main_menu_keyboard(),
@@ -314,9 +321,28 @@ async def process_first_name(message: types.Message, state: FSMContext):
         if message.from_user.is_bot:
             return
 
-        if not validator.validate_name(message.text):
+        # Enhanced validation with anti-spam
+        name = message.text.strip()
+        
+        # Basic validation
+        if len(name) < 2 or len(name) > 50:
             await message.answer(
-                "❌ نام باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
+                "❌ نام باید بین ۲ تا ۵۰ کاراکتر باشد.\nلطفاً دوباره وارد کنید:"
+            )
+            return
+            
+        # Persian characters check
+        import re
+        if not re.match(r'^[\u0600-\u06FF\s]+$', name):
+            await message.answer(
+                "❌ نام باید فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
+            )
+            return
+            
+        # Anti-spam checks
+        if re.search(r'(.)\1{3,}', name) or re.search(r'test|تست|spam|اسپم|fake|فیک|\d{3,}', name, re.IGNORECASE):
+            await message.answer(
+                "❌ نام وارد شده نامعتبر است.\nلطفاً نام واقعی خود را وارد کنید:"
             )
             return
 
@@ -343,9 +369,28 @@ async def process_last_name(message: types.Message, state: FSMContext):
         if message.from_user.is_bot:
             return
 
-        if not validator.validate_name(message.text):
+        # Enhanced validation with anti-spam
+        name = message.text.strip()
+        
+        # Basic validation
+        if len(name) < 2 or len(name) > 50:
             await message.answer(
-                "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
+                "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.\nلطفاً دوباره وارد کنید:"
+            )
+            return
+            
+        # Persian characters check
+        import re
+        if not re.match(r'^[\u0600-\u06FF\s]+$', name):
+            await message.answer(
+                "❌ نام خانوادگی باید فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
+            )
+            return
+            
+        # Anti-spam checks
+        if re.search(r'(.)\1{3,}', name) or re.search(r'test|تست|spam|اسپم|fake|فیک|\d{3,}', name, re.IGNORECASE):
+            await message.answer(
+                "❌ نام خانوادگی وارد شده نامعتبر است.\nلطفاً نام خانوادگی واقعی خود را وارد کنید:"
             )
             return
 
@@ -374,8 +419,7 @@ async def free_courses(callback: types.CallbackQuery):
         # Show free courses information directly
         message = Messages.get_free_courses_message()
         await callback.message.edit_text(
-            message, 
-            reply_markup=Keyboards.get_free_course_register_keyboard()
+            message, reply_markup=Keyboards.get_free_course_register_keyboard()
         )
 
     except Exception as e:
@@ -391,8 +435,7 @@ async def paid_courses(callback: types.CallbackQuery):
     try:
         message = Messages.get_paid_courses_message()
         await callback.message.edit_text(
-            message, 
-            reply_markup=Keyboards.get_paid_courses_keyboard()
+            message, reply_markup=Keyboards.get_paid_courses_keyboard()
         )
     except Exception as e:
         logger.error(f"Error showing paid courses: {e}")
@@ -407,8 +450,7 @@ async def book_info(callback: types.CallbackQuery):
     try:
         message = Messages.get_book_info_message()
         await callback.message.edit_text(
-            message, 
-            reply_markup=Keyboards.get_book_purchase_keyboard()
+            message, reply_markup=Keyboards.get_book_purchase_keyboard()
         )
     except Exception as e:
         logger.error(f"Error showing book info: {e}")
@@ -423,8 +465,7 @@ async def social_media(callback: types.CallbackQuery):
     try:
         message = Messages.get_social_media_message()
         await callback.message.edit_text(
-            message, 
-            reply_markup=Keyboards.get_social_media_keyboard()
+            message, reply_markup=Keyboards.get_social_media_keyboard()
         )
     except Exception as e:
         logger.error(f"Error showing social media: {e}")
@@ -439,8 +480,7 @@ async def contact_us(callback: types.CallbackQuery):
     try:
         message = Messages.get_contact_message()
         await callback.message.edit_text(
-            message, 
-            reply_markup=Keyboards.get_contact_keyboard()
+            message, reply_markup=Keyboards.get_contact_keyboard()
         )
     except Exception as e:
         logger.error(f"Error showing contact info: {e}")
@@ -470,15 +510,22 @@ async def register_free_course(callback: types.CallbackQuery):
     try:
         user_id = callback.from_user.id
         user_data = data_manager.load_user_data(user_id)
-        
+
         if user_data:
             # Add to enrolled courses
             if not user_data.enrolled_courses:
                 user_data.enrolled_courses = []
-            
-            if "دوره رایگان جمعه‌ها" not in user_data.enrolled_courses:
+
+                        if "دوره رایگان جمعه‌ها" not in user_data.enrolled_courses:
                 user_data.enrolled_courses.append("دوره رایگان جمعه‌ها")
                 data_manager.save_user_data(user_data)
+                
+                # Notify admin about free course enrollment
+                await notify_admin(
+                    f"🎓 **ثبت‌نام در دوره رایگان**\n\n"
+                    f"کاربر در دوره رایگان جمعه‌ها ثبت‌نام کرد.",
+                    user_data=user_data
+                )
                 
                 await callback.message.edit_text(
                     "🎉 **ثبت‌نام موفق!**\n\n"
@@ -486,51 +533,117 @@ async def register_free_course(callback: types.CallbackQuery):
                     "📅 **جلسه بعدی:** جمعه ساعت ۱۶:۰۰\n"
                     "📲 **لینک کلاس:** یک ساعت قبل از شروع ارسال می‌شود\n\n"
                     "🔔 **یادآوری:** پیام‌های مربوط به کلاس از طریق همین ربات ارسال خواهد شد.",
-                    reply_markup=Keyboards.get_back_keyboard()
+                    reply_markup=Keyboards.get_back_keyboard(),
                 )
             else:
                 await callback.message.edit_text(
                     "ℹ️ **قبلاً ثبت‌نام کرده‌اید**\n\n"
                     "شما قبلاً در دوره رایگان جمعه‌ها ثبت‌نام کرده‌اید.\n\n"
                     "📅 **جلسه بعدی:** جمعه ساعت ۱۶:۰۰",
-                    reply_markup=Keyboards.get_back_keyboard()
+                    reply_markup=Keyboards.get_back_keyboard(),
                 )
     except Exception as e:
         logger.error(f"Error registering for free course: {e}")
         await error_handler.handle_error(callback.message, e)
 
 
-@router.callback_query(lambda c: c.data == "paid_courses")
+@router.callback_query(lambda c: c.data.startswith("course:"))
 @maintenance_mode
 @registered_user_only
-async def paid_courses(callback: types.CallbackQuery):
-    """Show paid courses"""
+async def select_course(callback: types.CallbackQuery, state: FSMContext):
+    """Handle course selection for purchase"""
     try:
-        courses = data_manager.get_all_courses(course_type="paid")
-
-        if not courses:
-            await callback.message.edit_text(
-                "😔 در حال حاضر دوره تخصصی موجود نیست.",
-                reply_markup=Keyboards.get_back_keyboard(),
-            )
+        course_type = callback.data.split(":")[1]
+        
+        # Course details
+        courses = {
+            "intensive_math": {
+                "name": "دوره فشرده ریاضی کنکور",
+                "price": "۲,۵۰۰,۰۰۰",
+                "duration": "۳ ماه",
+                "sessions": "۲۴ جلسه"
+            },
+            "advanced_test": {
+                "name": "دوره تست‌زنی پیشرفته", 
+                "price": "۱,۸۰۰,۰۰۰",
+                "duration": "۲ ماه",
+                "sessions": "۱۶ جلسه"
+            },
+            "difficult_tests": {
+                "name": "دوره حل تست‌های دشوار",
+                "price": "۱,۲۰۰,۰۰۰", 
+                "duration": "۱.۵ ماه",
+                "sessions": "۱۲ جلسه"
+            }
+        }
+        
+        course = courses.get(course_type)
+        if not course:
             return
+            
+        # Store course info in state
+        await state.update_data(course_id=course_type, course_name=course["name"], course_price=course["price"])
+        
+        # Payment information message
+        payment_msg = f"""💎 **{course["name"]}**
 
-        message = Messages.get_paid_courses_message()
+📋 **جزئیات دوره:**
+• مدت: {course["duration"]}
+• تعداد جلسات: {course["sessions"]}
+• قیمت: {course["price"]} تومان
+
+💳 **اطلاعات پرداخت:**
+
+🏦 **بانک ملی:**
+شماره کارت: ۶۰۳۷-۹۹۱۱-۲۲۳۳-۴۴۵۵
+شماره شبا: IR۱۲۰۰۱۷۰۰۰۰۰۰۰۱۱۴۴۶۷۸۹۱
+به نام: استاد حاتمی
+
+💰 **مبلغ قابل پرداخت:** {course["price"]} تومان
+
+📋 **مراحل خرید:**
+۱. مبلغ را به شماره کارت بالا واریز کنید
+۲. عکس فیش واریزی را ارسال کنید
+۳. منتظر تایید پرداخت باشید
+۴. پس از تایید، دوره در بخش "دوره‌های خریداری شده" قرار می‌گیرد
+
+⚠️ **توجه:** لطفاً عکس فیش واریزی را واضح و خوانا ارسال کنید."""
+
         keyboard = InlineKeyboardBuilder()
-
-        for course in courses:
-            keyboard.button(
-                text=f"💎 {course.title} - {course.price:,} تومان",
-                callback_data=f"view_course:{course.course_id}",
-            )
-
-        keyboard.button(text="🔙 بازگشت", callback_data="back_to_main")
+        keyboard.button(text="📤 ارسال فیش واریزی", callback_data=f"upload_receipt:{course_type}")
+        keyboard.button(text="🔙 بازگشت", callback_data="paid_courses")
         keyboard.adjust(1)
-
-        await callback.message.edit_text(message, reply_markup=keyboard.as_markup())
-
+        
+        await callback.message.edit_text(payment_msg, reply_markup=keyboard.as_markup())
+        
     except Exception as e:
-        logger.error(f"Error showing paid courses: {e}")
+        logger.error(f"Error selecting course: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data.startswith("upload_receipt:"))
+@maintenance_mode
+@registered_user_only
+async def upload_receipt(callback: types.CallbackQuery, state: FSMContext):
+    """Start receipt upload process"""
+    try:
+        course_type = callback.data.split(":")[1]
+        await state.update_data(course_id=course_type)
+        
+        await callback.message.edit_text(
+            "📤 **ارسال فیش واریزی**\n\n"
+            "لطفاً عکس فیش واریزی خود را ارسال کنید.\n\n"
+            "⚠️ **نکات مهم:**\n"
+            "• عکس باید واضح و خوانا باشد\n"
+            "• تمام اطلاعات فیش قابل مشاهده باشد\n"
+            "• مبلغ واریزی با قیمت دوره مطابقت داشته باشد",
+            reply_markup=Keyboards.get_cancel_keyboard()
+        )
+        
+        await state.set_state(PurchaseStates.waiting_for_payment_receipt)
+        
+    except Exception as e:
+        logger.error(f"Error starting receipt upload: {e}")
         await error_handler.handle_error(callback.message, e)
 
 
@@ -564,6 +677,61 @@ async def purchased_courses(callback: types.CallbackQuery):
 
     except Exception as e:
         logger.error(f"Error showing purchased courses: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "buy_book")
+@maintenance_mode
+@registered_user_only
+async def buy_book(callback: types.CallbackQuery, state: FSMContext):
+    """Start book purchase process"""
+    try:
+        await callback.message.edit_text(
+            "📖 **خرید کتاب انفجار خلاقیت**\n\n"
+            "💰 **قیمت:** ۲۸۰,۰۰۰ تومان\n"
+            "📦 **ارسال رایگان** به سراسر کشور\n\n"
+            "💳 **اطلاعات پرداخت:**\n\n"
+            "🏦 **بانک ملی:**\n"
+            "شماره کارت: ۶۰۳۷-۹۹۱۱-۲۲۳۳-۴۴۵۵\n"
+            "شماره شبا: IR۱۲۰۰۱۷۰۰۰۰۰۰۰۱۱۴۴۶۷۸۹۱\n"
+            "به نام: استاد حاتمی\n\n"
+            "📋 **مراحل خرید:**\n"
+            "۱. مبلغ ۲۸۰,۰۰۰ تومان را واریز کنید\n"
+            "۲. آدرس پستی خود را وارد کنید\n"
+            "۳. عکس فیش واریزی را ارسال کنید\n"
+            "۴. منتظر تایید و ارسال باشید\n\n"
+            "⚠️ **توجه:** ابتدا آدرس پستی خود را وارد کنید.",
+            reply_markup=InlineKeyboardBuilder()
+            .button(text="📍 وارد کردن آدرس", callback_data="enter_address")
+            .button(text="🔙 بازگشت", callback_data="book_info")
+            .adjust(1).as_markup()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error starting book purchase: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "enter_address")
+@maintenance_mode
+@registered_user_only
+async def enter_address(callback: types.CallbackQuery, state: FSMContext):
+    """Start address entry process"""
+    try:
+        await callback.message.edit_text(
+            "📍 **وارد کردن آدرس پستی**\n\n"
+            "لطفاً آدرس کامل و دقیق خود را وارد کنید:\n\n"
+            "⚠️ **نکات مهم:**\n"
+            "• آدرس باید کامل و دقیق باشد\n"
+            "• شامل نام شهر، محله، خیابان و پلاک\n"
+            "• حداقل ۲۰ کاراکتر",
+            reply_markup=Keyboards.get_cancel_keyboard()
+        )
+        
+        await state.set_state(PurchaseStates.waiting_for_address)
+        
+    except Exception as e:
+        logger.error(f"Error starting address entry: {e}")
         await error_handler.handle_error(callback.message, e)
 
 
@@ -838,18 +1006,21 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
             purchase.payment_receipt = message.photo[-1].file_id
             data_manager.save_purchase(purchase)
 
-        # Notify admin
-        notification = NotificationData(
-            notification_id=data_manager.generate_id(),
-            notification_type=NotificationType.PAYMENT_RECEIVED,
-            user_id=message.from_user.id,
-            message=f"فیش واریزی جدید دریافت شد - مبلغ: {purchase.amount:,} تومان",
-            data={
-                "purchase_id": purchase_id,
-                "receipt_file_id": message.photo[-1].file_id,
-            },
+        # Get user data for admin notification
+        user_data = data_manager.load_user_data(message.from_user.id)
+        
+        # Notify admin with receipt photo
+        course_name = data.get("course_name", "نامشخص")
+        course_price = data.get("course_price", "نامشخص")
+        
+        await notify_admin(
+            f"💰 **فیش واریزی دریافت شد**\n\n"
+            f"دوره: {course_name}\n"
+            f"مبلغ: {course_price} تومان\n\n"
+            f"لطفاً فیش واریزی را بررسی و در صورت تایید، دوره را فعال کنید.",
+            user_data=user_data,
+            photo_file_id=message.photo[-1].file_id
         )
-        data_manager.save_notification(notification)
 
         await message.answer(
             Messages.get_purchase_success_message(),
@@ -996,6 +1167,47 @@ async def show_main_menu_after_registration(message: types.Message):
     except Exception as e:
         logger.error(f"Error showing main menu: {e}")
         await error_handler.handle_error(message, e)
+
+
+async def notify_admin(message: str, user_data: UserData = None, photo_file_id: str = None):
+    """Send notification to admin (Ostad Hatami)"""
+    try:
+        # Get admin user ID from config
+        admin_ids = config.bot.admin_user_ids
+        if not admin_ids:
+            logger.warning("No admin user IDs configured")
+            return
+            
+        primary_admin = admin_ids[0]  # استاد حاتمی (ادمین اصلی)
+        
+        # Prepare notification message
+        notification_text = f"🔔 **اطلاع‌رسانی جدید**\n\n{message}"
+        
+        if user_data:
+            notification_text += f"\n\n👤 **اطلاعات کاربر:**\n"
+            notification_text += f"• نام: {user_data.first_name} {user_data.last_name}\n"
+            notification_text += f"• مقطع: {user_data.grade}\n"
+            notification_text += f"• رشته: {user_data.major}\n"
+            notification_text += f"• شهر: {user_data.city}, {user_data.province}\n"
+            notification_text += f"• ID: {user_data.user_id}"
+        
+        # Send notification to primary admin
+        if photo_file_id:
+            await bot.send_photo(
+                chat_id=primary_admin,
+                photo=photo_file_id,
+                caption=notification_text
+            )
+        else:
+            await bot.send_message(
+                chat_id=primary_admin,
+                text=notification_text
+            )
+            
+        logger.info(f"Admin notification sent to {primary_admin}")
+        
+    except Exception as e:
+        logger.error(f"Error sending admin notification: {e}")
 
 
 async def show_main_menu_to_existing_user(message: types.Message):
