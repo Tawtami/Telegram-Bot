@@ -21,19 +21,18 @@ class Keyboards:
     GRADES = ["دهم", "یازدهم", "دوازدهم"]
     MAJORS = ["ریاضی", "تجربی", "انسانی"]
     
-    # Iranian provinces and cities (simplified for demo)
-    PROVINCES = {
-        "تهران": ["تهران", "شهریار", "ورامین", "فیروزکوه"],
-        "اصفهان": ["اصفهان", "کاشان", "نجف‌آباد", "خمینی‌شهر"],
-        "خراسان رضوی": ["مشهد", "نیشابور", "سبزوار", "تربت حیدریه"],
-        "فارس": ["شیراز", "مرودشت", "جهرم", "کازرون"],
-        "آذربایجان شرقی": ["تبریز", "مراغه", "میانه", "اهر"],
-        "مازندران": ["ساری", "بابل", "آمل", "قائم‌شهر"],
-        "گیلان": ["رشت", "لاهیجان", "انزلی", "آستارا"],
-        "خوزستان": ["اهواز", "دزفول", "ماهشهر", "ایذه"],
-        "بوشهر": ["بوشهر", "برازجان", "گناوه", "کنگان"],
-        "سایر": ["سایر شهرها"]
-    }
+    # Import from config
+    @staticmethod
+    def get_provinces():
+        from config import Config
+        config = Config()
+        return config.provinces
+    
+    @staticmethod
+    def get_cities_by_province():
+        from config import Config
+        config = Config()
+        return config.cities_by_province
 
     @staticmethod
     def get_grade_keyboard() -> InlineKeyboardMarkup:
@@ -57,7 +56,8 @@ class Keyboards:
     def get_province_keyboard() -> InlineKeyboardMarkup:
         """Get province selection keyboard"""
         builder = InlineKeyboardBuilder()
-        for province in Keyboards.PROVINCES.keys():
+        provinces = Keyboards.get_provinces()
+        for province in provinces:
             builder.button(text=f"🏛️ {province}", callback_data=f"province:{province}")
         builder.adjust(2)
         return builder.as_markup()
@@ -66,9 +66,13 @@ class Keyboards:
     def get_city_keyboard(province: str) -> InlineKeyboardMarkup:
         """Get city selection keyboard for a province"""
         builder = InlineKeyboardBuilder()
-        cities = Keyboards.PROVINCES.get(province, [])
+        cities_by_province = Keyboards.get_cities_by_province()
+        cities = cities_by_province.get(province, [])
         for city in cities:
             builder.button(text=f"🏙️ {city}", callback_data=f"city:{city}")
+        
+        # Add back button
+        builder.button(text="🔙 بازگشت", callback_data="back_to_province")
         builder.adjust(2)
         return builder.as_markup()
 
@@ -120,7 +124,7 @@ class Keyboards:
         builder.button(text="📚 دوره‌های خریداری شده", callback_data="purchased_courses")
         
         # Book and social
-        builder.button(text="📖 کتاب انفجار خلاقیت", callback_data="buy_book")
+        builder.button(text="📖 آشنایی و تهیه کتاب انفجار خلاقیت", callback_data="book_info")
         builder.button(text="📱 فضای مجازی", callback_data="social_media")
         builder.button(text="📞 ارتباط با ما", callback_data="contact_us")
         

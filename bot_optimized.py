@@ -11,6 +11,7 @@ import logging
 import os
 import asyncio
 from typing import Dict, Any
+from datetime import datetime
 from functools import wraps
 
 from aiogram import Bot, Dispatcher, types, Router
@@ -35,6 +36,7 @@ logging.basicConfig(
 # Import modules after logging is configured
 from config import Config
 from database import DataManager
+from database.models import UserData
 from database.models import (
     CourseType,
     PurchaseStatus,
@@ -123,11 +125,10 @@ class RegistrationStates(StatesGroup):
 
     waiting_for_first_name = State()
     waiting_for_last_name = State()
-    waiting_for_grade = State()
-    waiting_for_major = State()
     waiting_for_province = State()
     waiting_for_city = State()
-    waiting_for_phone = State()
+    waiting_for_grade = State()
+    waiting_for_major = State()
     confirmation = State()
     editing = State()
 
@@ -171,12 +172,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
             await show_main_menu_to_existing_user(message)
             return
 
-        # Start registration immediately for new users
-        await message.answer(
-            Messages.get_registration_start(),
-            reply_markup=Keyboards.get_grade_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_grade)
+        # Send welcome message with registration button for new users
+        welcome_msg = Messages.get_welcome_message(first_name)
+        keyboard = InlineKeyboardBuilder()
+        keyboard.button(text="📝 ثبت‌نام", callback_data="start_registration")
+        keyboard.adjust(1)
+
+        await message.answer(welcome_msg, reply_markup=keyboard.as_markup())
 
     except Exception as e:
         logger.error(f"Error in start command: {e}")
@@ -184,6 +186,22 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 
 # ==================== REGISTRATION HANDLERS ====================
+@router.callback_query(lambda c: c.data == "start_registration")
+@rate_limit
+@maintenance_mode
+async def start_registration(callback: types.CallbackQuery, state: FSMContext):
+    """Start registration process"""
+    try:
+        await callback.message.edit_text(
+            "📝 **شروع ثبت‌نام**\n\n"
+            "لطفاً **نام** خود را به فارسی وارد کنید:",
+            reply_markup=Keyboards.get_cancel_keyboard(),
+        )
+        await state.set_state(RegistrationStates.waiting_for_first_name)
+
+    except Exception as e:
+        logger.error(f"Error starting registration: {e}")
+        await error_handler.handle_error(callback.message, e)
 
 
 @router.callback_query(lambda c: c.data.startswith("grade:"))
@@ -215,11 +233,28 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
         major = callback.data.split(":")[1]
         await state.update_data(major=major)
 
-        await callback.message.edit_text(
-            "🏛️ **انتخاب استان**\n\nلطفاً استان خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_province_keyboard(),
+        # Registration completed - show confirmation
+        data = await state.get_data()
+        user_data = UserData(
+            user_id=callback.from_user.id,
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            grade=data['grade'],
+            major=major,
+            province=data['province'],
+            city=data['city'],
+            phone="",  # Will be collected later if needed
+            registration_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        await state.set_state(RegistrationStates.waiting_for_province)
+        
+        # Save user data
+        data_manager.save_user_data(user_data)
+        
+        await callback.message.edit_text(
+            Messages.get_registration_success(user_data),
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
+        await state.clear()
 
     except Exception as e:
         logger.error(f"Error processing major: {e}")
@@ -256,10 +291,10 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(city=city)
 
         await callback.message.edit_text(
-            "📝 **نام**\n\nلطفاً نام خود را به فارسی وارد کنید:",
-            reply_markup=Keyboards.get_back_keyboard(),
+            "🎓 **انتخاب مقطع تحصیلی**\n\nلطفاً مقطع تحصیلی خود را انتخاب کنید:",
+            reply_markup=Keyboards.get_grade_keyboard(),
         )
-        await state.set_state(RegistrationStates.waiting_for_first_name)
+        await state.set_state(RegistrationStates.waiting_for_grade)
 
     except Exception as e:
         logger.error(f"Error processing city: {e}")
@@ -314,10 +349,10 @@ async def process_last_name(message: types.Message, state: FSMContext):
         await state.update_data(last_name=message.text.strip())
 
         await message.answer(
-            "📱 **شماره تلفن**\n\nلطفاً شماره تلفن خود را وارد کنید:",
-            reply_markup=Keyboards.get_phone_keyboard(),
+            "🏛️ **انتخاب استان**\n\nلطفاً استان خود را انتخاب کنید:",
+            reply_markup=Keyboards.get_province_keyboard(),
         )
-        await state.set_state(RegistrationStates.waiting_for_phone)
+        await state.set_state(RegistrationStates.waiting_for_province)
 
     except Exception as e:
         logger.error(f"Error processing last name: {e}")
