@@ -10,7 +10,7 @@ import logging
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict, deque
 from dataclasses import dataclass
-from config import config
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -96,8 +96,9 @@ class RateLimiter:
     """Enhanced rate limiter with multiple strategies and monitoring"""
 
     def __init__(self, default_config: Optional[RateLimitConfig] = None):
+        config_instance = Config()
         self.default_config = default_config or RateLimitConfig(
-            max_requests=config.performance.max_requests_per_minute, window_seconds=60
+            max_requests=config_instance.performance.max_requests_per_minute, window_seconds=60
         )
         self.limits: Dict[str, RateLimitEntry] = {}
         self.stats = {

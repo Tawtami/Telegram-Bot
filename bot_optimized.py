@@ -45,12 +45,17 @@ from database.models import (
 from utils import Validator, SimpleCache, RateLimiter, BotErrorHandler
 from ui.keyboards import Keyboards
 from ui.messages import Messages
-from core.decorators import rate_limit, maintenance_mode, admin_only, registered_user_only
+from core.decorators import (
+    rate_limit,
+    maintenance_mode,
+    admin_only,
+    registered_user_only,
+)
 
 # Initialize config
 try:
     config = Config()
-    
+
     # Reconfigure logging with config settings
     logging.getLogger().handlers.clear()
     logging.basicConfig(
@@ -84,10 +89,19 @@ if not BOT_TOKEN:
 try:
     data_manager = DataManager()
     cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
-    rate_limiter = RateLimiter(
-        max_requests=config.performance.max_requests_per_minute, 
+    
+    # Initialize rate limiter with proper config
+    from utils.rate_limiter import RateLimitConfig
+    rate_limit_config = RateLimitConfig(
+        max_requests=config.performance.max_requests_per_minute,
         window_seconds=60
     )
+    rate_limiter = RateLimiter(default_config=rate_limit_config)
+    
+    # Set rate limiter in decorators
+    from core.decorators import set_rate_limiter
+    set_rate_limiter(rate_limiter)
+    
     error_handler = BotErrorHandler()
     validator = Validator()
 except Exception as e:
@@ -99,9 +113,11 @@ bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
 storage = MemoryStorage()
 dispatcher = Dispatcher(storage=storage)
 
+
 # FSM States
 class RegistrationStates(StatesGroup):
     """Registration process states"""
+
     waiting_for_first_name = State()
     waiting_for_last_name = State()
     waiting_for_grade = State()
@@ -115,6 +131,7 @@ class RegistrationStates(StatesGroup):
 
 class PurchaseStates(StatesGroup):
     """Purchase process states"""
+
     waiting_for_payment_receipt = State()
     waiting_for_address = State()
     waiting_for_postal_code = State()
@@ -123,6 +140,7 @@ class PurchaseStates(StatesGroup):
 
 class CourseEnrollmentStates(StatesGroup):
     """Course enrollment states"""
+
     waiting_for_confirmation = State()
 
 
@@ -139,20 +157,20 @@ async def cmd_start(message: types.Message, state: FSMContext):
     try:
         user_id = message.from_user.id
         first_name = message.from_user.first_name or "کاربر"
-        
+
         # Check if user is already registered
         existing_user = data_manager.load_user_data(user_id)
         if existing_user:
             await show_main_menu_after_registration(message)
             return
-        
+
         # Send welcome message
         welcome_msg = Messages.get_welcome_message(first_name)
         keyboard = InlineKeyboardBuilder()
         keyboard.button(text="📝 ثبت‌نام", callback_data="start_registration")
-        
+
         await message.answer(welcome_msg, reply_markup=keyboard.as_markup())
-        
+
     except Exception as e:
         logger.error(f"Error in start command: {e}")
         await error_handler.handle_error(message, e)
@@ -167,10 +185,10 @@ async def start_registration(callback: types.CallbackQuery, state: FSMContext):
     try:
         await callback.message.edit_text(
             Messages.get_registration_start(),
-            reply_markup=Keyboards.get_grade_keyboard()
+            reply_markup=Keyboards.get_grade_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_grade)
-        
+
     except Exception as e:
         logger.error(f"Error starting registration: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -184,13 +202,13 @@ async def process_grade(callback: types.CallbackQuery, state: FSMContext):
     try:
         grade = callback.data.split(":")[1]
         await state.update_data(grade=grade)
-        
+
         await callback.message.edit_text(
             "🎓 **انتخاب رشته تحصیلی**\n\nلطفاً رشته تحصیلی خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_major_keyboard()
+            reply_markup=Keyboards.get_major_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_major)
-        
+
     except Exception as e:
         logger.error(f"Error processing grade: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -204,13 +222,13 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
     try:
         major = callback.data.split(":")[1]
         await state.update_data(major=major)
-        
+
         await callback.message.edit_text(
             "🏛️ **انتخاب استان**\n\nلطفاً استان خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_province_keyboard()
+            reply_markup=Keyboards.get_province_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_province)
-        
+
     except Exception as e:
         logger.error(f"Error processing major: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -224,13 +242,13 @@ async def process_province(callback: types.CallbackQuery, state: FSMContext):
     try:
         province = callback.data.split(":")[1]
         await state.update_data(province=province)
-        
+
         await callback.message.edit_text(
             f"🏙️ **انتخاب شهر**\n\nاستان: {province}\n\nلطفاً شهر خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_city_keyboard(province)
+            reply_markup=Keyboards.get_city_keyboard(province),
         )
         await state.set_state(RegistrationStates.waiting_for_city)
-        
+
     except Exception as e:
         logger.error(f"Error processing province: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -244,13 +262,13 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
     try:
         city = callback.data.split(":")[1]
         await state.update_data(city=city)
-        
+
         await callback.message.edit_text(
             "📝 **نام**\n\nلطفاً نام خود را به فارسی وارد کنید:",
-            reply_markup=Keyboards.get_back_keyboard()
+            reply_markup=Keyboards.get_back_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_first_name)
-        
+
     except Exception as e:
         logger.error(f"Error processing city: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -267,15 +285,15 @@ async def process_first_name(message: types.Message, state: FSMContext):
                 "❌ نام باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-        
+
         await state.update_data(first_name=message.text.strip())
-        
+
         await message.answer(
             "📝 **نام خانوادگی**\n\nلطفاً نام خانوادگی خود را به فارسی وارد کنید:",
-            reply_markup=Keyboards.get_back_keyboard()
+            reply_markup=Keyboards.get_back_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_last_name)
-        
+
     except Exception as e:
         logger.error(f"Error processing first name: {e}")
         await error_handler.handle_error(message, e)
@@ -292,15 +310,15 @@ async def process_last_name(message: types.Message, state: FSMContext):
                 "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-        
+
         await state.update_data(last_name=message.text.strip())
-        
+
         await message.answer(
             "📱 **شماره تلفن**\n\nلطفاً شماره تلفن خود را وارد کنید:",
-            reply_markup=Keyboards.get_phone_keyboard()
+            reply_markup=Keyboards.get_phone_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_phone)
-        
+
     except Exception as e:
         logger.error(f"Error processing last name: {e}")
         await error_handler.handle_error(message, e)
@@ -313,31 +331,31 @@ async def process_phone(message: types.Message, state: FSMContext):
     """Process phone number input"""
     try:
         phone = message.text.strip()
-        
+
         # Handle contact sharing
         if message.contact and message.contact.user_id == message.from_user.id:
             phone = message.contact.phone_number
-        
+
         if not validator.validate_phone(phone):
             await message.answer(
                 "❌ شماره تلفن نامعتبر است.\nلطفاً شماره معتبر وارد کنید:",
-                reply_markup=Keyboards.get_phone_keyboard()
+                reply_markup=Keyboards.get_phone_keyboard(),
             )
             return
-        
+
         await state.update_data(phone=phone)
-        
+
         # Show confirmation
         data = await state.get_data()
         summary = Messages.get_profile_summary(data)
-        
+
         await message.answer(
             summary,
             reply_markup=Keyboards.get_confirmation_keyboard(),
-            reply_to_message_id=message.message_id
+            reply_to_message_id=message.message_id,
         )
         await state.set_state(RegistrationStates.confirmation)
-        
+
     except Exception as e:
         logger.error(f"Error processing phone: {e}")
         await error_handler.handle_error(message, e)
@@ -350,10 +368,10 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
     """Confirm registration"""
     try:
         from database.models import UserData, UserStatus
-        
+
         data = await state.get_data()
         user_id = callback.from_user.id
-        
+
         # Create user data
         user_data = UserData(
             user_id=user_id,
@@ -364,18 +382,18 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
             province=data["province"],
             city=data["city"],
             phone=data["phone"],
-            status=UserStatus.ACTIVE
+            status=UserStatus.ACTIVE,
         )
-        
+
         # Save user data
         data_manager.save_user_data(user_data)
-        
+
         await callback.message.edit_text(
             Messages.get_success_message(),
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
         await state.clear()
-        
+
     except Exception as e:
         logger.error(f"Error confirming registration: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -389,28 +407,28 @@ async def free_courses(callback: types.CallbackQuery):
     """Show free courses"""
     try:
         courses = data_manager.get_all_courses(course_type="free")
-        
+
         if not courses:
             await callback.message.edit_text(
                 "😔 در حال حاضر دوره رایگانی موجود نیست.",
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         message = Messages.get_free_courses_message()
         keyboard = InlineKeyboardBuilder()
-        
+
         for course in courses:
             keyboard.button(
                 text=f"📚 {course.title}",
-                callback_data=f"view_course:{course.course_id}"
+                callback_data=f"view_course:{course.course_id}",
             )
-        
+
         keyboard.button(text="🔙 بازگشت", callback_data="back_to_main")
         keyboard.adjust(1)
-        
+
         await callback.message.edit_text(message, reply_markup=keyboard.as_markup())
-        
+
     except Exception as e:
         logger.error(f"Error showing free courses: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -423,28 +441,28 @@ async def paid_courses(callback: types.CallbackQuery):
     """Show paid courses"""
     try:
         courses = data_manager.get_all_courses(course_type="paid")
-        
+
         if not courses:
             await callback.message.edit_text(
                 "😔 در حال حاضر دوره تخصصی موجود نیست.",
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         message = Messages.get_paid_courses_message()
         keyboard = InlineKeyboardBuilder()
-        
+
         for course in courses:
             keyboard.button(
                 text=f"💎 {course.title} - {course.price:,} تومان",
-                callback_data=f"view_course:{course.course_id}"
+                callback_data=f"view_course:{course.course_id}",
             )
-        
+
         keyboard.button(text="🔙 بازگشت", callback_data="back_to_main")
         keyboard.adjust(1)
-        
+
         await callback.message.edit_text(message, reply_markup=keyboard.as_markup())
-        
+
     except Exception as e:
         logger.error(f"Error showing paid courses: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -458,26 +476,26 @@ async def purchased_courses(callback: types.CallbackQuery):
     try:
         user_id = callback.from_user.id
         user_data = data_manager.load_user_data(user_id)
-        
+
         if not user_data or not user_data.purchased_courses:
             await callback.message.edit_text(
                 Messages.get_no_purchases_message(),
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         message = "📚 **دوره‌های خریداری شده شما:**\n\n"
         keyboard = InlineKeyboardBuilder()
-        
+
         for course_id in user_data.purchased_courses:
             course = data_manager.get_course(course_id)
             if course:
                 message += f"✅ {course.title}\n"
-        
+
         keyboard.button(text="🔙 بازگشت", callback_data="back_to_main")
-        
+
         await callback.message.edit_text(message, reply_markup=keyboard.as_markup())
-        
+
     except Exception as e:
         logger.error(f"Error showing purchased courses: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -490,22 +508,21 @@ async def buy_book(callback: types.CallbackQuery):
     """Show book information"""
     try:
         books = data_manager.get_all_books()
-        
+
         if not books:
             await callback.message.edit_text(
                 "😔 در حال حاضر کتابی موجود نیست.",
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         book = books[0]  # Assuming one book for now
         message = Messages.get_book_info_message()
-        
+
         await callback.message.edit_text(
-            message,
-            reply_markup=Keyboards.get_book_purchase_keyboard()
+            message, reply_markup=Keyboards.get_book_purchase_keyboard()
         )
-        
+
     except Exception as e:
         logger.error(f"Error showing book: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -517,12 +534,11 @@ async def social_media(callback: types.CallbackQuery):
     """Show social media links"""
     try:
         message = Messages.get_social_media_message()
-        
+
         await callback.message.edit_text(
-            message,
-            reply_markup=Keyboards.get_social_media_keyboard()
+            message, reply_markup=Keyboards.get_social_media_keyboard()
         )
-        
+
     except Exception as e:
         logger.error(f"Error showing social media: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -534,12 +550,11 @@ async def contact_us(callback: types.CallbackQuery):
     """Show contact information"""
     try:
         message = Messages.get_contact_message()
-        
+
         await callback.message.edit_text(
-            message,
-            reply_markup=Keyboards.get_back_keyboard()
+            message, reply_markup=Keyboards.get_back_keyboard()
         )
-        
+
     except Exception as e:
         logger.error(f"Error showing contact info: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -552,9 +567,9 @@ async def back_to_main(callback: types.CallbackQuery):
     try:
         await callback.message.edit_text(
             "🏠 **منوی اصلی**\n\nلطفاً گزینه مورد نظر خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
-        
+
     except Exception as e:
         logger.error(f"Error returning to main menu: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -569,55 +584,54 @@ async def enroll_course(callback: types.CallbackQuery, state: FSMContext):
     try:
         course_id = callback.data.split(":")[1]
         user_id = callback.from_user.id
-        
+
         # Get course
         course = data_manager.get_course(course_id)
         if not course:
             await callback.message.edit_text(
-                "❌ دوره مورد نظر یافت نشد.",
-                reply_markup=Keyboards.get_back_keyboard()
+                "❌ دوره مورد نظر یافت نشد.", reply_markup=Keyboards.get_back_keyboard()
             )
             return
-        
+
         if not course.can_enroll():
             await callback.message.edit_text(
                 "❌ این دوره در حال حاضر قابل ثبت‌نام نیست.",
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         # Check if already enrolled
         user_data = data_manager.load_user_data(user_id)
         if course_id in user_data.enrolled_courses:
             await callback.message.edit_text(
                 "✅ شما قبلاً در این دوره ثبت‌نام کرده‌اید.",
-                reply_markup=Keyboards.get_back_keyboard()
+                reply_markup=Keyboards.get_back_keyboard(),
             )
             return
-        
+
         # Enroll user
         user_data.enrolled_courses.append(course_id)
         data_manager.save_user_data(user_data)
-        
+
         # Update course
         course.current_students += 1
         data_manager.save_course(course)
-        
+
         await callback.message.edit_text(
             f"✅ **ثبت‌نام موفق!**\n\n📚 **دوره:** {course.title}\n\n📅 اطلاعات کلاس برای شما ارسال خواهد شد.",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
-        
+
         # Notify admin
         notification = NotificationData(
             notification_id=data_manager.generate_id(),
             notification_type=NotificationType.COURSE_PURCHASE,
             user_id=user_id,
             message=f"ثبت‌نام جدید در دوره رایگان: {course.title}",
-            data={"course_id": course_id, "course_type": "free"}
+            data={"course_id": course_id, "course_type": "free"},
         )
         data_manager.save_notification(notification)
-        
+
     except Exception as e:
         logger.error(f"Error enrolling in course: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -631,16 +645,15 @@ async def purchase_course(callback: types.CallbackQuery, state: FSMContext):
     try:
         course_id = callback.data.split(":")[1]
         user_id = callback.from_user.id
-        
+
         # Get course
         course = data_manager.get_course(course_id)
         if not course:
             await callback.message.edit_text(
-                "❌ دوره مورد نظر یافت نشد.",
-                reply_markup=Keyboards.get_back_keyboard()
+                "❌ دوره مورد نظر یافت نشد.", reply_markup=Keyboards.get_back_keyboard()
             )
             return
-        
+
         # Create purchase record
         purchase = PurchaseData(
             purchase_id=data_manager.generate_id(),
@@ -648,18 +661,17 @@ async def purchase_course(callback: types.CallbackQuery, state: FSMContext):
             item_type="course",
             item_id=course_id,
             amount=course.price,
-            status=PurchaseStatus.PENDING
+            status=PurchaseStatus.PENDING,
         )
         data_manager.save_purchase(purchase)
-        
+
         # Show payment info
         message = Messages.get_payment_info_message(course.price, course.title)
-        
+
         await callback.message.edit_text(
-            message,
-            reply_markup=Keyboards.get_payment_keyboard(purchase.purchase_id)
+            message, reply_markup=Keyboards.get_payment_keyboard(purchase.purchase_id)
         )
-        
+
     except Exception as e:
         logger.error(f"Error purchasing course: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -674,16 +686,15 @@ async def purchase_book(callback: types.CallbackQuery, state: FSMContext):
     try:
         user_id = callback.from_user.id
         books = data_manager.get_all_books()
-        
+
         if not books:
             await callback.message.edit_text(
-                "❌ کتاب مورد نظر یافت نشد.",
-                reply_markup=Keyboards.get_back_keyboard()
+                "❌ کتاب مورد نظر یافت نشد.", reply_markup=Keyboards.get_back_keyboard()
             )
             return
-        
+
         book = books[0]
-        
+
         # Create purchase record
         purchase = PurchaseData(
             purchase_id=data_manager.generate_id(),
@@ -691,19 +702,19 @@ async def purchase_book(callback: types.CallbackQuery, state: FSMContext):
             item_type="book",
             item_id=book.book_id,
             amount=book.price,
-            status=PurchaseStatus.PENDING
+            status=PurchaseStatus.PENDING,
         )
         data_manager.save_purchase(purchase)
-        
+
         await state.update_data(purchase_id=purchase.purchase_id)
-        
+
         # Request address
         await callback.message.edit_text(
             Messages.get_address_request_message(),
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
         await state.set_state(PurchaseStates.waiting_for_address)
-        
+
     except Exception as e:
         logger.error(f"Error purchasing book: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -718,13 +729,13 @@ async def send_receipt(callback: types.CallbackQuery, state: FSMContext):
     try:
         purchase_id = callback.data.split(":")[1]
         await state.update_data(purchase_id=purchase_id)
-        
+
         await callback.message.edit_text(
             "📸 **ارسال فیش واریزی**\n\nلطفاً عکس فیش واریزی خود را ارسال کنید:",
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
         await state.set_state(PurchaseStates.waiting_for_payment_receipt)
-        
+
     except Exception as e:
         logger.error(f"Error requesting receipt: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -739,40 +750,43 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         if not message.photo:
             await message.answer(
                 "❌ لطفاً عکس فیش واریزی را ارسال کنید.",
-                reply_markup=Keyboards.get_cancel_keyboard()
+                reply_markup=Keyboards.get_cancel_keyboard(),
             )
             return
-        
+
         data = await state.get_data()
         purchase_id = data.get("purchase_id")
-        
+
         if not purchase_id:
             await message.answer("❌ خطا در پردازش. لطفاً دوباره تلاش کنید.")
             await state.clear()
             return
-        
+
         # Update purchase with receipt
         purchase = data_manager.get_purchase(purchase_id)
         if purchase:
             purchase.payment_receipt = message.photo[-1].file_id
             data_manager.save_purchase(purchase)
-        
+
         # Notify admin
         notification = NotificationData(
             notification_id=data_manager.generate_id(),
             notification_type=NotificationType.PAYMENT_RECEIVED,
             user_id=message.from_user.id,
             message=f"فیش واریزی جدید دریافت شد - مبلغ: {purchase.amount:,} تومان",
-            data={"purchase_id": purchase_id, "receipt_file_id": message.photo[-1].file_id}
+            data={
+                "purchase_id": purchase_id,
+                "receipt_file_id": message.photo[-1].file_id,
+            },
         )
         data_manager.save_notification(notification)
-        
+
         await message.answer(
             Messages.get_purchase_success_message(),
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
         await state.clear()
-        
+
     except Exception as e:
         logger.error(f"Error processing payment receipt: {e}")
         await error_handler.handle_error(message, e)
@@ -790,15 +804,15 @@ async def process_address(message: types.Message, state: FSMContext):
                 "❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر)."
             )
             return
-        
+
         await state.update_data(address=message.text.strip())
-        
+
         await message.answer(
             Messages.get_postal_code_request_message(),
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
         await state.set_state(PurchaseStates.waiting_for_postal_code)
-        
+
     except Exception as e:
         logger.error(f"Error processing address: {e}")
         await error_handler.handle_error(message, e)
@@ -811,21 +825,19 @@ async def process_postal_code(message: types.Message, state: FSMContext):
     """Process postal code input"""
     try:
         postal_code = message.text.strip()
-        
+
         if not postal_code.isdigit() or len(postal_code) != 10:
-            await message.answer(
-                "❌ کد پستی باید ۱۰ رقم باشد. لطفاً دوباره وارد کنید:"
-            )
+            await message.answer("❌ کد پستی باید ۱۰ رقم باشد. لطفاً دوباره وارد کنید:")
             return
-        
+
         await state.update_data(postal_code=postal_code)
-        
+
         await message.answer(
             Messages.get_description_request_message(),
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
         await state.set_state(PurchaseStates.waiting_for_description)
-        
+
     except Exception as e:
         logger.error(f"Error processing postal code: {e}")
         await error_handler.handle_error(message, e)
@@ -839,7 +851,7 @@ async def process_description(message: types.Message, state: FSMContext):
     try:
         data = await state.get_data()
         description = message.text.strip() if message.text else ""
-        
+
         # Update purchase with address info
         purchase_id = data.get("purchase_id")
         if purchase_id:
@@ -847,20 +859,19 @@ async def process_description(message: types.Message, state: FSMContext):
             if purchase:
                 purchase.admin_notes = f"آدرس: {data.get('address', '')}\nکد پستی: {data.get('postal_code', '')}\nتوضیحات: {description}"
                 data_manager.save_purchase(purchase)
-        
+
         # Show payment info
         books = data_manager.get_all_books()
         if books:
             book = books[0]
             message_text = Messages.get_payment_info_message(book.price, book.title)
-            
+
             await message.answer(
-                message_text,
-                reply_markup=Keyboards.get_payment_keyboard(purchase_id)
+                message_text, reply_markup=Keyboards.get_payment_keyboard(purchase_id)
             )
-        
+
         await state.clear()
-        
+
     except Exception as e:
         logger.error(f"Error processing description: {e}")
         await error_handler.handle_error(message, e)
@@ -873,7 +884,7 @@ async def view_stats(message: types.Message):
     """View bot statistics (admin only)"""
     try:
         stats = data_manager.get_database_stats()
-        
+
         stats_message = f"""📊 **آمار ربات**
 
 👥 **کاربران:** {stats.get('total_users', 0)}
@@ -883,9 +894,9 @@ async def view_stats(message: types.Message):
 📖 **کتاب‌ها:** {stats.get('total_books', 0)}
 
 🕒 **آخرین به‌روزرسانی:** {stats.get('last_updated', 'نامشخص')}"""
-        
+
         await message.answer(stats_message)
-        
+
     except Exception as e:
         logger.error(f"Error viewing stats: {e}")
         await error_handler.handle_error(message, e)
@@ -898,7 +909,7 @@ async def show_main_menu_after_registration(message: types.Message):
         await message.answer(
             "🎉 **ثبت‌نام شما با موفقیت انجام شد!**\n\n"
             "حالا می‌توانید از خدمات ربات استفاده کنید:",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
     except Exception as e:
         logger.error(f"Error showing main menu: {e}")
@@ -915,7 +926,7 @@ async def handle_unknown_message(message: types.Message):
         await message.answer(
             "❓ متوجه پیام شما نشدم.\n\n"
             "لطفاً از منوی اصلی استفاده کنید یا دستور /start را بزنید.",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
     except Exception as e:
         logger.error(f"Error handling unknown message: {e}")
@@ -927,13 +938,13 @@ async def main():
     """Main function"""
     try:
         logger.info("🚀 Starting Ostad Hatami Bot...")
-        
+
         # Include routers
         dispatcher.include_router(router)
-        
+
         # Start polling
         await dispatcher.start_polling(bot)
-        
+
     except Exception as e:
         logger.error(f"💥 Fatal error during startup: {e}")
         raise

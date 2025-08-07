@@ -7,31 +7,39 @@ Decorators for Ostad Hatami Bot
 import logging
 import asyncio
 from functools import wraps
-from typing import Union, Callable, Any
+from typing import Union, Callable, Any, Optional
 from aiogram.types import Message, CallbackQuery
 
 from config import Config
-from utils import RateLimiter, BotErrorHandler
+from utils import BotErrorHandler
 
 logger = logging.getLogger(__name__)
 
-# Initialize components
+# Initialize components (without RateLimiter to avoid conflicts)
 config = Config()
-rate_limiter = RateLimiter(
-    max_requests=config.performance.max_requests_per_minute,
-    window_seconds=60
-)
 error_handler = BotErrorHandler()
 
+# Global rate limiter instance (will be set by main bot)
+_rate_limiter = None
+
+def set_rate_limiter(rate_limiter):
+    """Set the global rate limiter instance"""
+    global _rate_limiter
+    _rate_limiter = rate_limiter
 
 def rate_limit(func: Callable) -> Callable:
     """Rate limiting decorator"""
     @wraps(func)
     async def wrapper(message_or_callback: Union[Message, CallbackQuery], *args, **kwargs):
         try:
+            if _rate_limiter is None:
+                # If rate limiter is not set, allow the request
+                logger.warning("Rate limiter not initialized, allowing request")
+                return await func(message_or_callback, *args, **kwargs)
+            
             user_id = message_or_callback.from_user.id
             
-            if not rate_limiter.is_allowed(user_id):
+            if not await _rate_limiter.is_allowed(str(user_id)):
                 await error_handler.handle_rate_limit(message_or_callback)
                 return
             
@@ -102,7 +110,7 @@ def registered_user_only(func: Callable) -> Callable:
     @wraps(func)
     async def wrapper(message_or_callback: Union[Message, CallbackQuery], *args, **kwargs):
         try:
-            from database import DataManager
+            from database import DataManager # Local import to avoid circular dependency
             
             user_id = message_or_callback.from_user.id
             data_manager = DataManager()
