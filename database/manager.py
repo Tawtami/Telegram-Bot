@@ -107,7 +107,7 @@ class DataManager:
     # ============================================================================
     # USER MANAGEMENT
     # ============================================================================
-    def save_user_data(self, user_data: Dict[str, Any]) -> bool:
+    async def save_user_data(self, user_data: Dict[str, Any]) -> bool:
         """Save user registration data"""
         try:
             users_data = self._load_json(self.users_file)
@@ -136,7 +136,7 @@ class DataManager:
             print(f"Error saving user data: {e}")
             return False
 
-    def load_user_data(self, user_id: int) -> Optional[UserData]:
+    async def load_user_data(self, user_id: int) -> Optional[UserData]:
         """Load user data by user ID"""
         try:
             users_data = self._load_json(self.users_file)

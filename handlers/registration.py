@@ -53,7 +53,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
         first_name = message.from_user.first_name or "کاربر"
 
         # Check if user is already registered
-        existing_user = data_manager.load_user_data(user_id)
+        existing_user = await data_manager.load_user_data(user_id)
         if existing_user:
             await show_main_menu_after_registration(message)
             return
@@ -245,7 +245,7 @@ async def confirm_registration(callback: types.CallbackQuery, state: FSMContext)
         )
 
         # Save user data
-        data_manager.save_user_data(user_data.to_dict())
+        await data_manager.save_user_data(user_data.to_dict())
 
         await callback.message.edit_text(
             Messages.get_success_message(),
