@@ -129,8 +129,6 @@ class RegistrationStates(StatesGroup):
     waiting_for_city = State()
     waiting_for_grade = State()
     waiting_for_major = State()
-    confirmation = State()
-    editing = State()
 
 
 class PurchaseStates(StatesGroup):
@@ -193,8 +191,7 @@ async def start_registration(callback: types.CallbackQuery, state: FSMContext):
     """Start registration process"""
     try:
         await callback.message.edit_text(
-            "📝 **شروع ثبت‌نام**\n\n"
-            "لطفاً **نام** خود را به فارسی وارد کنید:",
+            "📝 **شروع ثبت‌نام**\n\n" "لطفاً **نام** خود را به فارسی وارد کنید:",
             reply_markup=Keyboards.get_cancel_keyboard(),
         )
         await state.set_state(RegistrationStates.waiting_for_first_name)
@@ -237,19 +234,19 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
         data = await state.get_data()
         user_data = UserData(
             user_id=callback.from_user.id,
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            grade=data['grade'],
+            first_name=data["first_name"],
+            last_name=data["last_name"],
+            grade=data["grade"],
             major=major,
-            province=data['province'],
-            city=data['city'],
+            province=data["province"],
+            city=data["city"],
             phone="",  # Will be collected later if needed
             registration_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
-        
+
         # Save user data
         data_manager.save_user_data(user_data)
-        
+
         await callback.message.edit_text(
             Messages.get_registration_success(user_data),
             reply_markup=Keyboards.get_main_menu_keyboard(),
@@ -359,83 +356,10 @@ async def process_last_name(message: types.Message, state: FSMContext):
         await error_handler.handle_error(message, e)
 
 
-@router.message(StateFilter(RegistrationStates.waiting_for_phone))
-@rate_limit
-@maintenance_mode
-async def process_phone(message: types.Message, state: FSMContext):
-    """Process phone number input"""
-    try:
-        # Prevent bot from responding to its own messages
-        if message.from_user.is_bot:
-            return
-
-        phone = message.text.strip()
-
-        # Handle contact sharing
-        if message.contact and message.contact.user_id == message.from_user.id:
-            phone = message.contact.phone_number
-
-        if not validator.validate_phone(phone):
-            await message.answer(
-                "❌ شماره تلفن نامعتبر است.\nلطفاً شماره معتبر وارد کنید:",
-                reply_markup=Keyboards.get_phone_keyboard(),
-            )
-            return
-
-        await state.update_data(phone=phone)
-
-        # Show confirmation
-        data = await state.get_data()
-        summary = Messages.get_profile_summary(data)
-
-        await message.answer(
-            summary,
-            reply_markup=Keyboards.get_confirmation_keyboard(),
-            reply_to_message_id=message.message_id,
-        )
-        await state.set_state(RegistrationStates.confirmation)
-
-    except Exception as e:
-        logger.error(f"Error processing phone: {e}")
-        await error_handler.handle_error(message, e)
 
 
-@router.callback_query(lambda c: c.data == "confirm_registration")
-@rate_limit
-@maintenance_mode
-async def confirm_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Confirm registration"""
-    try:
-        from database.models import UserData, UserStatus
 
-        data = await state.get_data()
-        user_id = callback.from_user.id
 
-        # Create user data
-        user_data = UserData(
-            user_id=user_id,
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            grade=data["grade"],
-            major=data["major"],
-            province=data["province"],
-            city=data["city"],
-            phone=data["phone"],
-            status=UserStatus.ACTIVE,
-        )
-
-        # Save user data
-        data_manager.save_user_data(user_data)
-
-        await callback.message.edit_text(
-            Messages.get_success_message(),
-            reply_markup=Keyboards.get_main_menu_keyboard(),
-        )
-        await state.clear()
-
-    except Exception as e:
-        logger.error(f"Error confirming registration: {e}")
-        await error_handler.handle_error(callback.message, e)
 
 
 # ==================== MAIN MENU HANDLERS ====================
