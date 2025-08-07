@@ -135,6 +135,58 @@ class Keyboards:
         return builder.as_markup()
 
     @staticmethod
+    def get_free_course_register_keyboard() -> InlineKeyboardMarkup:
+        """Get free course registration keyboard"""
+        builder = InlineKeyboardBuilder()
+        builder.button(text="✅ ثبت‌نام در دوره رایگان", callback_data="register_free_course")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_paid_courses_keyboard() -> InlineKeyboardMarkup:
+        """Get paid courses selection keyboard"""
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🔥 دوره فشرده ریاضی", callback_data="course:intensive_math")
+        builder.button(text="⚡ دوره تست‌زنی پیشرفته", callback_data="course:advanced_test")
+        builder.button(text="🎯 حل تست‌های دشوار", callback_data="course:difficult_tests")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_book_purchase_keyboard() -> InlineKeyboardMarkup:
+        """Get book purchase keyboard"""
+        builder = InlineKeyboardBuilder()
+        builder.button(text="🛒 خرید کتاب", callback_data="buy_book")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_social_media_keyboard() -> InlineKeyboardMarkup:
+        """Get social media links keyboard"""
+        builder = InlineKeyboardBuilder()
+        builder.button(text="📸 اینستاگرام", url="https://instagram.com/ostadhatami_official")
+        builder.button(text="🎬 یوتوب", url="https://youtube.com/@ostadhatami")
+        builder.button(text="📢 کانال تلگرام", url="https://t.me/OstadHatamiChannel")
+        builder.button(text="👥 گروه تلگرام", url="https://t.me/OstadHatamiGroup")
+        builder.button(text="💬 پشتیبانی", url="https://t.me/Ostad_Hatami")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(2, 2, 1, 1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_contact_keyboard() -> InlineKeyboardMarkup:
+        """Get contact information keyboard"""
+        builder = InlineKeyboardBuilder()
+        builder.button(text="💬 تلگرام", url="https://t.me/Ostad_Hatami")
+        builder.button(text="🌐 وبسایت", url="https://ostadhatami.ir")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(2, 1)
+        return builder.as_markup()
+
+    @staticmethod
     def get_course_keyboard(course_id: str, course_type: str) -> InlineKeyboardMarkup:
         """Get course action keyboard"""
         builder = InlineKeyboardBuilder()

@@ -167,7 +167,13 @@ async def cmd_start(message: types.Message, state: FSMContext):
         # Check if user is already registered
         existing_user = data_manager.load_user_data(user_id)
         if existing_user:
-            await show_main_menu_to_existing_user(message)
+            # Welcome back message for existing users
+            await message.answer(
+                f"🌟 سلام {first_name} عزیز!\n\n"
+                f"خوش آمدید به ربات استاد حاتمی! 🎓\n\n"
+                f"شما قبلاً ثبت‌نام کرده‌اید و می‌توانید از تمام خدمات استفاده کنید:",
+                reply_markup=Keyboards.get_main_menu_keyboard(),
+            )
             return
 
         # Send welcome message with registration button for new users
@@ -356,12 +362,6 @@ async def process_last_name(message: types.Message, state: FSMContext):
         await error_handler.handle_error(message, e)
 
 
-
-
-
-
-
-
 # ==================== MAIN MENU HANDLERS ====================
 @router.callback_query(lambda c: c.data == "free_courses")
 @maintenance_mode
@@ -371,29 +371,132 @@ async def free_courses(callback: types.CallbackQuery):
     try:
         courses = data_manager.get_all_courses(course_type="free")
 
-        if not courses:
-            await callback.message.edit_text(
-                "😔 در حال حاضر دوره رایگانی موجود نیست.",
-                reply_markup=Keyboards.get_back_keyboard(),
-            )
-            return
-
+        # Show free courses information directly
         message = Messages.get_free_courses_message()
-        keyboard = InlineKeyboardBuilder()
-
-        for course in courses:
-            keyboard.button(
-                text=f"📚 {course.title}",
-                callback_data=f"view_course:{course.course_id}",
-            )
-
-        keyboard.button(text="🔙 بازگشت", callback_data="back_to_main")
-        keyboard.adjust(1)
-
-        await callback.message.edit_text(message, reply_markup=keyboard.as_markup())
+        await callback.message.edit_text(
+            message, 
+            reply_markup=Keyboards.get_free_course_register_keyboard()
+        )
 
     except Exception as e:
         logger.error(f"Error showing free courses: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "paid_courses")
+@maintenance_mode
+@registered_user_only
+async def paid_courses(callback: types.CallbackQuery):
+    """Show paid courses"""
+    try:
+        message = Messages.get_paid_courses_message()
+        await callback.message.edit_text(
+            message, 
+            reply_markup=Keyboards.get_paid_courses_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error showing paid courses: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "book_info")
+@maintenance_mode
+@registered_user_only
+async def book_info(callback: types.CallbackQuery):
+    """Show book information"""
+    try:
+        message = Messages.get_book_info_message()
+        await callback.message.edit_text(
+            message, 
+            reply_markup=Keyboards.get_book_purchase_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error showing book info: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "social_media")
+@maintenance_mode
+@registered_user_only
+async def social_media(callback: types.CallbackQuery):
+    """Show social media links"""
+    try:
+        message = Messages.get_social_media_message()
+        await callback.message.edit_text(
+            message, 
+            reply_markup=Keyboards.get_social_media_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error showing social media: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "contact_us")
+@maintenance_mode
+@registered_user_only
+async def contact_us(callback: types.CallbackQuery):
+    """Show contact information"""
+    try:
+        message = Messages.get_contact_message()
+        await callback.message.edit_text(
+            message, 
+            reply_markup=Keyboards.get_contact_keyboard()
+        )
+    except Exception as e:
+        logger.error(f"Error showing contact info: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "back_to_main")
+@maintenance_mode
+@registered_user_only
+async def back_to_main(callback: types.CallbackQuery):
+    """Go back to main menu"""
+    try:
+        await callback.message.edit_text(
+            "🏠 **منوی اصلی**\n\nلطفاً گزینه مورد نظر خود را انتخاب کنید:",
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
+    except Exception as e:
+        logger.error(f"Error going back to main menu: {e}")
+        await error_handler.handle_error(callback.message, e)
+
+
+@router.callback_query(lambda c: c.data == "register_free_course")
+@maintenance_mode
+@registered_user_only
+async def register_free_course(callback: types.CallbackQuery):
+    """Register for free course"""
+    try:
+        user_id = callback.from_user.id
+        user_data = data_manager.load_user_data(user_id)
+        
+        if user_data:
+            # Add to enrolled courses
+            if not user_data.enrolled_courses:
+                user_data.enrolled_courses = []
+            
+            if "دوره رایگان جمعه‌ها" not in user_data.enrolled_courses:
+                user_data.enrolled_courses.append("دوره رایگان جمعه‌ها")
+                data_manager.save_user_data(user_data)
+                
+                await callback.message.edit_text(
+                    "🎉 **ثبت‌نام موفق!**\n\n"
+                    "شما با موفقیت در دوره رایگان ریاضی جمعه‌ها ثبت‌نام شدید.\n\n"
+                    "📅 **جلسه بعدی:** جمعه ساعت ۱۶:۰۰\n"
+                    "📲 **لینک کلاس:** یک ساعت قبل از شروع ارسال می‌شود\n\n"
+                    "🔔 **یادآوری:** پیام‌های مربوط به کلاس از طریق همین ربات ارسال خواهد شد.",
+                    reply_markup=Keyboards.get_back_keyboard()
+                )
+            else:
+                await callback.message.edit_text(
+                    "ℹ️ **قبلاً ثبت‌نام کرده‌اید**\n\n"
+                    "شما قبلاً در دوره رایگان جمعه‌ها ثبت‌نام کرده‌اید.\n\n"
+                    "📅 **جلسه بعدی:** جمعه ساعت ۱۶:۰۰",
+                    reply_markup=Keyboards.get_back_keyboard()
+                )
+    except Exception as e:
+        logger.error(f"Error registering for free course: {e}")
         await error_handler.handle_error(callback.message, e)
 
 
