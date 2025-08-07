@@ -1154,7 +1154,9 @@ async def enroll_course(callback: types.CallbackQuery, state: FSMContext):
             return
 
         if not course.can_enroll():
-            await callback.message.edit_text("❌ این دوره در حال حاضر قابل ثبت‌نام نیست.")
+            await callback.message.edit_text(
+                "❌ این دوره در حال حاضر قابل ثبت‌نام نیست."
+            )
             return
 
         # Check if user is already enrolled
@@ -1169,7 +1171,7 @@ async def enroll_course(callback: types.CallbackQuery, state: FSMContext):
 
         await callback.message.edit_text(
             f"✅ **ثبت‌نام موفق!**\n\n📚 **دوره:** {course.title}\n\n📅 اطلاعات کلاس برای شما ارسال خواهد شد.",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
 
         # Notify admin
@@ -1178,7 +1180,7 @@ async def enroll_course(callback: types.CallbackQuery, state: FSMContext):
             notification_type=NotificationType.COURSE_PURCHASE,
             user_id=user_id,
             message=f"کاربر {user.get_full_name()} در دوره رایگان {course.title} ثبت‌نام کرد.",
-            data={"course_id": course_id, "course_title": course.title}
+            data={"course_id": course_id, "course_title": course.title},
         )
         await data_manager.save_notification(notification)
 
@@ -1206,13 +1208,13 @@ async def purchase_course(callback: types.CallbackQuery, state: FSMContext):
             user_id=user_id,
             item_type="course",
             item_id=course_id,
-            amount=course.price
+            amount=course.price,
         )
         await data_manager.save_purchase(purchase)
 
         await callback.message.edit_text(
             Messages.get_payment_info_message(course.price, course.title),
-            reply_markup=Keyboards.get_payment_keyboard(purchase.purchase_id)
+            reply_markup=Keyboards.get_payment_keyboard(purchase.purchase_id),
         )
 
     except Exception as e:
@@ -1233,7 +1235,7 @@ async def purchase_book(callback: types.CallbackQuery, state: FSMContext):
             user_id=user_id,
             item_type="book",
             item_id="book_creativity_explosion",
-            amount=250000  # 250,000 Tomans
+            amount=250000,  # 250,000 Tomans
         )
         await data_manager.save_purchase(purchase)
 
@@ -1241,7 +1243,9 @@ async def purchase_book(callback: types.CallbackQuery, state: FSMContext):
         await state.update_data(purchase_id=purchase.purchase_id)
 
         await callback.message.edit_text(
-            Messages.get_payment_info_message(250000, "کتاب انفجار خلاقیت") + "\n\n" + Messages.get_address_request_message()
+            Messages.get_payment_info_message(250000, "کتاب انفجار خلاقیت")
+            + "\n\n"
+            + Messages.get_address_request_message()
         )
 
     except Exception as e:
@@ -1258,7 +1262,7 @@ async def send_receipt(callback: types.CallbackQuery, state: FSMContext):
     try:
         await callback.answer()
         purchase_id = callback.data.split(":")[1]
-        
+
         await state.set_state(PurchaseStates.waiting_for_payment_receipt)
         await state.update_data(purchase_id=purchase_id)
 
@@ -1296,14 +1300,14 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
                 data={
                     "purchase_id": purchase_id,
                     "amount": purchase.amount,
-                    "receipt_file_id": message.photo[-1].file_id
-                }
+                    "receipt_file_id": message.photo[-1].file_id,
+                },
             )
             await data_manager.save_notification(notification)
 
         await message.answer(
             "✅ فیش واریزی شما دریافت شد.\n\n📋 **مراحل بعدی:**\n• فیش شما بررسی خواهد شد\n• پس از تایید، محصول ارسال می‌شود\n• از طریق تلگرام با شما تماس گرفته خواهد شد\n\n⏰ **زمان بررسی:** حداکثر ۲۴ ساعت",
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
         await state.clear()
 
@@ -1320,7 +1324,9 @@ async def process_address(message: types.Message, state: FSMContext):
     """Process address input"""
     try:
         if not message.text or len(message.text.strip()) < 10:
-            await message.answer("❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر).")
+            await message.answer(
+                "❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر)."
+            )
             return
 
         await state.update_data(address=message.text.strip())
@@ -1358,7 +1364,7 @@ async def process_description(message: types.Message, state: FSMContext):
     try:
         data = await state.get_data()
         description = message.text.strip() if message.text else ""
-        
+
         # Update purchase with address info
         purchase_id = data.get("purchase_id")
         if purchase_id:
@@ -1369,7 +1375,7 @@ async def process_description(message: types.Message, state: FSMContext):
 
         await message.answer(
             Messages.get_purchase_success_message(),
-            reply_markup=Keyboards.get_main_menu_keyboard()
+            reply_markup=Keyboards.get_main_menu_keyboard(),
         )
         await state.clear()
 
