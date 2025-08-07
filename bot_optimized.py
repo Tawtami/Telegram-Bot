@@ -250,16 +250,15 @@ async def process_major(callback: types.CallbackQuery, state: FSMContext):
             registration_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         )
 
-                # Save user data
+        # Save user data
         data_manager.save_user_data(user_data)
-        
+
         # Notify admin about new registration
         await notify_admin(
-            f"🎓 **ثبت‌نام جدید**\n\n"
-            f"کاربر جدیدی در ربات ثبت‌نام کرد.",
-            user_data=user_data
+            f"🎓 **ثبت‌نام جدید**\n\n" f"کاربر جدیدی در ربات ثبت‌نام کرد.",
+            user_data=user_data,
         )
-        
+
         await callback.message.edit_text(
             Messages.get_registration_success(user_data),
             reply_markup=Keyboards.get_main_menu_keyboard(),
@@ -323,24 +322,27 @@ async def process_first_name(message: types.Message, state: FSMContext):
 
         # Enhanced validation with anti-spam
         name = message.text.strip()
-        
+
         # Basic validation
         if len(name) < 2 or len(name) > 50:
             await message.answer(
                 "❌ نام باید بین ۲ تا ۵۰ کاراکتر باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-            
+
         # Persian characters check
         import re
-        if not re.match(r'^[\u0600-\u06FF\s]+$', name):
+
+        if not re.match(r"^[\u0600-\u06FF\s]+$", name):
             await message.answer(
                 "❌ نام باید فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-            
+
         # Anti-spam checks
-        if re.search(r'(.)\1{3,}', name) or re.search(r'test|تست|spam|اسپم|fake|فیک|\d{3,}', name, re.IGNORECASE):
+        if re.search(r"(.)\1{3,}", name) or re.search(
+            r"test|تست|spam|اسپم|fake|فیک|\d{3,}", name, re.IGNORECASE
+        ):
             await message.answer(
                 "❌ نام وارد شده نامعتبر است.\nلطفاً نام واقعی خود را وارد کنید:"
             )
@@ -371,24 +373,27 @@ async def process_last_name(message: types.Message, state: FSMContext):
 
         # Enhanced validation with anti-spam
         name = message.text.strip()
-        
+
         # Basic validation
         if len(name) < 2 or len(name) > 50:
             await message.answer(
                 "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-            
+
         # Persian characters check
         import re
-        if not re.match(r'^[\u0600-\u06FF\s]+$', name):
+
+        if not re.match(r"^[\u0600-\u06FF\s]+$", name):
             await message.answer(
                 "❌ نام خانوادگی باید فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
             )
             return
-            
+
         # Anti-spam checks
-        if re.search(r'(.)\1{3,}', name) or re.search(r'test|تست|spam|اسپم|fake|فیک|\d{3,}', name, re.IGNORECASE):
+        if re.search(r"(.)\1{3,}", name) or re.search(
+            r"test|تست|spam|اسپم|fake|فیک|\d{3,}", name, re.IGNORECASE
+        ):
             await message.answer(
                 "❌ نام خانوادگی وارد شده نامعتبر است.\nلطفاً نام خانوادگی واقعی خود را وارد کنید:"
             )
@@ -516,17 +521,17 @@ async def register_free_course(callback: types.CallbackQuery):
             if not user_data.enrolled_courses:
                 user_data.enrolled_courses = []
 
-                        if "دوره رایگان جمعه‌ها" not in user_data.enrolled_courses:
+            if "دوره رایگان جمعه‌ها" not in user_data.enrolled_courses:
                 user_data.enrolled_courses.append("دوره رایگان جمعه‌ها")
                 data_manager.save_user_data(user_data)
-                
+
                 # Notify admin about free course enrollment
                 await notify_admin(
                     f"🎓 **ثبت‌نام در دوره رایگان**\n\n"
                     f"کاربر در دوره رایگان جمعه‌ها ثبت‌نام کرد.",
-                    user_data=user_data
+                    user_data=user_data,
                 )
-                
+
                 await callback.message.edit_text(
                     "🎉 **ثبت‌نام موفق!**\n\n"
                     "شما با موفقیت در دوره رایگان ریاضی جمعه‌ها ثبت‌نام شدید.\n\n"
@@ -554,36 +559,40 @@ async def select_course(callback: types.CallbackQuery, state: FSMContext):
     """Handle course selection for purchase"""
     try:
         course_type = callback.data.split(":")[1]
-        
+
         # Course details
         courses = {
             "intensive_math": {
                 "name": "دوره فشرده ریاضی کنکور",
                 "price": "۲,۵۰۰,۰۰۰",
                 "duration": "۳ ماه",
-                "sessions": "۲۴ جلسه"
+                "sessions": "۲۴ جلسه",
             },
             "advanced_test": {
-                "name": "دوره تست‌زنی پیشرفته", 
+                "name": "دوره تست‌زنی پیشرفته",
                 "price": "۱,۸۰۰,۰۰۰",
                 "duration": "۲ ماه",
-                "sessions": "۱۶ جلسه"
+                "sessions": "۱۶ جلسه",
             },
             "difficult_tests": {
                 "name": "دوره حل تست‌های دشوار",
-                "price": "۱,۲۰۰,۰۰۰", 
+                "price": "۱,۲۰۰,۰۰۰",
                 "duration": "۱.۵ ماه",
-                "sessions": "۱۲ جلسه"
-            }
+                "sessions": "۱۲ جلسه",
+            },
         }
-        
+
         course = courses.get(course_type)
         if not course:
             return
-            
+
         # Store course info in state
-        await state.update_data(course_id=course_type, course_name=course["name"], course_price=course["price"])
-        
+        await state.update_data(
+            course_id=course_type,
+            course_name=course["name"],
+            course_price=course["price"],
+        )
+
         # Payment information message
         payment_msg = f"""💎 **{course["name"]}**
 
@@ -610,12 +619,14 @@ async def select_course(callback: types.CallbackQuery, state: FSMContext):
 ⚠️ **توجه:** لطفاً عکس فیش واریزی را واضح و خوانا ارسال کنید."""
 
         keyboard = InlineKeyboardBuilder()
-        keyboard.button(text="📤 ارسال فیش واریزی", callback_data=f"upload_receipt:{course_type}")
+        keyboard.button(
+            text="📤 ارسال فیش واریزی", callback_data=f"upload_receipt:{course_type}"
+        )
         keyboard.button(text="🔙 بازگشت", callback_data="paid_courses")
         keyboard.adjust(1)
-        
+
         await callback.message.edit_text(payment_msg, reply_markup=keyboard.as_markup())
-        
+
     except Exception as e:
         logger.error(f"Error selecting course: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -629,7 +640,7 @@ async def upload_receipt(callback: types.CallbackQuery, state: FSMContext):
     try:
         course_type = callback.data.split(":")[1]
         await state.update_data(course_id=course_type)
-        
+
         await callback.message.edit_text(
             "📤 **ارسال فیش واریزی**\n\n"
             "لطفاً عکس فیش واریزی خود را ارسال کنید.\n\n"
@@ -637,11 +648,11 @@ async def upload_receipt(callback: types.CallbackQuery, state: FSMContext):
             "• عکس باید واضح و خوانا باشد\n"
             "• تمام اطلاعات فیش قابل مشاهده باشد\n"
             "• مبلغ واریزی با قیمت دوره مطابقت داشته باشد",
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
-        
+
         await state.set_state(PurchaseStates.waiting_for_payment_receipt)
-        
+
     except Exception as e:
         logger.error(f"Error starting receipt upload: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -704,9 +715,10 @@ async def buy_book(callback: types.CallbackQuery, state: FSMContext):
             reply_markup=InlineKeyboardBuilder()
             .button(text="📍 وارد کردن آدرس", callback_data="enter_address")
             .button(text="🔙 بازگشت", callback_data="book_info")
-            .adjust(1).as_markup()
+            .adjust(1)
+            .as_markup(),
         )
-        
+
     except Exception as e:
         logger.error(f"Error starting book purchase: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -725,11 +737,11 @@ async def enter_address(callback: types.CallbackQuery, state: FSMContext):
             "• آدرس باید کامل و دقیق باشد\n"
             "• شامل نام شهر، محله، خیابان و پلاک\n"
             "• حداقل ۲۰ کاراکتر",
-            reply_markup=Keyboards.get_cancel_keyboard()
+            reply_markup=Keyboards.get_cancel_keyboard(),
         )
-        
+
         await state.set_state(PurchaseStates.waiting_for_address)
-        
+
     except Exception as e:
         logger.error(f"Error starting address entry: {e}")
         await error_handler.handle_error(callback.message, e)
@@ -1008,18 +1020,18 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
 
         # Get user data for admin notification
         user_data = data_manager.load_user_data(message.from_user.id)
-        
+
         # Notify admin with receipt photo
         course_name = data.get("course_name", "نامشخص")
         course_price = data.get("course_price", "نامشخص")
-        
+
         await notify_admin(
             f"💰 **فیش واریزی دریافت شد**\n\n"
             f"دوره: {course_name}\n"
             f"مبلغ: {course_price} تومان\n\n"
             f"لطفاً فیش واریزی را بررسی و در صورت تایید، دوره را فعال کنید.",
             user_data=user_data,
-            photo_file_id=message.photo[-1].file_id
+            photo_file_id=message.photo[-1].file_id,
         )
 
         await message.answer(
@@ -1169,7 +1181,9 @@ async def show_main_menu_after_registration(message: types.Message):
         await error_handler.handle_error(message, e)
 
 
-async def notify_admin(message: str, user_data: UserData = None, photo_file_id: str = None):
+async def notify_admin(
+    message: str, user_data: UserData = None, photo_file_id: str = None
+):
     """Send notification to admin (Ostad Hatami)"""
     try:
         # Get admin user ID from config
@@ -1177,35 +1191,32 @@ async def notify_admin(message: str, user_data: UserData = None, photo_file_id: 
         if not admin_ids:
             logger.warning("No admin user IDs configured")
             return
-            
+
         primary_admin = admin_ids[0]  # استاد حاتمی (ادمین اصلی)
-        
+
         # Prepare notification message
         notification_text = f"🔔 **اطلاع‌رسانی جدید**\n\n{message}"
-        
+
         if user_data:
             notification_text += f"\n\n👤 **اطلاعات کاربر:**\n"
-            notification_text += f"• نام: {user_data.first_name} {user_data.last_name}\n"
+            notification_text += (
+                f"• نام: {user_data.first_name} {user_data.last_name}\n"
+            )
             notification_text += f"• مقطع: {user_data.grade}\n"
             notification_text += f"• رشته: {user_data.major}\n"
             notification_text += f"• شهر: {user_data.city}, {user_data.province}\n"
             notification_text += f"• ID: {user_data.user_id}"
-        
+
         # Send notification to primary admin
         if photo_file_id:
             await bot.send_photo(
-                chat_id=primary_admin,
-                photo=photo_file_id,
-                caption=notification_text
+                chat_id=primary_admin, photo=photo_file_id, caption=notification_text
             )
         else:
-            await bot.send_message(
-                chat_id=primary_admin,
-                text=notification_text
-            )
-            
+            await bot.send_message(chat_id=primary_admin, text=notification_text)
+
         logger.info(f"Admin notification sent to {primary_admin}")
-        
+
     except Exception as e:
         logger.error(f"Error sending admin notification: {e}")
 
