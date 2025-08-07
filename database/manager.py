@@ -1,549 +1,473 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Enhanced database manager for Ostad Hatami Bot
+Data Manager for Ostad Hatami Bot
+مدیریت داده برای ربات استاد حاتمی
 """
 
 import json
+import os
+import uuid
 import asyncio
-import logging
-import shutil
+from typing import Dict, List, Any, Optional
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Set
-from datetime import datetime, timedelta
-from collections import defaultdict
-import gzip
-import pickle
+from datetime import datetime
 
-from config import config
-from .models import UserData, CourseData, RegistrationData, UserStatus
-from utils.cache import cache_manager
-from utils.error_handler import error_handler
-from utils.performance_monitor import monitor
-
-logger = logging.getLogger(__name__)
+from .models import (
+    UserData,
+    CourseData,
+    PurchaseData,
+    NotificationData,
+    BookData,
+    UserStatus,
+    CourseType,
+    PurchaseStatus,
+    NotificationType,
+)
 
 
 class DataManager:
-    """Enhanced user data storage management with caching, backup, and optimization"""
+    """Singleton data manager for JSON file storage"""
 
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            cls._instance = super(DataManager, cls).__new__(cls)
         return cls._instance
 
     def __init__(self):
         if hasattr(self, "_initialized"):
             return
 
-        self.data_dir = Path(config.database.path)
-        self.users_dir = self.data_dir / "users"
-        self.courses_dir = self.data_dir / "courses"
-        self.registrations_dir = self.data_dir / "registrations"
-        self.backup_dir = self.data_dir / "backups"
-
-        # Create directories
-        self.users_dir.mkdir(parents=True, exist_ok=True)
-        self.courses_dir.mkdir(parents=True, exist_ok=True)
-        self.registrations_dir.mkdir(parents=True, exist_ok=True)
-        self.backup_dir.mkdir(parents=True, exist_ok=True)
-
-        # File locks for concurrent access
-        self._file_locks = defaultdict(asyncio.Lock)
-
-        # Statistics
-        self.stats = {
-            "total_users": 0,
-            "total_courses": 0,
-            "total_registrations": 0,
-            "cache_hits": 0,
-            "cache_misses": 0,
-            "backup_count": 0,
-            "last_backup": None,
-        }
-
-        # Initialize cache
-        self.cache = cache_manager.get_cache("users")
-        self.course_cache = cache_manager.get_cache("courses")
-        self.registration_cache = cache_manager.get_cache("registrations")
-
-        # Load initial statistics
-        self._load_statistics()
-
         self._initialized = True
+        self.data_dir = Path("data")
+        self.data_dir.mkdir(exist_ok=True)
 
-        logger.info(f"DataManager initialized with data directory: {self.data_dir}")
+        # File paths
+        self.users_file = self.data_dir / "users.json"
+        self.courses_file = self.data_dir / "courses.json"
+        self.purchases_file = self.data_dir / "purchases.json"
+        self.notifications_file = self.data_dir / "notifications.json"
+        self.books_file = self.data_dir / "books.json"
 
-    def _load_statistics(self):
-        """Load initial statistics from disk"""
+        # Initialize files if they don't exist
+        self._initialize_files()
+
+    def _initialize_files(self):
+        """Initialize JSON files with empty arrays"""
+        files = [
+            self.users_file,
+            self.courses_file,
+            self.purchases_file,
+            self.notifications_file,
+            self.books_file,
+        ]
+
+        for file_path in files:
+            if not file_path.exists():
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump([], f, ensure_ascii=False, indent=2)
+
+    def _load_json(self, file_path: Path) -> List[Dict[str, Any]]:
+        """Load JSON file safely"""
         try:
-            # Count users
-            self.stats["total_users"] = len(list(self.users_dir.glob("user_*.json")))
-
-            # Count courses
-            self.stats["total_courses"] = len(
-                list(self.courses_dir.glob("course_*.json"))
-            )
-
-            # Count registrations
-            self.stats["total_registrations"] = len(
-                list(self.registrations_dir.glob("registration_*.json"))
-            )
-
-            # Find last backup
-            backup_files = list(self.backup_dir.glob("backup_*.json.gz"))
-            if backup_files:
-                latest_backup = max(backup_files, key=lambda f: f.stat().st_mtime)
-                self.stats["last_backup"] = datetime.fromtimestamp(
-                    latest_backup.stat().st_mtime
-                )
-                self.stats["backup_count"] = len(backup_files)
-
-        except Exception as e:
-            logger.error(f"Error loading statistics: {e}")
-
-    def get_user_file_path(self, user_id: int) -> Path:
-        """Get path to user's JSON file"""
-        return self.users_dir / f"user_{user_id}.json"
-
-    def get_course_file_path(self, course_id: str) -> Path:
-        """Get path to course's JSON file"""
-        return self.courses_dir / f"course_{course_id}.json"
-
-    def get_registration_file_path(self, registration_id: str) -> Path:
-        """Get path to registration's JSON file"""
-        return self.registrations_dir / f"registration_{registration_id}.json"
-
-    async def save_user_data(self, user_data: UserData) -> bool:
-        """Save user data with enhanced error handling and caching"""
-        try:
-            async with self._file_locks[user_data.user_id]:
-                file_path = self.get_user_file_path(user_data.user_id)
-
-                # Update timestamps
-                user_data.last_updated = datetime.now()
-
-                # Convert to dictionary
-                data_dict = user_data.to_dict()
-
-                # Use asyncio for file operations
-                loop = asyncio.get_event_loop()
-                await loop.run_in_executor(
-                    None, self._write_json_file, file_path, data_dict
-                )
-
-                # Update cache
-                cache_key = f"user_{user_data.user_id}"
-                await self.cache.set(cache_key, data_dict)
-
-                # Update statistics
-                if not file_path.exists():
-                    self.stats["total_users"] += 1
-
-                logger.info(f"User data saved for user_id: {user_data.user_id}")
-                return True
-
-        except Exception as e:
-            await error_handler.handle_error(e, "save_user_data", user_data.user_id)
-            return False
-
-    async def load_user_data(self, user_id: int) -> Optional[UserData]:
-        """Load user data with caching and error handling"""
-        try:
-            # Check cache first
-            cache_key = f"user_{user_id}"
-            cached_data = await self.cache.get(cache_key)
-
-            if cached_data:
-                self.stats["cache_hits"] += 1
-                return UserData.from_dict(cached_data)
-
-            self.stats["cache_misses"] += 1
-
-            async with self._file_locks[user_id]:
-                file_path = self.get_user_file_path(user_id)
-
-                if not file_path.exists():
-                    return None
-
-                # Use asyncio for file operations
-                loop = asyncio.get_event_loop()
-                data_dict = await loop.run_in_executor(
-                    None, self._read_json_file, file_path
-                )
-
-                if data_dict:
-                    # Cache the result
-                    await self.cache.set(cache_key, data_dict)
-                    return UserData.from_dict(data_dict)
-
-                return None
-
-        except Exception as e:
-            await error_handler.handle_error(e, "load_user_data", user_id)
-            return None
-
-    async def user_exists(self, user_id: int) -> bool:
-        """Check if user exists with caching"""
-        # Check cache first
-        cache_key = f"user_{user_id}"
-        cached_data = await self.cache.get(cache_key)
-        if cached_data is not None:
-            return True
-
-        # Check file system
-        file_path = self.get_user_file_path(user_id)
-        exists = await asyncio.get_event_loop().run_in_executor(None, file_path.exists)
-        return exists
-
-    async def delete_user_data(self, user_id: int) -> bool:
-        """Delete user data"""
-        try:
-            async with self._file_locks[user_id]:
-                file_path = self.get_user_file_path(user_id)
-
-                if file_path.exists():
-                    # Remove from cache
-                    cache_key = f"user_{user_id}"
-                    await self.cache.delete(cache_key)
-
-                    # Delete file
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, file_path.unlink
-                    )
-
-                    # Update statistics
-                    self.stats["total_users"] = max(0, self.stats["total_users"] - 1)
-
-                    logger.info(f"User data deleted for user_id: {user_id}")
-                    return True
-
-                return False
-
-        except Exception as e:
-            await error_handler.handle_error(e, "delete_user_data", user_id)
-            return False
-
-    async def get_all_users(self) -> List[UserData]:
-        """Get all users with pagination support"""
-        try:
-            users = []
-            user_files = list(self.users_dir.glob("user_*.json"))
-
-            for file_path in user_files:
-                try:
-                    # Extract user ID from filename
-                    user_id = int(file_path.stem.split("_")[1])
-
-                    # Load user data
-                    user_data = await self.load_user_data(user_id)
-                    if user_data:
-                        users.append(user_data)
-
-                except Exception as e:
-                    logger.error(f"Error loading user from {file_path}: {e}")
-                    continue
-
-            return users
-
-        except Exception as e:
-            await error_handler.handle_error(e, "get_all_users")
+            if not file_path.exists():
+                return []
+            with open(file_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
             return []
 
-    async def search_users(self, criteria: Dict[str, Any]) -> List[UserData]:
-        """Search users by criteria"""
-        try:
-            all_users = await self.get_all_users()
-            results = []
-
-            for user in all_users:
-                match = True
-
-                for key, value in criteria.items():
-                    if hasattr(user, key):
-                        user_value = getattr(user, key)
-                        if isinstance(value, str) and isinstance(user_value, str):
-                            if value.lower() not in user_value.lower():
-                                match = False
-                                break
-                        elif user_value != value:
-                            match = False
-                            break
-                    else:
-                        match = False
-                        break
-
-                if match:
-                    results.append(user)
-
-            return results
-
-        except Exception as e:
-            await error_handler.handle_error(e, "search_users")
-            return []
-
-    async def get_user_statistics(self) -> Dict[str, Any]:
-        """Get user statistics"""
-        try:
-            all_users = await self.get_all_users()
-
-            stats = {
-                "total_users": len(all_users),
-                "active_users": len([u for u in all_users if u.is_active()]),
-                "users_by_grade": defaultdict(int),
-                "users_by_major": defaultdict(int),
-                "users_by_province": defaultdict(int),
-                "recent_registrations": 0,
-                "cache_stats": {
-                    "hits": self.stats["cache_hits"],
-                    "misses": self.stats["cache_misses"],
-                    "hit_rate": round(
-                        (
-                            (
-                                self.stats["cache_hits"]
-                                / (
-                                    self.stats["cache_hits"]
-                                    + self.stats["cache_misses"]
-                                )
-                                * 100
-                            )
-                            if (self.stats["cache_hits"] + self.stats["cache_misses"])
-                            > 0
-                            else 0
-                        ),
-                        2,
-                    ),
-                },
-            }
-
-            # Calculate statistics
-            for user in all_users:
-                stats["users_by_grade"][user.grade] += 1
-                stats["users_by_major"][user.major] += 1
-                stats["users_by_province"][user.province] += 1
-
-                # Count recent registrations (last 7 days)
-                if user.registration_date:
-                    days_ago = (datetime.now() - user.registration_date).days
-                    if days_ago <= 7:
-                        stats["recent_registrations"] += 1
-
-            return stats
-
-        except Exception as e:
-            await error_handler.handle_error(e, "get_user_statistics")
-            return {}
-
-    async def create_backup(self) -> bool:
-        """Create a backup of all data"""
-        try:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_file = self.backup_dir / f"backup_{timestamp}.json.gz"
-
-            # Collect all data
-            backup_data = {
-                "timestamp": timestamp,
-                "users": [],
-                "courses": [],
-                "registrations": [],
-                "statistics": self.stats,
-            }
-
-            # Backup users
-            all_users = await self.get_all_users()
-            for user in all_users:
-                backup_data["users"].append(user.to_dict())
-
-            # Backup courses (if any)
-            course_files = list(self.courses_dir.glob("course_*.json"))
-            for file_path in course_files:
-                try:
-                    data = self._read_json_file(file_path)
-                    if data:
-                        backup_data["courses"].append(data)
-                except Exception as e:
-                    logger.error(f"Error reading course file {file_path}: {e}")
-
-            # Backup registrations (if any)
-            registration_files = list(
-                self.registrations_dir.glob("registration_*.json")
-            )
-            for file_path in registration_files:
-                try:
-                    data = self._read_json_file(file_path)
-                    if data:
-                        backup_data["registrations"].append(data)
-                except Exception as e:
-                    logger.error(f"Error reading registration file {file_path}: {e}")
-
-            # Compress and save backup
-            await asyncio.get_event_loop().run_in_executor(
-                None, self._write_compressed_json, backup_file, backup_data
-            )
-
-            # Update statistics
-            self.stats["backup_count"] += 1
-            self.stats["last_backup"] = datetime.now()
-
-            # Clean old backups
-            await self._cleanup_old_backups()
-
-            logger.info(f"Backup created: {backup_file}")
-            return True
-
-        except Exception as e:
-            await error_handler.handle_error(e, "create_backup")
-            return False
-
-    async def restore_backup(self, backup_file: Path) -> bool:
-        """Restore data from backup"""
-        try:
-            # Read backup data
-            backup_data = await asyncio.get_event_loop().run_in_executor(
-                None, self._read_compressed_json, backup_file
-            )
-
-            if not backup_data:
-                logger.error("Invalid backup file")
-                return False
-
-            # Restore users
-            for user_dict in backup_data.get("users", []):
-                try:
-                    user_data = UserData.from_dict(user_dict)
-                    await self.save_user_data(user_data)
-                except Exception as e:
-                    logger.error(
-                        f"Error restoring user {user_dict.get('user_id')}: {e}"
-                    )
-
-            # Restore courses
-            for course_dict in backup_data.get("courses", []):
-                try:
-                    course_data = CourseData.from_dict(course_dict)
-                    await self.save_course_data(course_data)
-                except Exception as e:
-                    logger.error(
-                        f"Error restoring course {course_dict.get('course_id')}: {e}"
-                    )
-
-            # Restore registrations
-            for reg_dict in backup_data.get("registrations", []):
-                try:
-                    reg_data = RegistrationData.from_dict(reg_dict)
-                    await self.save_registration_data(reg_data)
-                except Exception as e:
-                    logger.error(
-                        f"Error restoring registration {reg_dict.get('registration_id')}: {e}"
-                    )
-
-            logger.info(f"Backup restored from: {backup_file}")
-            return True
-
-        except Exception as e:
-            await error_handler.handle_error(e, "restore_backup")
-            return False
-
-    async def _cleanup_old_backups(self):
-        """Clean up old backup files"""
-        try:
-            backup_files = list(self.backup_dir.glob("backup_*.json.gz"))
-
-            # Keep only the last N backups
-            max_backups = config.database.max_backup_files
-            if len(backup_files) > max_backups:
-                # Sort by modification time and remove oldest
-                backup_files.sort(key=lambda f: f.stat().st_mtime)
-                files_to_remove = backup_files[:-max_backups]
-
-                for file_path in files_to_remove:
-                    await asyncio.get_event_loop().run_in_executor(
-                        None, file_path.unlink
-                    )
-                    logger.info(f"Removed old backup: {file_path}")
-
-        except Exception as e:
-            logger.error(f"Error cleaning up old backups: {e}")
-
-    def _write_json_file(self, file_path: Path, data: Dict[str, Any]):
-        """Write JSON file with error handling"""
+    def _save_json(self, file_path: Path, data: List[Dict[str, Any]]):
+        """Save JSON file safely"""
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"Error writing JSON file {file_path}: {e}")
-            raise
+            print(f"Error saving {file_path}: {e}")
 
-    def _read_json_file(self, file_path: Path) -> Optional[Dict[str, Any]]:
-        """Read JSON file with error handling"""
+    # ============================================================================
+    # USER MANAGEMENT
+    # ============================================================================
+    async def save_user_data(self, user_data: Dict[str, Any]) -> bool:
+        """Save user registration data"""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+            users_data = self._load_json(self.users_file)
+            
+            # Check if user already exists
+            existing_user = next(
+                (user for user in users_data if user.get("user_id") == user_data["user_id"]),
+                None
+            )
+
+            if existing_user:
+                # Update existing user
+                existing_user.update(user_data)
+            else:
+                # Add new user
+                users_data.append(user_data)
+
+            self._save_json(self.users_file, users_data)
+            return True
+
         except Exception as e:
-            logger.error(f"Error reading JSON file {file_path}: {e}")
+            print(f"Error saving user data: {e}")
+            return False
+
+    async def load_user_data(self, user_id: int) -> Optional[UserData]:
+        """Load user data by user ID"""
+        try:
+            users_data = self._load_json(self.users_file)
+            user_dict = next(
+                (user for user in users_data if user.get("user_id") == user_id),
+                None
+            )
+            
+            if user_dict:
+                return UserData.from_dict(user_dict)
             return None
 
-    def _write_compressed_json(self, file_path: Path, data: Dict[str, Any]):
-        """Write compressed JSON file"""
-        try:
-            with gzip.open(file_path, "wt", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"Error writing compressed JSON file {file_path}: {e}")
-            raise
-
-    def _read_compressed_json(self, file_path: Path) -> Optional[Dict[str, Any]]:
-        """Read compressed JSON file"""
-        try:
-            with gzip.open(file_path, "rt", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Error reading compressed JSON file {file_path}: {e}")
+            print(f"Error loading user data: {e}")
             return None
 
-    # Course management methods (placeholder for future implementation)
-    async def save_course_data(self, course_data: CourseData) -> bool:
-        """Save course data"""
-        # Implementation for course management
-        return True
-
-    async def save_registration_data(self, registration_data: RegistrationData) -> bool:
-        """Save registration data"""
-        # Implementation for registration management
-        return True
-
-    async def get_database_stats(self) -> Dict[str, Any]:
-        """Get comprehensive database statistics"""
-        return {
-            "users": await self.get_user_statistics(),
-            "cache": await self.cache.get_stats(),
-            "backup": {
-                "count": self.stats["backup_count"],
-                "last_backup": (
-                    self.stats["last_backup"].isoformat()
-                    if self.stats["last_backup"]
-                    else None
-                ),
-            },
-            "storage": {
-                "users_dir_size": await self._get_directory_size(self.users_dir),
-                "courses_dir_size": await self._get_directory_size(self.courses_dir),
-                "registrations_dir_size": await self._get_directory_size(
-                    self.registrations_dir
-                ),
-                "backup_dir_size": await self._get_directory_size(self.backup_dir),
-            },
-        }
-
-    async def _get_directory_size(self, directory: Path) -> int:
-        """Get directory size in bytes"""
+    async def user_exists(self, user_id: int) -> bool:
+        """Check if user exists"""
         try:
-            total_size = 0
-            for file_path in directory.rglob("*"):
-                if file_path.is_file():
-                    total_size += file_path.stat().st_size
-            return total_size
+            users_data = self._load_json(self.users_file)
+            return any(user.get("user_id") == user_id for user in users_data)
         except Exception:
-            return 0
+            return False
+
+    async def get_all_users(self) -> List[UserData]:
+        """Get all users"""
+        try:
+            users_data = self._load_json(self.users_file)
+            return [UserData.from_dict(user) for user in users_data]
+        except Exception as e:
+            print(f"Error loading all users: {e}")
+            return []
+
+    async def update_user_courses(self, user_id: int, course_id: str, action: str = "add"):
+        """Update user's enrolled courses"""
+        try:
+            user = await self.load_user_data(user_id)
+            if not user:
+                return False
+
+            if action == "add" and course_id not in user.enrolled_courses:
+                user.enrolled_courses.append(course_id)
+            elif action == "remove" and course_id in user.enrolled_courses:
+                user.enrolled_courses.remove(course_id)
+
+            await self.save_user_data(user.to_dict())
+            return True
+
+        except Exception as e:
+            print(f"Error updating user courses: {e}")
+            return False
+
+    # ============================================================================
+    # COURSE MANAGEMENT
+    # ============================================================================
+    async def save_course(self, course: CourseData) -> bool:
+        """Save course data"""
+        try:
+            courses_data = self._load_json(self.courses_file)
+            
+            # Check if course already exists
+            existing_course = next(
+                (c for c in courses_data if c.get("course_id") == course.course_id),
+                None
+            )
+
+            if existing_course:
+                # Update existing course
+                existing_course.update(course.to_dict())
+            else:
+                # Add new course
+                courses_data.append(course.to_dict())
+
+            self._save_json(self.courses_file, courses_data)
+            return True
+
+        except Exception as e:
+            print(f"Error saving course: {e}")
+            return False
+
+    async def get_course(self, course_id: str) -> Optional[CourseData]:
+        """Get course by ID"""
+        try:
+            courses_data = self._load_json(self.courses_file)
+            course_dict = next(
+                (c for c in courses_data if c.get("course_id") == course_id),
+                None
+            )
+            
+            if course_dict:
+                return CourseData.from_dict(course_dict)
+            return None
+
+        except Exception as e:
+            print(f"Error loading course: {e}")
+            return None
+
+    async def get_all_courses(self, course_type: Optional[CourseType] = None) -> List[CourseData]:
+        """Get all courses, optionally filtered by type"""
+        try:
+            courses_data = self._load_json(self.courses_file)
+            courses = [CourseData.from_dict(c) for c in courses_data]
+            
+            if course_type:
+                courses = [c for c in courses if c.course_type == course_type]
+            
+            return courses
+
+        except Exception as e:
+            print(f"Error loading courses: {e}")
+            return []
+
+    async def update_course_students(self, course_id: str, change: int = 1):
+        """Update course student count"""
+        try:
+            course = await self.get_course(course_id)
+            if not course:
+                return False
+
+            course.current_students = max(0, course.current_students + change)
+            await self.save_course(course)
+            return True
+
+        except Exception as e:
+            print(f"Error updating course students: {e}")
+            return False
+
+    # ============================================================================
+    # PURCHASE MANAGEMENT
+    # ============================================================================
+    async def save_purchase(self, purchase: PurchaseData) -> bool:
+        """Save purchase data"""
+        try:
+            purchases_data = self._load_json(self.purchases_file)
+            purchases_data.append(purchase.to_dict())
+            self._save_json(self.purchases_file, purchases_data)
+            return True
+
+        except Exception as e:
+            print(f"Error saving purchase: {e}")
+            return False
+
+    async def get_purchase(self, purchase_id: str) -> Optional[PurchaseData]:
+        """Get purchase by ID"""
+        try:
+            purchases_data = self._load_json(self.purchases_file)
+            purchase_dict = next(
+                (p for p in purchases_data if p.get("purchase_id") == purchase_id),
+                None
+            )
+            
+            if purchase_dict:
+                return PurchaseData.from_dict(purchase_dict)
+            return None
+
+        except Exception as e:
+            print(f"Error loading purchase: {e}")
+            return None
+
+    async def get_user_purchases(self, user_id: int, status: Optional[PurchaseStatus] = None) -> List[PurchaseData]:
+        """Get user's purchases"""
+        try:
+            purchases_data = self._load_json(self.purchases_file)
+            purchases = [PurchaseData.from_dict(p) for p in purchases_data if p.get("user_id") == user_id]
+            
+            if status:
+                purchases = [p for p in purchases if p.status == status]
+            
+            return purchases
+
+        except Exception as e:
+            print(f"Error loading user purchases: {e}")
+            return []
+
+    async def update_purchase_status(self, purchase_id: str, status: PurchaseStatus, admin_id: Optional[int] = None, notes: str = ""):
+        """Update purchase status"""
+        try:
+            purchase = await self.get_purchase(purchase_id)
+            if not purchase:
+                return False
+
+            purchase.status = status
+            purchase.admin_id = admin_id
+            purchase.admin_notes = notes
+            
+            if status == PurchaseStatus.APPROVED:
+                purchase.approved_date = datetime.now().isoformat()
+
+            # Update in file
+            purchases_data = self._load_json(self.purchases_file)
+            for i, p in enumerate(purchases_data):
+                if p.get("purchase_id") == purchase_id:
+                    purchases_data[i] = purchase.to_dict()
+                    break
+
+            self._save_json(self.purchases_file, purchases_data)
+            return True
+
+        except Exception as e:
+            print(f"Error updating purchase status: {e}")
+            return False
+
+    # ============================================================================
+    # NOTIFICATION MANAGEMENT
+    # ============================================================================
+    async def save_notification(self, notification: NotificationData) -> bool:
+        """Save notification"""
+        try:
+            notifications_data = self._load_json(self.notifications_file)
+            notifications_data.append(notification.to_dict())
+            self._save_json(self.notifications_file, notifications_data)
+            return True
+
+        except Exception as e:
+            print(f"Error saving notification: {e}")
+            return False
+
+    async def get_unread_notifications(self) -> List[NotificationData]:
+        """Get unread notifications"""
+        try:
+            notifications_data = self._load_json(self.notifications_file)
+            unread = [n for n in notifications_data if not n.get("is_read", False)]
+            return [NotificationData.from_dict(n) for n in unread]
+
+        except Exception as e:
+            print(f"Error loading notifications: {e}")
+            return []
+
+    async def mark_notification_read(self, notification_id: str):
+        """Mark notification as read"""
+        try:
+            notifications_data = self._load_json(self.notifications_file)
+            for notification in notifications_data:
+                if notification.get("notification_id") == notification_id:
+                    notification["is_read"] = True
+                    break
+
+            self._save_json(self.notifications_file, notifications_data)
+
+        except Exception as e:
+            print(f"Error marking notification read: {e}")
+
+    # ============================================================================
+    # BOOK MANAGEMENT
+    # ============================================================================
+    async def save_book(self, book: BookData) -> bool:
+        """Save book data"""
+        try:
+            books_data = self._load_json(self.books_file)
+            
+            existing_book = next(
+                (b for b in books_data if b.get("book_id") == book.book_id),
+                None
+            )
+
+            if existing_book:
+                existing_book.update(book.to_dict())
+            else:
+                books_data.append(book.to_dict())
+
+            self._save_json(self.books_file, books_data)
+            return True
+
+        except Exception as e:
+            print(f"Error saving book: {e}")
+            return False
+
+    async def get_book(self, book_id: str) -> Optional[BookData]:
+        """Get book by ID"""
+        try:
+            books_data = self._load_json(self.books_file)
+            book_dict = next(
+                (b for b in books_data if b.get("book_id") == book_id),
+                None
+            )
+            
+            if book_dict:
+                return BookData.from_dict(book_dict)
+            return None
+
+        except Exception as e:
+            print(f"Error loading book: {e}")
+            return None
+
+    async def get_all_books(self) -> List[BookData]:
+        """Get all books"""
+        try:
+            books_data = self._load_json(self.books_file)
+            return [BookData.from_dict(b) for b in books_data]
+
+        except Exception as e:
+            print(f"Error loading books: {e}")
+            return []
+
+    # ============================================================================
+    # UTILITY METHODS
+    # ============================================================================
+    async def get_database_stats(self) -> Dict[str, Any]:
+        """Get database statistics"""
+        try:
+            users = await self.get_all_users()
+            courses = await self.get_all_courses()
+            purchases = self._load_json(self.purchases_file)
+            notifications = await self.get_unread_notifications()
+
+            total_size = 0
+            for file_path in [self.users_file, self.courses_file, self.purchases_file, 
+                            self.notifications_file, self.books_file]:
+                if file_path.exists():
+                    total_size += file_path.stat().st_size
+
+            return {
+                "total_users": len(users),
+                "total_courses": len(courses),
+                "total_purchases": len(purchases),
+                "unread_notifications": len(notifications),
+                "total_size_mb": total_size / (1024 * 1024)
+            }
+
+        except Exception as e:
+            print(f"Error getting database stats: {e}")
+            return {}
+
+    def generate_id(self) -> str:
+        """Generate unique ID"""
+        return str(uuid.uuid4())
+
+    async def backup_data(self, backup_dir: str = "backups"):
+        """Create backup of all data"""
+        try:
+            backup_path = Path(backup_dir)
+            backup_path.mkdir(exist_ok=True)
+
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            files_to_backup = [
+                self.users_file,
+                self.courses_file,
+                self.purchases_file,
+                self.notifications_file,
+                self.books_file,
+            ]
+
+            for file_path in files_to_backup:
+                if file_path.exists():
+                    backup_file = backup_path / f"{file_path.stem}_{timestamp}.json"
+                    with open(file_path, "r", encoding="utf-8") as src:
+                        with open(backup_file, "w", encoding="utf-8") as dst:
+                            dst.write(src.read())
+
+            return True
+
+        except Exception as e:
+            print(f"Error creating backup: {e}")
+            return False

@@ -2,35 +2,47 @@
 # -*- coding: utf-8 -*-
 """
 Data models for Ostad Hatami Bot
+مدل‌های داده برای ربات استاد حاتمی
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
+import json
 from datetime import datetime
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass, asdict
 from enum import Enum
 
 
 class UserStatus(Enum):
     """User registration status"""
-
     PENDING = "pending"
     ACTIVE = "active"
     SUSPENDED = "suspended"
-    DELETED = "deleted"
 
 
 class CourseType(Enum):
     """Course types"""
-
     FREE = "free"
     PAID = "paid"
-    PREMIUM = "premium"
+
+
+class PurchaseStatus(Enum):
+    """Purchase status"""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    COMPLETED = "completed"
+
+
+class NotificationType(Enum):
+    """Notification types"""
+    COURSE_PURCHASE = "course_purchase"
+    BOOK_PURCHASE = "book_purchase"
+    PAYMENT_RECEIVED = "payment_received"
 
 
 @dataclass
 class UserData:
-    """User registration data model"""
-
+    """User registration data"""
     user_id: int
     first_name: str
     last_name: str
@@ -39,242 +51,173 @@ class UserData:
     province: str
     city: str
     phone: str
-    status: UserStatus = UserStatus.PENDING
-    registration_date: Optional[datetime] = None
-    last_updated: Optional[datetime] = None
-    last_login: Optional[datetime] = None
-    login_count: int = 0
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    registration_date: str
+    status: UserStatus = UserStatus.ACTIVE
+    enrolled_courses: List[str] = None
+    purchased_courses: List[str] = None
+    purchased_books: List[str] = None
 
     def __post_init__(self):
-        if self.registration_date is None:
-            self.registration_date = datetime.now()
-        if self.last_updated is None:
-            self.last_updated = datetime.now()
+        if self.enrolled_courses is None:
+            self.enrolled_courses = []
+        if self.purchased_courses is None:
+            self.purchased_courses = []
+        if self.purchased_books is None:
+            self.purchased_books = []
+        if not self.registration_date:
+            self.registration_date = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for storage"""
-        return {
-            "user_id": self.user_id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "grade": self.grade,
-            "major": self.major,
-            "province": self.province,
-            "city": self.city,
-            "phone": self.phone,
-            "status": self.status.value,
-            "registration_date": (
-                self.registration_date.isoformat() if self.registration_date else None
-            ),
-            "last_updated": (
-                self.last_updated.isoformat() if self.last_updated else None
-            ),
-            "last_login": self.last_login.isoformat() if self.last_login else None,
-            "login_count": self.login_count,
-            "metadata": self.metadata,
-        }
+        """Convert to dictionary"""
+        data = asdict(self)
+        data["status"] = self.status.value
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "UserData":
-        """Create UserData from dictionary"""
-        # Parse dates
-        registration_date = None
-        if data.get("registration_date"):
-            registration_date = datetime.fromisoformat(data["registration_date"])
-
-        last_updated = None
-        if data.get("last_updated"):
-            last_updated = datetime.fromisoformat(data["last_updated"])
-
-        last_login = None
-        if data.get("last_login"):
-            last_login = datetime.fromisoformat(data["last_login"])
-
-        return cls(
-            user_id=data["user_id"],
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            grade=data["grade"],
-            major=data["major"],
-            province=data["province"],
-            city=data["city"],
-            phone=data["phone"],
-            status=UserStatus(data.get("status", "pending")),
-            registration_date=registration_date,
-            last_updated=last_updated,
-            last_login=last_login,
-            login_count=data.get("login_count", 0),
-            metadata=data.get("metadata", {}),
-        )
-
-    def update_login(self):
-        """Update login information"""
-        self.last_login = datetime.now()
-        self.login_count += 1
-        self.last_updated = datetime.now()
+        """Create from dictionary"""
+        if "status" in data:
+            data["status"] = UserStatus(data["status"])
+        return cls(**data)
 
     def get_full_name(self) -> str:
-        """Get user's full name"""
+        """Get full name"""
         return f"{self.first_name} {self.last_name}"
 
-    def is_active(self) -> bool:
-        """Check if user is active"""
-        return self.status == UserStatus.ACTIVE
+    def is_admin(self, admin_ids: List[int]) -> bool:
+        """Check if user is admin"""
+        return self.user_id in admin_ids
 
 
 @dataclass
 class CourseData:
-    """Course information data model"""
-
+    """Course information"""
     course_id: str
-    name: str
+    title: str
     description: str
     course_type: CourseType
-    grade_level: str
-    major: str
-    max_students: int
+    price: int = 0  # 0 for free courses
+    duration: str = ""
+    schedule: str = ""
+    max_students: int = 0
     current_students: int = 0
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    schedule: Dict[str, Any] = field(default_factory=dict)
-    price: Optional[float] = None
     is_active: bool = True
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    created_date: str = ""
 
     def __post_init__(self):
-        if self.created_at is None:
-            self.created_at = datetime.now()
-        if self.updated_at is None:
-            self.updated_at = datetime.now()
+        if not self.created_date:
+            self.created_date = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for storage"""
-        return {
-            "course_id": self.course_id,
-            "name": self.name,
-            "description": self.description,
-            "course_type": self.course_type.value,
-            "grade_level": self.grade_level,
-            "major": self.major,
-            "max_students": self.max_students,
-            "current_students": self.current_students,
-            "start_date": self.start_date.isoformat() if self.start_date else None,
-            "end_date": self.end_date.isoformat() if self.end_date else None,
-            "schedule": self.schedule,
-            "price": self.price,
-            "is_active": self.is_active,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "metadata": self.metadata,
-        }
+        """Convert to dictionary"""
+        data = asdict(self)
+        data["course_type"] = self.course_type.value
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CourseData":
-        """Create CourseData from dictionary"""
-        # Parse dates
-        start_date = None
-        if data.get("start_date"):
-            start_date = datetime.fromisoformat(data["start_date"])
-
-        end_date = None
-        if data.get("end_date"):
-            end_date = datetime.fromisoformat(data["end_date"])
-
-        created_at = None
-        if data.get("created_at"):
-            created_at = datetime.fromisoformat(data["created_at"])
-
-        updated_at = None
-        if data.get("updated_at"):
-            updated_at = datetime.fromisoformat(data["updated_at"])
-
-        return cls(
-            course_id=data["course_id"],
-            name=data["name"],
-            description=data["description"],
-            course_type=CourseType(data.get("course_type", "free")),
-            grade_level=data["grade_level"],
-            major=data["major"],
-            max_students=data["max_students"],
-            current_students=data.get("current_students", 0),
-            start_date=start_date,
-            end_date=end_date,
-            schedule=data.get("schedule", {}),
-            price=data.get("price"),
-            is_active=data.get("is_active", True),
-            created_at=created_at,
-            updated_at=updated_at,
-            metadata=data.get("metadata", {}),
-        )
+        """Create from dictionary"""
+        if "course_type" in data:
+            data["course_type"] = CourseType(data["course_type"])
+        return cls(**data)
 
     def is_full(self) -> bool:
         """Check if course is full"""
-        return self.current_students >= self.max_students
+        return self.max_students > 0 and self.current_students >= self.max_students
 
-    def has_available_seats(self) -> bool:
-        """Check if course has available seats"""
-        return self.current_students < self.max_students
-
-    def get_availability_percentage(self) -> float:
-        """Get course availability percentage"""
-        if self.max_students == 0:
-            return 0.0
-        return (self.current_students / self.max_students) * 100
-
-    def is_free(self) -> bool:
-        """Check if course is free"""
-        return self.course_type == CourseType.FREE or self.price == 0
-
-    def update_student_count(self, count: int):
-        """Update student count"""
-        self.current_students = max(0, self.current_students + count)
-        self.updated_at = datetime.now()
+    def can_enroll(self) -> bool:
+        """Check if course can be enrolled"""
+        return self.is_active and not self.is_full()
 
 
 @dataclass
-class RegistrationData:
-    """Course registration data model"""
-
-    registration_id: str
+class PurchaseData:
+    """Purchase information"""
+    purchase_id: str
     user_id: int
-    course_id: str
-    registration_date: datetime
-    status: str = "pending"  # pending, confirmed, cancelled, completed
-    payment_status: Optional[str] = None
-    payment_amount: Optional[float] = None
-    notes: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    item_type: str  # "course" or "book"
+    item_id: str
+    amount: int
+    status: PurchaseStatus = PurchaseStatus.PENDING
+    payment_receipt: str = ""
+    admin_notes: str = ""
+    created_date: str = ""
+    approved_date: str = ""
+    admin_id: Optional[int] = None
+
+    def __post_init__(self):
+        if not self.created_date:
+            self.created_date = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for storage"""
-        return {
-            "registration_id": self.registration_id,
-            "user_id": self.user_id,
-            "course_id": self.course_id,
-            "registration_date": self.registration_date.isoformat(),
-            "status": self.status,
-            "payment_status": self.payment_status,
-            "payment_amount": self.payment_amount,
-            "notes": self.notes,
-            "metadata": self.metadata,
-        }
+        """Convert to dictionary"""
+        data = asdict(self)
+        data["status"] = self.status.value
+        return data
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "RegistrationData":
-        """Create RegistrationData from dictionary"""
-        registration_date = datetime.fromisoformat(data["registration_date"])
+    def from_dict(cls, data: Dict[str, Any]) -> "PurchaseData":
+        """Create from dictionary"""
+        if "status" in data:
+            data["status"] = PurchaseStatus(data["status"])
+        return cls(**data)
 
-        return cls(
-            registration_id=data["registration_id"],
-            user_id=data["user_id"],
-            course_id=data["course_id"],
-            registration_date=registration_date,
-            status=data.get("status", "pending"),
-            payment_status=data.get("payment_status"),
-            payment_amount=data.get("payment_amount"),
-            notes=data.get("notes"),
-            metadata=data.get("metadata", {}),
-        )
+
+@dataclass
+class NotificationData:
+    """Admin notification data"""
+    notification_id: str
+    notification_type: NotificationType
+    user_id: int
+    message: str
+    data: Dict[str, Any] = None
+    is_read: bool = False
+    created_date: str = ""
+
+    def __post_init__(self):
+        if self.data is None:
+            self.data = {}
+        if not self.created_date:
+            self.created_date = datetime.now().isoformat()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        data = asdict(self)
+        data["notification_type"] = self.notification_type.value
+        return data
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "NotificationData":
+        """Create from dictionary"""
+        if "notification_type" in data:
+            data["notification_type"] = NotificationType(data["notification_type"])
+        return cls(**data)
+
+
+@dataclass
+class BookData:
+    """Book information"""
+    book_id: str
+    title: str
+    description: str
+    price: int
+    author: str
+    pages: int
+    features: List[str] = None
+    is_available: bool = True
+    created_date: str = ""
+
+    def __post_init__(self):
+        if self.features is None:
+            self.features = []
+        if not self.created_date:
+            self.created_date = datetime.now().isoformat()
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "BookData":
+        """Create from dictionary"""
+        return cls(**data)

@@ -15,6 +15,7 @@ from aiogram import Bot, Dispatcher, types, Router
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
 from aiogram.types import (
     InlineKeyboardMarkup,
     ReplyKeyboardMarkup,
@@ -40,20 +41,35 @@ logging.basicConfig(
 # Now import modules after logging is configured
 from config import Config
 from database import DataManager
+from database.models import (
+    CourseType,
+    PurchaseStatus,
+    PurchaseData,
+    NotificationData,
+    NotificationType,
+)
 from utils import Validator, SimpleCache, RateLimiter, BotErrorHandler
 
 # Initialize config
 try:
     config = Config()
-    
+
     # Reconfigure logging with config settings
     logging.getLogger().handlers.clear()  # Clear existing handlers
     logging.basicConfig(
         level=getattr(logging, config.logging.level),
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler("bot.log", encoding="utf-8") if config.logging.file_enabled else logging.NullHandler(),
-            logging.StreamHandler() if config.logging.console_enabled else logging.NullHandler(),
+            (
+                logging.FileHandler("bot.log", encoding="utf-8")
+                if config.logging.file_enabled
+                else logging.NullHandler()
+            ),
+            (
+                logging.StreamHandler()
+                if config.logging.console_enabled
+                else logging.NullHandler()
+            ),
         ],
     )
 except Exception as e:
@@ -101,6 +117,21 @@ class RegistrationStates(StatesGroup):
     waiting_for_phone = State()
     confirmation = State()
     editing = State()
+
+
+class PurchaseStates(StatesGroup):
+    """Purchase process states"""
+
+    waiting_for_payment_receipt = State()
+    waiting_for_address = State()
+    waiting_for_postal_code = State()
+    waiting_for_description = State()
+
+
+class CourseEnrollmentStates(StatesGroup):
+    """Course enrollment states"""
+
+    waiting_for_confirmation = State()
 
 
 # ============================================================================
@@ -227,15 +258,57 @@ class Keyboards:
     @staticmethod
     def get_main_menu_keyboard() -> InlineKeyboardMarkup:
         builder = InlineKeyboardBuilder()
-        builder.button(
-            text="🗓 مشاهده کلاس‌های قابل ثبت‌نام", callback_data="view_classes"
-        )
+        builder.button(text="🎓 دوره‌های رایگان", callback_data="free_courses")
+        builder.button(text="💎 دوره‌های تخصصی", callback_data="paid_courses")
+        builder.button(text="📚 دوره‌های خریداری شده", callback_data="purchased_courses")
         builder.button(text="📘 تهیه کتاب انفجار خلاقیت", callback_data="buy_book")
-        builder.button(
-            text="🧑‍🏫 ارتباط با استاد حاتمی", callback_data="contact_teacher"
-        )
-        builder.button(text="⚙️ ویرایش اطلاعات", callback_data="edit_profile")
+        builder.button(text="🌐 فضای مجازی", callback_data="social_media")
+        builder.button(text="📞 ارتباط با ما", callback_data="contact_us")
+        builder.adjust(2)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_course_keyboard(course_id: str, course_type: str) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        if course_type == "free":
+            builder.button(
+                text="✅ ثبت‌نام در دوره", callback_data=f"enroll_course:{course_id}"
+            )
+        else:
+            builder.button(
+                text="💳 خرید دوره", callback_data=f"purchase_course:{course_id}"
+            )
+        builder.button(text="🔙 بازگشت", callback_data="back_to_courses")
         builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_payment_keyboard(purchase_id: str) -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(
+            text="📸 ارسال فیش واریزی", callback_data=f"send_receipt:{purchase_id}"
+        )
+        builder.button(text="🔙 بازگشت", callback_data="back_to_courses")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_book_purchase_keyboard() -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(text="💳 خرید کتاب", callback_data="purchase_book")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(1)
+        return builder.as_markup()
+
+    @staticmethod
+    def get_social_media_keyboard() -> InlineKeyboardMarkup:
+        builder = InlineKeyboardBuilder()
+        builder.button(text="📱 اینستاگرام", url="https://instagram.com/ostad_hatami")
+        builder.button(text="📺 یوتیوب", url="https://youtube.com/@ostadhatami")
+        builder.button(text="💬 گروه تلگرام", url="https://t.me/ostad_hatami_group")
+        builder.button(text="📢 کانال تلگرام", url="https://t.me/ostad_hatami_channel")
+        builder.button(text="🔙 بازگشت", callback_data="back_to_main")
+        builder.adjust(2)
         return builder.as_markup()
 
 
@@ -288,7 +361,205 @@ class Messages:
 🔔 **نکات مهم:**
 • کلاس‌ها کاملاً رایگان هستند
 • در صورت عدم حضور، از لیست حذف خواهید شد
-• سوالات خود را از طریق ربات مطرح کنید"""
+• سوالات خود را از طریق ربات مطرح کنید
+
+🎓 **حالا می‌توانید از منوی اصلی استفاده کنید!**"""
+
+    @staticmethod
+    def get_free_courses_message() -> str:
+        return """🎓 **دوره‌های رایگان استاد حاتمی**
+
+📚 **کلاس‌های ریاضی رایگان:**
+• نظریه اعداد و ریاضی گسسته
+• مهارت‌های حل خلاق مسائل ریاضی
+• کلاس‌های پایه (دهم، یازدهم، دوازدهم)
+
+⏰ **زمان کلاس‌ها:**
+• جمعه‌ها ساعت ۱۵:۰۰
+• مدت هر جلسه: ۹۰ دقیقه
+
+🎯 **ویژگی‌ها:**
+• کاملاً رایگان
+• کلاس زنده در اسکای‌روم
+• پشتیبانی ۲۴/۷
+• محتوای تکمیلی
+
+📝 **برای ثبت‌نام در کلاس‌ها، روی گزینه مورد نظر کلیک کنید.**"""
+
+    @staticmethod
+    def get_paid_courses_message() -> str:
+        return """💎 **دوره‌های تخصصی استاد حاتمی**
+
+🎯 **دوره‌های موجود:**
+• دوره جامع ریاضی کنکور
+• دوره حل مسائل پیشرفته
+• دوره آنالیز ریاضی
+• دوره جبر خطی
+
+💰 **قیمت‌ها:**
+• دوره جامع: ۵۰۰,۰۰۰ تومان
+• دوره پیشرفته: ۳۵۰,۰۰۰ تومان
+• دوره آنالیز: ۴۰۰,۰۰۰ تومان
+• دوره جبر: ۳۰۰,۰۰۰ تومان
+
+✨ **ویژگی‌ها:**
+• ویدیوهای با کیفیت بالا
+• جزوات کامل
+• پشتیبانی تلفنی
+• گواهی پایان دوره
+
+💳 **برای خرید دوره، روی گزینه مورد نظر کلیک کنید.**"""
+
+    @staticmethod
+    def get_book_info_message() -> str:
+        return """📘 **کتاب انفجار خلاقیت**
+
+✍️ **نویسنده:** استاد حاتمی
+📄 **تعداد صفحات:** ۴۰۰ صفحه
+💰 **قیمت:** ۲۵۰,۰۰۰ تومان
+
+✨ **ویژگی‌های کتاب:**
+• مثال‌های حل شده
+• تمرینات متنوع
+• نمونه سوالات کنکور
+• پاسخ تشریحی
+• تکنیک‌های حل مسائل
+• نکات مهم کنکوری
+
+🚚 **نحوه ارسال:**
+• ارسال پستی به سراسر کشور
+• زمان تحویل: ۲-۳ روز کاری
+• هزینه ارسال: رایگان
+
+💳 **برای خرید کتاب، روی گزینه خرید کلیک کنید.**"""
+
+    @staticmethod
+    def get_payment_info_message(amount: int, item_name: str) -> str:
+        return f"""💳 **اطلاعات واریزی**
+
+📦 **محصول:** {item_name}
+💰 **مبلغ قابل پرداخت:** {amount:,} تومان
+
+🏦 **شماره حساب:**
+• بانک ملی: ۶۰۳۷-۹۹۹۹-۹۹۹۹-۹۹۹۹
+• به نام: استاد حاتمی
+
+📱 **شماره کارت:**
+• ۶۰۳۷-۹۹۹۹-۹۹۹۹-۹۹۹۹
+
+📸 **پس از واریز، لطفاً فیش واریزی را ارسال کنید.**
+⚠️ **توجه:** بدون ارسال فیش، خرید شما تایید نخواهد شد."""
+
+    @staticmethod
+    def get_address_request_message() -> str:
+        return """📮 **اطلاعات ارسال**
+
+لطفاً آدرس دقیق پستی خود را وارد کنید:
+
+🏠 **نمونه آدرس:**
+تهران، خیابان ولیعصر، پلاک ۱۲۳، واحد ۴
+
+📝 **نکات مهم:**
+• آدرس باید کامل و دقیق باشد
+• کد پستی را جداگانه وارد کنید
+• شماره تماس گیرنده را ذکر کنید"""
+
+    @staticmethod
+    def get_postal_code_request_message() -> str:
+        return """📮 **کد پستی**
+
+لطفاً کد پستی ۱۰ رقمی خود را وارد کنید:
+
+📝 **مثال:** ۱۲۳۴۵۶۷۸۹۰
+
+⚠️ **نکات:**
+• کد پستی باید ۱۰ رقم باشد
+• فقط اعداد وارد کنید"""
+
+    @staticmethod
+    def get_description_request_message() -> str:
+        return """📝 **توضیحات اضافی**
+
+لطفاً هر توضیح اضافی که می‌خواهید را وارد کنید:
+
+💡 **مثال:**
+• زمان مناسب برای تماس
+• درخواست‌های خاص
+• سوالات اضافی
+
+🔙 **در صورت عدم نیاز، روی بازگشت کلیک کنید.**"""
+
+    @staticmethod
+    def get_purchase_success_message() -> str:
+        return """✅ **درخواست خرید شما ثبت شد!**
+
+📋 **مراحل بعدی:**
+• فیش واریزی شما بررسی خواهد شد
+• پس از تایید، محصول برای شما ارسال می‌شود
+• از طریق تلگرام با شما تماس گرفته خواهد شد
+
+⏰ **زمان بررسی:** حداکثر ۲۴ ساعت
+
+📞 **در صورت سوال:** @Ostad_Hatami
+
+🔔 **اطلاع‌رسانی تایید خرید از طریق ربات انجام خواهد شد.**"""
+
+    @staticmethod
+    def get_no_purchases_message() -> str:
+        return """📚 **دوره‌های خریداری شده**
+
+😔 **هنوز دوره‌ای خریداری نکرده‌اید.**
+
+💡 **پیشنهاد:**
+• از دوره‌های رایگان استفاده کنید
+• دوره‌های تخصصی را بررسی کنید
+• کتاب انفجار خلاقیت را تهیه کنید
+
+🔙 **برای بازگشت به منوی اصلی کلیک کنید.**"""
+
+    @staticmethod
+    def get_social_media_message() -> str:
+        return """🌐 **فضای مجازی استاد حاتمی**
+
+📱 **شبکه‌های اجتماعی:**
+• اینستاگرام: آموزش‌های روزانه
+• یوتیوب: ویدیوهای آموزشی
+• تلگرام: گروه و کانال رسمی
+
+💬 **گروه تلگرام:**
+• پرسش و پاسخ
+• اشتراک‌گذاری مطالب
+• اطلاع‌رسانی کلاس‌ها
+
+📢 **کانال تلگرام:**
+• اخبار و اطلاعیه‌ها
+• نمونه سوالات
+• نکات آموزشی
+
+🔗 **برای دسترسی، روی لینک مورد نظر کلیک کنید.**"""
+
+    @staticmethod
+    def get_contact_message() -> str:
+        return """📞 **ارتباط با ما**
+
+🧑‍🏫 **استاد حاتمی:**
+• تلگرام: @Ostad_Hatami
+• ایمیل: info@ostadhatami.ir
+• وب‌سایت: www.ostadhatami.ir
+
+📱 **شماره تماس:**
+• ۰۹۱۲۳۴۵۶۷۸۹
+
+⏰ **ساعات پاسخگویی:**
+• شنبه تا چهارشنبه: ۹ صبح تا ۶ عصر
+• جمعه: ۹ صبح تا ۲ عصر
+
+💡 **نکات مهم:**
+• سوالات درسی خود را مطرح کنید
+• برای مشاوره تحصیلی تماس بگیرید
+• درخواست کلاس خصوصی داشته باشید
+
+🔔 **پاسخ‌گویی سریع از طریق تلگرام**"""
 
 
 # ============================================================================
@@ -690,33 +961,101 @@ async def show_main_menu_after_registration(message: types.Message):
         )
 
 
-@router.callback_query(lambda c: c.data == "view_classes")
+# ============================================================================
+# MAIN MENU HANDLERS
+# ============================================================================
+@router.callback_query(lambda c: c.data == "free_courses")
 @maintenance_mode
-async def view_classes(callback: types.CallbackQuery):
-    """Show available classes"""
+async def free_courses(callback: types.CallbackQuery):
+    """Show free courses"""
     try:
         await callback.answer()
-        classes_text = """🗓 **کلاس‌های قابل ثبت‌نام:**
+        courses = await data_manager.get_all_courses(CourseType.FREE)
 
-📚 **کلاس‌های ریاضی:**
-• نظریه اعداد و ریاضی گسسته
-• مهارت‌های حل خلاق مسائل ریاضی
-• کلاس‌های پایه (دهم، یازدهم، دوازدهم)
+        if not courses:
+            await callback.message.edit_text(
+                "😔 در حال حاضر دوره رایگانی موجود نیست.",
+                reply_markup=Keyboards.get_main_menu_keyboard(),
+            )
+            return
 
-⏰ **زمان کلاس‌ها:**
-• جمعه‌ها ساعت ۱۵:۰۰
-• مدت هر جلسه: ۹۰ دقیقه
+        courses_text = Messages.get_free_courses_message() + "\n\n"
+        for course in courses:
+            courses_text += f"📚 **{course.title}**\n"
+            courses_text += f"📝 {course.description}\n"
+            courses_text += f"⏰ {course.schedule}\n"
+            courses_text += f"👥 {course.current_students}/{course.max_students if course.max_students > 0 else 'نامحدود'}\n\n"
 
-🎯 **ویژگی‌ها:**
-• کاملاً رایگان
-• کلاس زنده در اسکای‌روم
-• پشتیبانی ۲۴/۷
-• محتوای تکمیلی
-
-📝 **برای ثبت‌نام در کلاس‌ها، منتظر اطلاع‌رسانی باشید.**"""
-        await callback.message.edit_text(classes_text)
+        await callback.message.edit_text(
+            courses_text,
+            reply_markup=Keyboards.get_course_keyboard(courses[0].course_id, "free"),
+        )
     except Exception as e:
-        await error_handler.handle_system_error(callback, e, "view_classes")
+        await error_handler.handle_system_error(callback, e, "free_courses")
+
+
+@router.callback_query(lambda c: c.data == "paid_courses")
+@maintenance_mode
+async def paid_courses(callback: types.CallbackQuery):
+    """Show paid courses"""
+    try:
+        await callback.answer()
+        courses = await data_manager.get_all_courses(CourseType.PAID)
+
+        if not courses:
+            await callback.message.edit_text(
+                "😔 در حال حاضر دوره تخصصی موجود نیست.",
+                reply_markup=Keyboards.get_main_menu_keyboard(),
+            )
+            return
+
+        courses_text = Messages.get_paid_courses_message() + "\n\n"
+        for course in courses:
+            courses_text += f"💎 **{course.title}**\n"
+            courses_text += f"📝 {course.description}\n"
+            courses_text += f"💰 {course.price:,} تومان\n"
+            courses_text += f"⏰ {course.duration}\n\n"
+
+        await callback.message.edit_text(
+            courses_text,
+            reply_markup=Keyboards.get_course_keyboard(courses[0].course_id, "paid"),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "paid_courses")
+
+
+@router.callback_query(lambda c: c.data == "purchased_courses")
+@maintenance_mode
+async def purchased_courses(callback: types.CallbackQuery):
+    """Show user's purchased courses"""
+    try:
+        await callback.answer()
+        user_id = callback.from_user.id
+        purchases = await data_manager.get_user_purchases(
+            user_id, PurchaseStatus.APPROVED
+        )
+
+        if not purchases:
+            await callback.message.edit_text(
+                Messages.get_no_purchases_message(),
+                reply_markup=Keyboards.get_main_menu_keyboard(),
+            )
+            return
+
+        courses_text = "📚 **دوره‌های خریداری شده شما:**\n\n"
+        for purchase in purchases:
+            if purchase.item_type == "course":
+                course = await data_manager.get_course(purchase.item_id)
+                if course:
+                    courses_text += f"✅ **{course.title}**\n"
+                    courses_text += f"📅 تاریخ خرید: {purchase.created_date[:10]}\n"
+                    courses_text += f"💰 مبلغ: {purchase.amount:,} تومان\n\n"
+
+        await callback.message.edit_text(
+            courses_text, reply_markup=Keyboards.get_main_menu_keyboard()
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "purchased_courses")
 
 
 @router.callback_query(lambda c: c.data == "buy_book")
@@ -725,51 +1064,54 @@ async def buy_book(callback: types.CallbackQuery):
     """Show book information"""
     try:
         await callback.answer()
-        book_text = """📘 **کتاب انفجار خلاقیت**
-
-✍️ **نویسنده:** استاد حاتمی
-📄 **تعداد صفحات:** ۴۰۰ صفحه
-💰 **قیمت:** ۲۵۰,۰۰۰ تومان
-
-✨ **ویژگی‌های کتاب:**
-• مثال‌های حل شده
-• تمرینات متنوع
-• نمونه سوالات کنکور
-• پاسخ تشریحی
-
-📞 **برای سفارش کتاب:**
-• تماس: ۰۹۱۲۳۴۵۶۷۸۹
-• تلگرام: @Ostad_Hatami
-• ایمیل: info@ostadhatami.ir"""
-        await callback.message.edit_text(book_text)
+        await callback.message.edit_text(
+            Messages.get_book_info_message(),
+            reply_markup=Keyboards.get_book_purchase_keyboard(),
+        )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "buy_book")
 
 
-@router.callback_query(lambda c: c.data == "contact_teacher")
+@router.callback_query(lambda c: c.data == "social_media")
 @maintenance_mode
-async def contact_teacher(callback: types.CallbackQuery):
+async def social_media(callback: types.CallbackQuery):
+    """Show social media links"""
+    try:
+        await callback.answer()
+        await callback.message.edit_text(
+            Messages.get_social_media_message(),
+            reply_markup=Keyboards.get_social_media_keyboard(),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "social_media")
+
+
+@router.callback_query(lambda c: c.data == "contact_us")
+@maintenance_mode
+async def contact_us(callback: types.CallbackQuery):
     """Show contact information"""
     try:
         await callback.answer()
-        contact_text = """🧑‍🏫 **ارتباط با استاد حاتمی**
-
-📞 **شماره تماس:** ۰۹۱۲۳۴۵۶۷۸۹
-💬 **تلگرام:** @Ostad_Hatami
-📧 **ایمیل:** info@ostadhatami.ir
-🌐 **وب‌سایت:** www.ostadhatami.ir
-
-⏰ **ساعات پاسخگویی:**
-• شنبه تا چهارشنبه: ۹ صبح تا ۶ عصر
-• جمعه: ۹ صبح تا ۲ عصر
-
-💡 **نکات مهم:**
-• سوالات درسی خود را مطرح کنید
-• برای مشاوره تحصیلی تماس بگیرید
-• درخواست کلاس خصوصی داشته باشید"""
-        await callback.message.edit_text(contact_text)
+        await callback.message.edit_text(
+            Messages.get_contact_message(),
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
     except Exception as e:
-        await error_handler.handle_system_error(callback, e, "contact_teacher")
+        await error_handler.handle_system_error(callback, e, "contact_us")
+
+
+@router.callback_query(lambda c: c.data == "back_to_main")
+@maintenance_mode
+async def back_to_main(callback: types.CallbackQuery):
+    """Back to main menu"""
+    try:
+        await callback.answer()
+        await callback.message.edit_text(
+            "🎓 **منوی اصلی ربات استاد حاتمی**\n\nلطفاً یکی از گزینه‌های زیر را انتخاب کنید:",
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "back_to_main")
 
 
 @router.callback_query(lambda c: c.data == "edit_profile")
@@ -785,13 +1127,254 @@ async def edit_profile(callback: types.CallbackQuery, state: FSMContext):
             return
 
         await state.set_state(RegistrationStates.editing)
-        await state.update_data(**user_data)
+        await state.update_data(**user_data.to_dict())
         await callback.message.edit_text(
             "✏️ **ویرایش اطلاعات**\n\nکدام فیلد را می‌خواهید ویرایش کنید؟",
             reply_markup=Keyboards.get_edit_keyboard(),
         )
     except Exception as e:
         await error_handler.handle_system_error(callback, e, "edit_profile")
+
+
+# ============================================================================
+# COURSE ENROLLMENT HANDLERS
+# ============================================================================
+@router.callback_query(lambda c: c.data.startswith("enroll_course:"))
+@maintenance_mode
+async def enroll_course(callback: types.CallbackQuery, state: FSMContext):
+    """Enroll in free course"""
+    try:
+        await callback.answer()
+        course_id = callback.data.split(":")[1]
+        user_id = callback.from_user.id
+
+        course = await data_manager.get_course(course_id)
+        if not course:
+            await callback.message.edit_text("❌ دوره مورد نظر یافت نشد.")
+            return
+
+        if not course.can_enroll():
+            await callback.message.edit_text("❌ این دوره در حال حاضر قابل ثبت‌نام نیست.")
+            return
+
+        # Check if user is already enrolled
+        user = await data_manager.load_user_data(user_id)
+        if course_id in user.enrolled_courses:
+            await callback.message.edit_text("✅ شما قبلاً در این دوره ثبت‌نام کرده‌اید.")
+            return
+
+        # Enroll user
+        await data_manager.update_user_courses(user_id, course_id, "add")
+        await data_manager.update_course_students(course_id, 1)
+
+        await callback.message.edit_text(
+            f"✅ **ثبت‌نام موفق!**\n\n📚 **دوره:** {course.title}\n\n📅 اطلاعات کلاس برای شما ارسال خواهد شد.",
+            reply_markup=Keyboards.get_main_menu_keyboard()
+        )
+
+        # Notify admin
+        notification = NotificationData(
+            notification_id=data_manager.generate_id(),
+            notification_type=NotificationType.COURSE_PURCHASE,
+            user_id=user_id,
+            message=f"کاربر {user.get_full_name()} در دوره رایگان {course.title} ثبت‌نام کرد.",
+            data={"course_id": course_id, "course_title": course.title}
+        )
+        await data_manager.save_notification(notification)
+
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "enroll_course")
+
+
+@router.callback_query(lambda c: c.data.startswith("purchase_course:"))
+@maintenance_mode
+async def purchase_course(callback: types.CallbackQuery, state: FSMContext):
+    """Purchase paid course"""
+    try:
+        await callback.answer()
+        course_id = callback.data.split(":")[1]
+        user_id = callback.from_user.id
+
+        course = await data_manager.get_course(course_id)
+        if not course:
+            await callback.message.edit_text("❌ دوره مورد نظر یافت نشد.")
+            return
+
+        # Create purchase record
+        purchase = PurchaseData(
+            purchase_id=data_manager.generate_id(),
+            user_id=user_id,
+            item_type="course",
+            item_id=course_id,
+            amount=course.price
+        )
+        await data_manager.save_purchase(purchase)
+
+        await callback.message.edit_text(
+            Messages.get_payment_info_message(course.price, course.title),
+            reply_markup=Keyboards.get_payment_keyboard(purchase.purchase_id)
+        )
+
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "purchase_course")
+
+
+@router.callback_query(lambda c: c.data == "purchase_book")
+@maintenance_mode
+async def purchase_book(callback: types.CallbackQuery, state: FSMContext):
+    """Purchase book"""
+    try:
+        await callback.answer()
+        user_id = callback.from_user.id
+
+        # Create purchase record for book
+        purchase = PurchaseData(
+            purchase_id=data_manager.generate_id(),
+            user_id=user_id,
+            item_type="book",
+            item_id="book_creativity_explosion",
+            amount=250000  # 250,000 Tomans
+        )
+        await data_manager.save_purchase(purchase)
+
+        await state.set_state(PurchaseStates.waiting_for_address)
+        await state.update_data(purchase_id=purchase.purchase_id)
+
+        await callback.message.edit_text(
+            Messages.get_payment_info_message(250000, "کتاب انفجار خلاقیت") + "\n\n" + Messages.get_address_request_message()
+        )
+
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "purchase_book")
+
+
+# ============================================================================
+# PAYMENT HANDLERS
+# ============================================================================
+@router.callback_query(lambda c: c.data.startswith("send_receipt:"))
+@maintenance_mode
+async def send_receipt(callback: types.CallbackQuery, state: FSMContext):
+    """Handle payment receipt"""
+    try:
+        await callback.answer()
+        purchase_id = callback.data.split(":")[1]
+        
+        await state.set_state(PurchaseStates.waiting_for_payment_receipt)
+        await state.update_data(purchase_id=purchase_id)
+
+        await callback.message.edit_text(
+            "📸 **ارسال فیش واریزی**\n\nلطفاً عکس فیش واریزی خود را ارسال کنید.\n\n⚠️ **نکات مهم:**\n• عکس باید واضح و خوانا باشد\n• شماره تراکنش قابل مشاهده باشد\n• مبلغ واریزی مشخص باشد"
+        )
+
+    except Exception as e:
+        await error_handler.handle_system_error(callback, e, "send_receipt")
+
+
+@router.message(StateFilter(PurchaseStates.waiting_for_payment_receipt))
+@maintenance_mode
+async def process_payment_receipt(message: types.Message, state: FSMContext):
+    """Process payment receipt"""
+    try:
+        if not message.photo:
+            await message.answer("❌ لطفاً عکس فیش واریزی را ارسال کنید.")
+            return
+
+        data = await state.get_data()
+        purchase_id = data.get("purchase_id")
+
+        # Save receipt info
+        await state.update_data(receipt_file_id=message.photo[-1].file_id)
+
+        # Notify admin
+        purchase = await data_manager.get_purchase(purchase_id)
+        if purchase:
+            notification = NotificationData(
+                notification_id=data_manager.generate_id(),
+                notification_type=NotificationType.PAYMENT_RECEIVED,
+                user_id=message.from_user.id,
+                message=f"فیش واریزی جدید برای {purchase.item_type} دریافت شد.",
+                data={
+                    "purchase_id": purchase_id,
+                    "amount": purchase.amount,
+                    "receipt_file_id": message.photo[-1].file_id
+                }
+            )
+            await data_manager.save_notification(notification)
+
+        await message.answer(
+            "✅ فیش واریزی شما دریافت شد.\n\n📋 **مراحل بعدی:**\n• فیش شما بررسی خواهد شد\n• پس از تایید، محصول ارسال می‌شود\n• از طریق تلگرام با شما تماس گرفته خواهد شد\n\n⏰ **زمان بررسی:** حداکثر ۲۴ ساعت",
+            reply_markup=Keyboards.get_main_menu_keyboard()
+        )
+        await state.clear()
+
+    except Exception as e:
+        await error_handler.handle_system_error(message, e, "process_payment_receipt")
+
+
+# ============================================================================
+# BOOK PURCHASE HANDLERS
+# ============================================================================
+@router.message(StateFilter(PurchaseStates.waiting_for_address))
+@maintenance_mode
+async def process_address(message: types.Message, state: FSMContext):
+    """Process address input"""
+    try:
+        if not message.text or len(message.text.strip()) < 10:
+            await message.answer("❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر).")
+            return
+
+        await state.update_data(address=message.text.strip())
+        await state.set_state(PurchaseStates.waiting_for_postal_code)
+
+        await message.answer(Messages.get_postal_code_request_message())
+
+    except Exception as e:
+        await error_handler.handle_system_error(message, e, "process_address")
+
+
+@router.message(StateFilter(PurchaseStates.waiting_for_postal_code))
+@maintenance_mode
+async def process_postal_code(message: types.Message, state: FSMContext):
+    """Process postal code input"""
+    try:
+        postal_code = message.text.strip()
+        if not postal_code.isdigit() or len(postal_code) != 10:
+            await message.answer("❌ لطفاً کد پستی ۱۰ رقمی معتبر وارد کنید.")
+            return
+
+        await state.update_data(postal_code=postal_code)
+        await state.set_state(PurchaseStates.waiting_for_description)
+
+        await message.answer(Messages.get_description_request_message())
+
+    except Exception as e:
+        await error_handler.handle_system_error(message, e, "process_postal_code")
+
+
+@router.message(StateFilter(PurchaseStates.waiting_for_description))
+@maintenance_mode
+async def process_description(message: types.Message, state: FSMContext):
+    """Process description input"""
+    try:
+        data = await state.get_data()
+        description = message.text.strip() if message.text else ""
+        
+        # Update purchase with address info
+        purchase_id = data.get("purchase_id")
+        if purchase_id:
+            purchase = await data_manager.get_purchase(purchase_id)
+            if purchase:
+                purchase.admin_notes = f"آدرس: {data.get('address')}\nکد پستی: {data.get('postal_code')}\nتوضیحات: {description}"
+                await data_manager.save_purchase(purchase)
+
+        await message.answer(
+            Messages.get_purchase_success_message(),
+            reply_markup=Keyboards.get_main_menu_keyboard()
+        )
+        await state.clear()
+
+    except Exception as e:
+        await error_handler.handle_system_error(message, e, "process_description")
 
 
 @router.message(Command("stats"))

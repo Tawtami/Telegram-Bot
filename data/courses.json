@@ -1,0 +1,93 @@
+[
+  {
+    "course_id": "free_math_basic",
+    "title": "کلاس‌های پایه ریاضی",
+    "description": "کلاس‌های رایگان ریاضی برای پایه‌های دهم، یازدهم و دوازدهم",
+    "course_type": "free",
+    "price": 0,
+    "duration": "۹۰ دقیقه",
+    "schedule": "جمعه‌ها ساعت ۱۵:۰۰",
+    "max_students": 0,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "free_number_theory",
+    "title": "نظریه اعداد و ریاضی گسسته",
+    "description": "آموزش مفاهیم نظریه اعداد و ریاضی گسسته برای کنکور",
+    "course_type": "free",
+    "price": 0,
+    "duration": "۹۰ دقیقه",
+    "schedule": "جمعه‌ها ساعت ۱۵:۰۰",
+    "max_students": 0,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "free_creative_solving",
+    "title": "مهارت‌های حل خلاق مسائل ریاضی",
+    "description": "آموزش تکنیک‌های حل خلاق مسائل ریاضی",
+    "course_type": "free",
+    "price": 0,
+    "duration": "۹۰ دقیقه",
+    "schedule": "جمعه‌ها ساعت ۱۵:۰۰",
+    "max_students": 0,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "paid_comprehensive",
+    "title": "دوره جامع ریاضی کنکور",
+    "description": "دوره کامل ریاضی کنکور با تمام مباحث",
+    "course_type": "paid",
+    "price": 500000,
+    "duration": "۴۰ ساعت",
+    "schedule": "انعطاف‌پذیر",
+    "max_students": 100,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "paid_advanced",
+    "title": "دوره حل مسائل پیشرفته",
+    "description": "دوره حل مسائل پیشرفته ریاضی",
+    "course_type": "paid",
+    "price": 350000,
+    "duration": "۲۵ ساعت",
+    "schedule": "انعطاف‌پذیر",
+    "max_students": 50,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "paid_analysis",
+    "title": "دوره آنالیز ریاضی",
+    "description": "دوره تخصصی آنالیز ریاضی",
+    "course_type": "paid",
+    "price": 400000,
+    "duration": "۳۰ ساعت",
+    "schedule": "انعطاف‌پذیر",
+    "max_students": 30,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  },
+  {
+    "course_id": "paid_linear_algebra",
+    "title": "دوره جبر خطی",
+    "description": "دوره تخصصی جبر خطی",
+    "course_type": "paid",
+    "price": 300000,
+    "duration": "۲۰ ساعت",
+    "schedule": "انعطاف‌پذیر",
+    "max_students": 40,
+    "current_students": 0,
+    "is_active": true,
+    "created_date": "2025-08-06T18:00:00"
+  }
+]
