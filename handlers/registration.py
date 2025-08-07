@@ -1,271 +1,178 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Registration handlers for Ostad Hatami Bot
+Registration flow using python-telegram-bot (async)
+Flow: first_name -> last_name -> province -> city -> grade -> field -> confirm
 """
+from __future__ import annotations
 
-import logging
 from typing import Dict, Any
-from aiogram import Router, types
-from aiogram.fsm.state import State, StatesGroup
-from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command, StateFilter
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from telegram import Update
+from telegram.constants import ParseMode
+from telegram.ext import (
+    ConversationHandler,
+    CallbackContext,
+    CallbackQueryHandler,
+    MessageHandler,
+    CommandHandler,
+    filters,
+)
 
-from config import Config
-from database import DataManager
-from database.models import UserData, UserStatus
-from utils import Validator, BotErrorHandler
-from ui.keyboards import Keyboards
+from utils.storage import Student, StudentStorage
+from utils.keyboards import (
+    build_register_keyboard,
+    build_back_keyboard,
+    build_provinces_keyboard,
+    build_cities_keyboard,
+    build_grades_keyboard,
+    build_majors_keyboard,
+    build_main_menu_keyboard,
+)
 from ui.messages import Messages
-from core.decorators import rate_limit, maintenance_mode
+from config import Config
 
-logger = logging.getLogger(__name__)
-router = Router()
-
-# Initialize components
-config = Config()
-data_manager = DataManager()
-validator = Validator()
-error_handler = BotErrorHandler()
+FIRST_NAME, LAST_NAME, PROVINCE, CITY, GRADE, FIELD, CONFIRM = range(7)
 
 
-class RegistrationStates(StatesGroup):
-    """Registration process states"""
-
-    waiting_for_first_name = State()
-    waiting_for_last_name = State()
-    waiting_for_grade = State()
-    waiting_for_major = State()
-    waiting_for_province = State()
-    waiting_for_city = State()
-    confirmation = State()
-    editing = State()
+def _is_persian_text(text: str) -> bool:
+    import re
+    return bool(re.fullmatch(r"[\u0600-\u06FF\s]{2,50}", text or ""))
 
 
-@router.message(Command("start"))
-@rate_limit
-@maintenance_mode
-async def cmd_start(message: types.Message, state: FSMContext):
-    """Handle /start command"""
-    try:
-        user_id = message.from_user.id
-        first_name = message.from_user.first_name or "کاربر"
-
-        # Check if user is already registered
-        existing_user = await data_manager.load_user_data(user_id)
-        if existing_user:
-            await show_main_menu_after_registration(message)
-            return
-
-        # Send welcome message
-        welcome_msg = Messages.get_welcome_message(first_name)
-        keyboard = InlineKeyboardBuilder()
-        keyboard.button(text="📝 ثبت‌نام", callback_data="start_registration")
-
-        await message.answer(welcome_msg, reply_markup=keyboard.as_markup())
-
-    except Exception as e:
-        logger.error(f"Error in start command: {e}")
-        await error_handler.handle_error(message, e)
+async def start_registration(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    await update.callback_query.message.edit_text(
+        "📝 نام خود را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg")
+    )
+    return FIRST_NAME
 
 
-@router.callback_query(lambda c: c.data == "start_registration")
-@rate_limit
-@maintenance_mode
-async def start_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Start registration process"""
-    try:
-        await callback.message.edit_text(
-            Messages.get_registration_start(),
-            reply_markup=Keyboards.get_grade_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_grade)
-
-    except Exception as e:
-        logger.error(f"Error starting registration: {e}")
-        await error_handler.handle_error(callback.message, e)
+async def first_name(update: Update, context: CallbackContext):
+    name = (update.message.text or "").strip()
+    if not _is_persian_text(name):
+        await update.message.reply_text("❌ نام باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.")
+        return FIRST_NAME
+    context.user_data["first_name"] = name
+    await update.message.reply_text("📝 نام خانوادگی را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg"))
+    return LAST_NAME
 
 
-@router.callback_query(lambda c: c.data.startswith("grade:"))
-@rate_limit
-@maintenance_mode
-async def process_grade(callback: types.CallbackQuery, state: FSMContext):
-    """Process grade selection"""
-    try:
-        grade = callback.data.split(":")[1]
-        await state.update_data(grade=grade)
+async def last_name(update: Update, context: CallbackContext):
+    name = (update.message.text or "").strip()
+    if not _is_persian_text(name):
+        await update.message.reply_text("❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.")
+        return LAST_NAME
+    context.user_data["last_name"] = name
 
-        await callback.message.edit_text(
-            "🎓 **انتخاب رشته تحصیلی**\n\nلطفاً رشته تحصیلی خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_major_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_major)
-
-    except Exception as e:
-        logger.error(f"Error processing grade: {e}")
-        await error_handler.handle_error(callback.message, e)
+    config: Config = context.bot_data["config"]
+    await update.message.reply_text(
+        "🏛️ استان خود را انتخاب کنید:",
+        reply_markup=build_provinces_keyboard(config.provinces),
+    )
+    return PROVINCE
 
 
-@router.callback_query(lambda c: c.data.startswith("major:"))
-@rate_limit
-@maintenance_mode
-async def process_major(callback: types.CallbackQuery, state: FSMContext):
-    """Process major selection"""
-    try:
-        major = callback.data.split(":")[1]
-        await state.update_data(major=major)
+async def province(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    province = update.callback_query.data.split(":", 1)[1]
+    context.user_data["province"] = province
 
-        await callback.message.edit_text(
-            "🏛️ **انتخاب استان**\n\nلطفاً استان خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_province_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_province)
-
-    except Exception as e:
-        logger.error(f"Error processing major: {e}")
-        await error_handler.handle_error(callback.message, e)
+    config: Config = context.bot_data["config"]
+    await update.callback_query.message.edit_text(
+        f"🏙️ شهر خود را انتخاب کنید (استان: {province}):",
+        reply_markup=build_cities_keyboard(config.cities_by_province.get(province, [])),
+    )
+    return CITY
 
 
-@router.callback_query(lambda c: c.data.startswith("province:"))
-@rate_limit
-@maintenance_mode
-async def process_province(callback: types.CallbackQuery, state: FSMContext):
-    """Process province selection"""
-    try:
-        province = callback.data.split(":")[1]
-        await state.update_data(province=province)
+async def city(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    city = update.callback_query.data.split(":", 1)[1]
+    context.user_data["city"] = city
 
-        await callback.message.edit_text(
-            f"🏙️ **انتخاب شهر**\n\nاستان: {province}\n\nلطفاً شهر خود را انتخاب کنید:",
-            reply_markup=Keyboards.get_city_keyboard(province),
-        )
-        await state.set_state(RegistrationStates.waiting_for_city)
-
-    except Exception as e:
-        logger.error(f"Error processing province: {e}")
-        await error_handler.handle_error(callback.message, e)
+    config: Config = context.bot_data["config"]
+    await update.callback_query.message.edit_text(
+        "🎓 مقطع تحصیلی را انتخاب کنید:",
+        reply_markup=build_grades_keyboard(config.grades),
+    )
+    return GRADE
 
 
-@router.callback_query(lambda c: c.data.startswith("city:"))
-@rate_limit
-@maintenance_mode
-async def process_city(callback: types.CallbackQuery, state: FSMContext):
-    """Process city selection"""
-    try:
-        city = callback.data.split(":")[1]
-        await state.update_data(city=city)
+async def grade(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    grade = update.callback_query.data.split(":", 1)[1]
+    context.user_data["grade"] = grade
 
-        await callback.message.edit_text(
-            "📝 **نام**\n\nلطفاً نام خود را به فارسی وارد کنید:",
-            reply_markup=Keyboards.get_back_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_first_name)
-
-    except Exception as e:
-        logger.error(f"Error processing city: {e}")
-        await error_handler.handle_error(callback.message, e)
+    config: Config = context.bot_data["config"]
+    await update.callback_query.message.edit_text(
+        "📚 رشته تحصیلی را انتخاب کنید:",
+        reply_markup=build_majors_keyboard(["تجربی", "ریاضی", "انسانی"]),
+    )
+    return FIELD
 
 
-@router.message(StateFilter(RegistrationStates.waiting_for_first_name))
-@rate_limit
-@maintenance_mode
-async def process_first_name(message: types.Message, state: FSMContext):
-    """Process first name input"""
-    try:
-        if not validator.validate_name(message.text):
-            await message.answer(
-                "❌ نام باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
-            )
-            return
+async def field(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    field = update.callback_query.data.split(":", 1)[1]
+    context.user_data["field"] = field
 
-        await state.update_data(first_name=message.text.strip())
-
-        await message.answer(
-            "📝 **نام خانوادگی**\n\nلطفاً نام خانوادگی خود را به فارسی وارد کنید:",
-            reply_markup=Keyboards.get_back_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_last_name)
-
-    except Exception as e:
-        logger.error(f"Error processing first name: {e}")
-        await error_handler.handle_error(message, e)
+    data = context.user_data
+    summary = (
+        f"📋 خلاصه اطلاعات:\n\n"
+        f"👤 {data.get('first_name')} {data.get('last_name')}\n"
+        f"🏛️ {data.get('province')} - 🏙️ {data.get('city')}\n"
+        f"🎓 {data.get('grade')} - 📚 {data.get('field')}\n\n"
+        f"✅ برای تایید ثبت‌نام، دکمه زیر را بزنید."
+    )
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ تایید", callback_data="confirm_reg")], [InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")]])
+    await update.callback_query.message.edit_text(summary, reply_markup=kb)
+    return CONFIRM
 
 
-@router.message(StateFilter(RegistrationStates.waiting_for_last_name))
-@rate_limit
-@maintenance_mode
-async def process_last_name(message: types.Message, state: FSMContext):
-    """Process last name input"""
-    try:
-        if not validator.validate_name(message.text):
-            await message.answer(
-                "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
-            )
-            return
+async def confirm(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    storage: StudentStorage = context.bot_data["storage"]
+    user_id = update.effective_user.id
 
-        await state.update_data(last_name=message.text.strip())
+    student = Student(
+        user_id=user_id,
+        first_name=context.user_data.get("first_name", ""),
+        last_name=context.user_data.get("last_name", ""),
+        province=context.user_data.get("province", ""),
+        city=context.user_data.get("city", ""),
+        grade=context.user_data.get("grade", ""),
+        field=context.user_data.get("field", ""),
+    )
+    storage.upsert_student(student)
 
-        # Show confirmation
-        data = await state.get_data()
-        summary = Messages.get_profile_summary(data)
-
-        await message.answer(
-            summary,
-            reply_markup=Keyboards.get_confirmation_keyboard(),
-            reply_to_message_id=message.message_id,
-        )
-        await state.set_state(RegistrationStates.confirmation)
-
-    except Exception as e:
-        logger.error(f"Error processing last name: {e}")
-        await error_handler.handle_error(message, e)
+    from utils.keyboards import build_main_menu_keyboard
+    await update.callback_query.message.edit_text(
+        Messages.get_success_message(), reply_markup=build_main_menu_keyboard()
+    )
+    return ConversationHandler.END
 
 
-@router.callback_query(lambda c: c.data == "confirm_registration")
-@rate_limit
-@maintenance_mode
-async def confirm_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Confirm registration"""
-    try:
-        data = await state.get_data()
-        user_id = callback.from_user.id
-
-        # Create user data
-        user_data = UserData(
-            user_id=user_id,
-            first_name=data["first_name"],
-            last_name=data["last_name"],
-            grade=data["grade"],
-            major=data["major"],
-            province=data["province"],
-            city=data["city"],
-            phone="",  # Phone not required in specification
-            status=UserStatus.ACTIVE,
-        )
-
-        # Save user data
-        await data_manager.save_user_data(user_data.to_dict())
-
-        await callback.message.edit_text(
-            Messages.get_success_message(),
-            reply_markup=Keyboards.get_main_menu_keyboard(),
-        )
-        await state.clear()
-
-    except Exception as e:
-        logger.error(f"Error confirming registration: {e}")
-        await error_handler.handle_error(callback.message, e)
+async def cancel(update: Update, context: CallbackContext):
+    await update.callback_query.answer()
+    await update.callback_query.message.edit_text("❌ ثبت‌نام لغو شد.")
+    return ConversationHandler.END
 
 
-async def show_main_menu_after_registration(message: types.Message):
-    """Show main menu after registration"""
-    try:
-        await message.answer(
-            "🎉 **ثبت‌نام شما با موفقیت انجام شد!**\n\n"
-            "حالا می‌توانید از خدمات ربات استفاده کنید:",
-            reply_markup=Keyboards.get_main_menu_keyboard(),
-        )
-    except Exception as e:
-        logger.error(f"Error showing main menu: {e}")
-        await error_handler.handle_error(message, e)
+def build_registration_conversation() -> ConversationHandler:
+    return ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(start_registration, pattern=r"^start_registration$")
+        ],
+        states={
+            FIRST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, first_name)],
+            LAST_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, last_name)],
+            PROVINCE: [CallbackQueryHandler(province, pattern=r"^province:.*")],
+            CITY: [CallbackQueryHandler(city, pattern=r"^city:.*")],
+            GRADE: [CallbackQueryHandler(grade, pattern=r"^grade:.*")],
+            FIELD: [CallbackQueryHandler(field, pattern=r"^major:.*")],
+            CONFIRM: [CallbackQueryHandler(confirm, pattern=r"^confirm_reg$")],
+        },
+        fallbacks=[CallbackQueryHandler(cancel, pattern=r"^(cancel_reg|back_to_main)$")],
+        allow_reentry=True,
+    )
