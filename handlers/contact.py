@@ -14,7 +14,9 @@ async def contact_us(update: Update, context: CallbackContext):
         "📞 ارتباط با ما\n\n"
         "تلگرام: @Ostad_Hatami\nایمیل: info@ostadhatami.ir\nوب‌سایت: ostadhatami.ir"
     )
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]])
+    kb = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")]]
+    )
     await update.callback_query.answer()
     await update.callback_query.message.edit_text(text, reply_markup=kb)
 

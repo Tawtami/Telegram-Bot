@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import Application, CallbackQueryHandler, MessageHandler, CallbackContext, ConversationHandler, CommandHandler, filters
+from telegram.ext import (
+    Application,
+    CallbackQueryHandler,
+    MessageHandler,
+    CallbackContext,
+    ConversationHandler,
+    CommandHandler,
+    filters,
+)
 
 from handlers.menu import ensure_registered
 from utils.storage import StudentStorage
@@ -51,7 +59,9 @@ async def ask_postal(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ کد پستی باید ۱۰ رقم باشد.")
         return ASK_POSTAL
     context.user_data["postal_code"] = postal
-    await update.message.reply_text("📝 توضیحات اختیاری را وارد کنید (یا /skip را بزنید):")
+    await update.message.reply_text(
+        "📝 توضیحات اختیاری را وارد کنید (یا /skip را بزنید):"
+    )
     return ASK_NOTES
 
 
@@ -91,7 +101,11 @@ async def receipt_photo(update: Update, context: CallbackContext):
     # Notify admin #1
     admins = context.bot_data["config"].bot.admin_user_ids
     if admins:
-        await context.bot.send_photo(chat_id=admins[0], photo=update.message.photo[-1].file_id, caption=f"خرید کتاب جدید از کاربر {user_id}")
+        await context.bot.send_photo(
+            chat_id=admins[0],
+            photo=update.message.photo[-1].file_id,
+            caption=f"خرید کتاب جدید از کاربر {user_id}",
+        )
 
     await update.message.reply_text("✅ خرید شما ثبت شد. منتظر تایید بمانید.")
     return ConversationHandler.END
@@ -103,8 +117,12 @@ def register_book_handlers(app: Application):
         ConversationHandler(
             entry_points=[CallbackQueryHandler(buy_book, pattern=r"^buy_book$")],
             states={
-                ASK_ADDRESS: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_address)],
-                ASK_POSTAL: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_postal)],
+                ASK_ADDRESS: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, ask_address)
+                ],
+                ASK_POSTAL: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, ask_postal)
+                ],
                 ASK_NOTES: [
                     CommandHandler("skip", skip_notes),
                     MessageHandler(filters.TEXT & ~filters.COMMAND, notes),

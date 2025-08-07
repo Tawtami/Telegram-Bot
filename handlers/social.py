@@ -12,10 +12,22 @@ async def social_media(update: Update, context: CallbackContext):
         return
     kb = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📸 اینستاگرام", url="https://instagram.com/ostadhatami_official")],
+            [
+                InlineKeyboardButton(
+                    "📸 اینستاگرام", url="https://instagram.com/ostadhatami_official"
+                )
+            ],
             [InlineKeyboardButton("🎬 یوتیوب", url="https://youtube.com/@ostadhatami")],
-            [InlineKeyboardButton("📢 کانال تلگرام", url="https://t.me/OstadHatamiChannel")],
-            [InlineKeyboardButton("👥 گروه تلگرام", url="https://t.me/OstadHatamiGroup")],
+            [
+                InlineKeyboardButton(
+                    "📢 کانال تلگرام", url="https://t.me/OstadHatamiChannel"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "👥 گروه تلگرام", url="https://t.me/OstadHatamiGroup"
+                )
+            ],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_main")],
         ]
     )

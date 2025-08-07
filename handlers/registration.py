@@ -36,6 +36,7 @@ FIRST_NAME, LAST_NAME, PROVINCE, CITY, GRADE, FIELD, CONFIRM = range(7)
 
 def _is_persian_text(text: str) -> bool:
     import re
+
     return bool(re.fullmatch(r"[\u0600-\u06FF\s]{2,50}", text or ""))
 
 
@@ -53,14 +54,18 @@ async def first_name(update: Update, context: CallbackContext):
         await update.message.reply_text("❌ نام باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.")
         return FIRST_NAME
     context.user_data["first_name"] = name
-    await update.message.reply_text("📝 نام خانوادگی را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg"))
+    await update.message.reply_text(
+        "📝 نام خانوادگی را وارد کنید:", reply_markup=build_back_keyboard("cancel_reg")
+    )
     return LAST_NAME
 
 
 async def last_name(update: Update, context: CallbackContext):
     name = (update.message.text or "").strip()
     if not _is_persian_text(name):
-        await update.message.reply_text("❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.")
+        await update.message.reply_text(
+            "❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد."
+        )
         return LAST_NAME
     context.user_data["last_name"] = name
 
@@ -125,7 +130,13 @@ async def field(update: Update, context: CallbackContext):
         f"✅ برای تایید ثبت‌نام، دکمه زیر را بزنید."
     )
     from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ تایید", callback_data="confirm_reg")], [InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")]])
+
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("✅ تایید", callback_data="confirm_reg")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")],
+        ]
+    )
     await update.callback_query.message.edit_text(summary, reply_markup=kb)
     return CONFIRM
 
@@ -147,6 +158,7 @@ async def confirm(update: Update, context: CallbackContext):
     storage.upsert_student(student)
 
     from utils.keyboards import build_main_menu_keyboard
+
     await update.callback_query.message.edit_text(
         Messages.get_success_message(), reply_markup=build_main_menu_keyboard()
     )
@@ -173,6 +185,8 @@ def build_registration_conversation() -> ConversationHandler:
             FIELD: [CallbackQueryHandler(field, pattern=r"^major:.*")],
             CONFIRM: [CallbackQueryHandler(confirm, pattern=r"^confirm_reg$")],
         },
-        fallbacks=[CallbackQueryHandler(cancel, pattern=r"^(cancel_reg|back_to_main)$")],
+        fallbacks=[
+            CallbackQueryHandler(cancel, pattern=r"^(cancel_reg|back_to_main)$")
+        ],
         allow_reentry=True,
     )

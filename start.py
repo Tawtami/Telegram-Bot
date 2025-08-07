@@ -13,7 +13,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
 
 # Configure basic logging for startup
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +27,11 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            response = {"status": "healthy", "service": "Telegram Bot", "version": "ptb"}
+            response = {
+                "status": "healthy",
+                "service": "Telegram Bot",
+                "version": "ptb",
+            }
             self.wfile.write(json.dumps(response).encode())
         else:
             self.send_response(404)
