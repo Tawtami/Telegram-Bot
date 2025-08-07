@@ -89,19 +89,20 @@ if not BOT_TOKEN:
 try:
     data_manager = DataManager()
     cache_manager = SimpleCache(ttl_seconds=config.performance.cache_ttl_seconds)
-    
+
     # Initialize rate limiter with proper config
     from utils.rate_limiter import RateLimitConfig
+
     rate_limit_config = RateLimitConfig(
-        max_requests=config.performance.max_requests_per_minute,
-        window_seconds=60
+        max_requests=config.performance.max_requests_per_minute, window_seconds=60
     )
     rate_limiter = RateLimiter(default_config=rate_limit_config)
-    
+
     # Set rate limiter in decorators
     from core.decorators import set_rate_limiter
+
     set_rate_limiter(rate_limiter)
-    
+
     error_handler = BotErrorHandler()
     validator = Validator()
 except Exception as e:
@@ -109,7 +110,8 @@ except Exception as e:
     raise
 
 # Initialize bot
-bot = Bot(token=BOT_TOKEN, parse_mode="HTML")
+from aiogram.client.default import DefaultBotProperties
+bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 storage = MemoryStorage()
 dispatcher = Dispatcher(storage=storage)
 
