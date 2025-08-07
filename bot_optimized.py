@@ -171,12 +171,12 @@ async def cmd_start(message: types.Message, state: FSMContext):
             await show_main_menu_to_existing_user(message)
             return
 
-        # Send welcome message
-        welcome_msg = Messages.get_welcome_message(first_name)
-        keyboard = InlineKeyboardBuilder()
-        keyboard.button(text="📝 ثبت‌نام", callback_data="start_registration")
-
-        await message.answer(welcome_msg, reply_markup=keyboard.as_markup())
+        # Start registration immediately for new users
+        await message.answer(
+            Messages.get_registration_start(),
+            reply_markup=Keyboards.get_grade_keyboard(),
+        )
+        await state.set_state(RegistrationStates.waiting_for_grade)
 
     except Exception as e:
         logger.error(f"Error in start command: {e}")
@@ -184,21 +184,6 @@ async def cmd_start(message: types.Message, state: FSMContext):
 
 
 # ==================== REGISTRATION HANDLERS ====================
-@router.callback_query(lambda c: c.data == "start_registration")
-@rate_limit
-@maintenance_mode
-async def start_registration(callback: types.CallbackQuery, state: FSMContext):
-    """Start registration process"""
-    try:
-        await callback.message.edit_text(
-            Messages.get_registration_start(),
-            reply_markup=Keyboards.get_grade_keyboard(),
-        )
-        await state.set_state(RegistrationStates.waiting_for_grade)
-
-    except Exception as e:
-        logger.error(f"Error starting registration: {e}")
-        await error_handler.handle_error(callback.message, e)
 
 
 @router.callback_query(lambda c: c.data.startswith("grade:"))
@@ -769,7 +754,7 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
         # Prevent bot from responding to its own messages
         if message.from_user.is_bot:
             return
-            
+
         if not message.photo:
             await message.answer(
                 "❌ لطفاً عکس فیش واریزی را ارسال کنید.",
@@ -825,7 +810,7 @@ async def process_address(message: types.Message, state: FSMContext):
         # Prevent bot from responding to its own messages
         if message.from_user.is_bot:
             return
-            
+
         if len(message.text.strip()) < 10:
             await message.answer(
                 "❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر)."
@@ -854,7 +839,7 @@ async def process_postal_code(message: types.Message, state: FSMContext):
         # Prevent bot from responding to its own messages
         if message.from_user.is_bot:
             return
-            
+
         postal_code = message.text.strip()
 
         if not postal_code.isdigit() or len(postal_code) != 10:
@@ -883,7 +868,7 @@ async def process_description(message: types.Message, state: FSMContext):
         # Prevent bot from responding to its own messages
         if message.from_user.is_bot:
             return
-            
+
         data = await state.get_data()
         description = message.text.strip() if message.text else ""
 
