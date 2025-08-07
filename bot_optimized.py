@@ -111,6 +111,7 @@ except Exception as e:
 
 # Initialize bot
 from aiogram.client.default import DefaultBotProperties
+
 bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode="HTML"))
 storage = MemoryStorage()
 dispatcher = Dispatcher(storage=storage)
@@ -157,13 +158,17 @@ router = Router()
 async def cmd_start(message: types.Message, state: FSMContext):
     """Handle /start command"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+
         user_id = message.from_user.id
         first_name = message.from_user.first_name or "کاربر"
 
         # Check if user is already registered
         existing_user = data_manager.load_user_data(user_id)
         if existing_user:
-            await show_main_menu_after_registration(message)
+            await show_main_menu_to_existing_user(message)
             return
 
         # Send welcome message
@@ -282,6 +287,10 @@ async def process_city(callback: types.CallbackQuery, state: FSMContext):
 async def process_first_name(message: types.Message, state: FSMContext):
     """Process first name input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+
         if not validator.validate_name(message.text):
             await message.answer(
                 "❌ نام باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
@@ -307,6 +316,10 @@ async def process_first_name(message: types.Message, state: FSMContext):
 async def process_last_name(message: types.Message, state: FSMContext):
     """Process last name input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+
         if not validator.validate_name(message.text):
             await message.answer(
                 "❌ نام خانوادگی باید بین ۲ تا ۵۰ کاراکتر و فقط شامل حروف فارسی باشد.\nلطفاً دوباره وارد کنید:"
@@ -332,6 +345,10 @@ async def process_last_name(message: types.Message, state: FSMContext):
 async def process_phone(message: types.Message, state: FSMContext):
     """Process phone number input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+
         phone = message.text.strip()
 
         # Handle contact sharing
@@ -749,6 +766,10 @@ async def send_receipt(callback: types.CallbackQuery, state: FSMContext):
 async def process_payment_receipt(message: types.Message, state: FSMContext):
     """Process payment receipt"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+            
         if not message.photo:
             await message.answer(
                 "❌ لطفاً عکس فیش واریزی را ارسال کنید.",
@@ -801,6 +822,10 @@ async def process_payment_receipt(message: types.Message, state: FSMContext):
 async def process_address(message: types.Message, state: FSMContext):
     """Process address input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+            
         if len(message.text.strip()) < 10:
             await message.answer(
                 "❌ لطفاً آدرس کامل و دقیق خود را وارد کنید (حداقل ۱۰ کاراکتر)."
@@ -826,6 +851,10 @@ async def process_address(message: types.Message, state: FSMContext):
 async def process_postal_code(message: types.Message, state: FSMContext):
     """Process postal code input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+            
         postal_code = message.text.strip()
 
         if not postal_code.isdigit() or len(postal_code) != 10:
@@ -851,6 +880,10 @@ async def process_postal_code(message: types.Message, state: FSMContext):
 async def process_description(message: types.Message, state: FSMContext):
     """Process description input"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+            
         data = await state.get_data()
         description = message.text.strip() if message.text else ""
 
@@ -918,6 +951,18 @@ async def show_main_menu_after_registration(message: types.Message):
         await error_handler.handle_error(message, e)
 
 
+async def show_main_menu_to_existing_user(message: types.Message):
+    """Show main menu to existing registered user"""
+    try:
+        await message.answer(
+            "🏠 **منوی اصلی**\n\nلطفاً گزینه مورد نظر خود را انتخاب کنید:",
+            reply_markup=Keyboards.get_main_menu_keyboard(),
+        )
+    except Exception as e:
+        logger.error(f"Error showing main menu to existing user: {e}")
+        await error_handler.handle_error(message, e)
+
+
 # ==================== ERROR HANDLERS ====================
 @router.message()
 @rate_limit
@@ -925,6 +970,10 @@ async def show_main_menu_after_registration(message: types.Message):
 async def handle_unknown_message(message: types.Message):
     """Handle unknown messages"""
     try:
+        # Prevent bot from responding to its own messages
+        if message.from_user.is_bot:
+            return
+
         await message.answer(
             "❓ متوجه پیام شما نشدم.\n\n"
             "لطفاً از منوی اصلی استفاده کنید یا دستور /start را بزنید.",
