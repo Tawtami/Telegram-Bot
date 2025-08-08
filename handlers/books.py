@@ -336,5 +336,4 @@ def build_book_purchase_conversation() -> ConversationHandler:
         ],
         name="book_purchase",
         persistent=False,
-        per_message=True,
     )

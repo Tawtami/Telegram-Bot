@@ -104,7 +104,7 @@ async def main():
 
         logger.info("🚀 Starting Telegram Bot...")
 
-        # Start health check server first
+        # Start health check server in a separate thread
         health_thread = threading.Thread(target=start_health_server, daemon=True)
         health_thread.start()
 
@@ -116,6 +116,7 @@ async def main():
             from bot import main as bot_main
 
             is_bot_ready = True
+            # Run the bot in the current event loop
             await bot_main()
         except ImportError as e:
             logger.error(f"❌ Import error: {e}")
