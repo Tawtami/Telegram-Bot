@@ -242,7 +242,7 @@ async def handle_purchased_courses(
             if course_id in course_details:
                 course = course_details[course_id]
                 message_text += f"📚 {course['title']}\n"
-                
+
                 # Check if course is approved (has link)
                 if course.get("link"):
                     message_text += "✅ **وضعیت:** تایید شده\n"
