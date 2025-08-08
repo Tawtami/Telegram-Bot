@@ -115,6 +115,58 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
         )
 
 
+async def profile_command(update: Update, context: Any) -> None:
+    """Handle /profile command"""
+    storage: StudentStorage = context.bot_data["storage"]
+    user_id = update.effective_user.id
+    student = storage.get_student(user_id)
+
+    if not student:
+        await update.message.reply_text(
+            "❌ شما هنوز ثبت‌نام نکرده‌اید.\n" "لطفاً ابتدا ثبت‌نام کنید.",
+            reply_markup=build_register_keyboard(),
+        )
+        return
+
+    profile_text = (
+        "📋 **پروفایل شما:**\n\n"
+        f"👤 **نام:** {student['first_name']}\n"
+        f"👤 **نام خانوادگی:** {student['last_name']}\n"
+        f"📱 **شماره تماس:** {student.get('phone_number', 'ثبت نشده')}\n"
+        f"📍 **استان:** {student['province']}\n"
+        f"🏙 **شهر:** {student['city']}\n"
+        f"📚 **پایه تحصیلی:** {student['grade']}\n"
+        f"🎓 **رشته تحصیلی:** {student['field']}\n\n"
+        "برای ویرایش اطلاعات، لطفاً دوباره ثبت‌نام کنید."
+    )
+
+    await update.message.reply_text(profile_text)
+
+
+async def help_command(update: Update, context: Any) -> None:
+    """Handle /help command"""
+    help_text = (
+        "🤖 **راهنمای ربات استاد حاتمی**\n\n"
+        "**دستورات اصلی:**\n"
+        "📝 `/start` - شروع کار با ربات\n"
+        "👤 `/profile` - مشاهده پروفایل\n"
+        "❓ `/help` - راهنما (همین پیام)\n\n"
+        "**منوهای اصلی:**\n"
+        "🎁 دوره‌های رایگان\n"
+        "💼 دوره‌های تخصصی\n"
+        "🛒 دوره‌های خریداری‌شده\n"
+        "📘 خرید کتاب انفجار خلاقیت\n"
+        "🌐 شبکه‌های اجتماعی\n"
+        "📞 ارتباط با ما\n\n"
+        "**پشتیبانی:**\n"
+        "📞 تلگرام: @ostad_hatami\n"
+        "📧 ایمیل: info@ostadhatami.ir\n\n"
+        "💡 **نکته:** برای استفاده کامل از ربات، ابتدا ثبت‌نام کنید."
+    )
+
+    await update.message.reply_text(help_text)
+
+
 async def main() -> None:
     """Initialize and start the bot"""
     try:

@@ -35,11 +35,12 @@ from ui.keyboards import (
 class RegistrationStates(Enum):
     FIRST_NAME = 1
     LAST_NAME = 2
-    PROVINCE = 3
-    CITY = 4
-    GRADE = 5
-    FIELD = 6
-    CONFIRM = 7
+    PHONE_NUMBER = 3
+    PROVINCE = 4
+    CITY = 5
+    GRADE = 6
+    FIELD = 7
+    CONFIRM = 8
 
 
 def _is_persian_text(text: str) -> bool:
@@ -47,6 +48,22 @@ def _is_persian_text(text: str) -> bool:
     if not text or len(text) < 2 or len(text) > 50:
         return False
     return bool(re.fullmatch(r"[\u0600-\u06FF\s]{2,50}", text))
+
+
+def _is_iranian_phone(phone: str) -> bool:
+    """Validate Iranian phone number"""
+    # Remove spaces and dashes
+    phone = re.sub(r"[\s\-]", "", phone)
+
+    # Iranian phone number patterns
+    patterns = [
+        r"^09[0-9]{9}$",  # 09123456789
+        r"^9[0-9]{9}$",  # 9123456789
+        r"^\+989[0-9]{9}$",  # +989123456789
+        r"^00989[0-9]{9}$",  # 00989123456789
+    ]
+
+    return any(re.match(pattern, phone) for pattern in patterns)
 
 
 async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -85,6 +102,34 @@ async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         return RegistrationStates.LAST_NAME
 
     context.user_data["last_name"] = name
+    await update.message.reply_text(
+        "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
+    )
+    return RegistrationStates.PHONE_NUMBER
+
+
+async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Handle phone number input"""
+    phone = update.message.text.strip()
+
+    if not _is_iranian_phone(phone):
+        await update.message.reply_text(
+            "❌ شماره تماس نامعتبر است.\n"
+            "لطفاً شماره معتبر ایرانی وارد کنید:\n"
+            "مثال: 09123456789 یا 9123456789"
+        )
+        return RegistrationStates.PHONE_NUMBER
+
+    # Normalize phone number to 09xxxxxxxxx format
+    phone = re.sub(r"[\s\-]", "", phone)
+    if phone.startswith("9"):
+        phone = "0" + phone
+    elif phone.startswith("+98"):
+        phone = "0" + phone[3:]
+    elif phone.startswith("0098"):
+        phone = "0" + phone[4:]
+
+    context.user_data["phone_number"] = phone
     await update.message.reply_text(
         "لطفاً استان خود را انتخاب کنید:",
         reply_markup=build_provinces_keyboard(config.provinces),
@@ -177,6 +222,7 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "📋 لطفاً اطلاعات وارد شده را تایید کنید:\n\n"
         f"👤 نام: {user_data['first_name']}\n"
         f"👤 نام خانوادگی: {user_data['last_name']}\n"
+        f"📱 شماره تماس: {user_data['phone_number']}\n"
         f"📍 استان: {user_data['province']}\n"
         f"🏙 شهر: {user_data['city']}\n"
         f"📚 پایه تحصیلی: {user_data['grade']}\n"
@@ -248,6 +294,9 @@ def build_registration_conversation() -> ConversationHandler:
             ],
             RegistrationStates.LAST_NAME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, last_name)
+            ],
+            RegistrationStates.PHONE_NUMBER: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, phone_number)
             ],
             RegistrationStates.PROVINCE: [
                 CallbackQueryHandler(province, pattern="^province:")
