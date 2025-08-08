@@ -62,7 +62,8 @@ async def setup_webhook():
             os.environ["WEBHOOK_URL"] = webhook_url
             logger.info(f"🌐 Webhook URL set to: {webhook_url}")
 
-        return await bot_main()
+        # Run the bot directly - it will handle its own event loop
+        await bot_main()
 
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")

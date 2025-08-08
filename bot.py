@@ -239,9 +239,7 @@ async def main() -> None:
 
         # Start the bot
         logger.info("🚀 Starting bot...")
-        await application.initialize()
-        await application.start()
-
+        
         # Check if we're in a deployment environment
         port = int(os.environ.get("PORT", 0))
         if port > 0:
@@ -263,15 +261,6 @@ async def main() -> None:
             # Use polling for local development
             await application.run_polling(drop_pending_updates=True)
             logger.info("📡 Polling started")
-
-        # Keep the bot running
-        try:
-            await asyncio.Event().wait()  # Wait indefinitely
-        except KeyboardInterrupt:
-            pass
-        finally:
-            await application.stop()
-            await application.shutdown()
 
     except Exception as e:
         logger.error(f"❌ Error starting bot: {e}")

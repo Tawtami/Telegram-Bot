@@ -385,5 +385,5 @@ def build_registration_conversation() -> ConversationHandler:
         ],
         name="registration",
         persistent=False,
-        per_message=True,
+        per_message=False,
     )
