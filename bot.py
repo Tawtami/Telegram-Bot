@@ -50,10 +50,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 # Command handlers
 async def start_command(update: Update, context: Any) -> None:
     """Handle /start command"""
     await send_main_menu(update, context)
+
 
 async def students_command(update: Update, context: Any) -> None:
     """Handle /students command - Admin only"""
@@ -64,13 +66,14 @@ async def students_command(update: Update, context: Any) -> None:
 
     storage: StudentStorage = context.bot_data["storage"]
     students = storage.get_all_students()
-    
+
     if not students:
         await update.message.reply_text("هیچ دانش‌آموزی ثبت‌نام نکرده است.")
         return
 
     # Create students.json file
     import json
+
     with open("data/students.json", "w", encoding="utf-8") as f:
         json.dump({"students": students}, f, ensure_ascii=False, indent=2)
 
@@ -79,6 +82,7 @@ async def students_command(update: Update, context: Any) -> None:
         document=open("data/students.json", "rb"),
         caption=f"📊 اطلاعات {len(students)} دانش‌آموز",
     )
+
 
 async def confirm_payment_command(update: Update, context: Any) -> None:
     """Handle /confirm_payment command - Admin only"""
@@ -90,9 +94,11 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
     try:
         student_id = int(context.args[0])
         storage: StudentStorage = context.bot_data["storage"]
-        
+
         if not storage.confirm_payment(student_id):
-            await update.message.reply_text("❌ دانش‌آموز یافت نشد یا پرداختی در انتظار تایید ندارد.")
+            await update.message.reply_text(
+                "❌ دانش‌آموز یافت نشد یا پرداختی در انتظار تایید ندارد."
+            )
             return
 
         # Notify student
@@ -108,7 +114,8 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
             "❌ فرمت دستور اشتباه است. نمونه صحیح:\n/confirm_payment 123456789"
         )
 
-def main() -> None:
+
+async def main() -> None:
     """Initialize and start the bot"""
     try:
         # Initialize bot application
@@ -122,7 +129,9 @@ def main() -> None:
         # Add handlers
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("students", students_command))
-        application.add_handler(CommandHandler("confirm_payment", confirm_payment_command))
+        application.add_handler(
+            CommandHandler("confirm_payment", confirm_payment_command)
+        )
 
         # Registration conversation
         application.add_handler(build_registration_conversation())
@@ -131,30 +140,55 @@ def main() -> None:
         application.add_handler(build_book_purchase_conversation())
 
         # Menu handlers
-        application.add_handler(CallbackQueryHandler(handle_menu_selection, pattern="^menu_"))
-        application.add_handler(CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$"))
+        application.add_handler(
+            CallbackQueryHandler(handle_menu_selection, pattern="^menu_")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$")
+        )
 
         # Course handlers
-        application.add_handler(CallbackQueryHandler(handle_free_courses, pattern="^free_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_purchased_courses, pattern="^purchased_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_course_registration, pattern="^register_course_"))
-        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt))
+        application.add_handler(
+            CallbackQueryHandler(handle_free_courses, pattern="^free_courses$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(
+                handle_purchased_courses, pattern="^purchased_courses$"
+            )
+        )
+        application.add_handler(
+            CallbackQueryHandler(
+                handle_course_registration, pattern="^register_course_"
+            )
+        )
+        application.add_handler(
+            MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt)
+        )
 
         # Other menu handlers
-        application.add_handler(CallbackQueryHandler(handle_social_media, pattern="^social_media$"))
-        application.add_handler(CallbackQueryHandler(handle_contact_us, pattern="^contact_us$"))
+        application.add_handler(
+            CallbackQueryHandler(handle_social_media, pattern="^social_media$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
+        )
 
         # Error handler
         application.add_error_handler(error_handler)
 
         # Start the bot
         logger.info("🚀 Starting bot...")
-        application.run_polling(allowed_updates=Update.ALL_TYPES)
+        await application.initialize()
+        await application.start()
+        await application.run_polling(allowed_updates=Update.ALL_TYPES)
 
     except Exception as e:
         logger.error(f"❌ Error starting bot: {e}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
