@@ -10,14 +10,15 @@ from telegram.ext import ContextTypes
 from config import config
 from ui.keyboards import build_main_menu_keyboard
 
+
 async def handle_contact_us(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle contact us menu"""
     query = update.callback_query
     if not query:
         return
-    
+
     await query.answer()
-    
+
     contact_info = config.contact_info
     message_text = (
         "☎️ اطلاعات تماس:\n\n"
@@ -29,11 +30,11 @@ async def handle_contact_us(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         "شنبه تا چهارشنبه: ۹ الی ۱۸\n"
         "پنجشنبه: ۹ الی ۱۳"
     )
-    
+
     keyboard = [
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
     ]
-    
+
     await query.edit_message_text(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),

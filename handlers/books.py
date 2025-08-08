@@ -26,12 +26,14 @@ from config import config
 from utils.storage import StudentStorage
 from ui.keyboards import build_main_menu_keyboard
 
+
 # States for the book purchase conversation
 class BookPurchaseStates(Enum):
     POSTAL_CODE = 1
     ADDRESS = 2
     NOTES = 3
     PAYMENT = 4
+
 
 # Book details (in production, load from database)
 BOOK_DETAILS = {
@@ -46,14 +48,15 @@ BOOK_DETAILS = {
     "pages": 250,
 }
 
+
 async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show book information and start purchase process"""
     query = update.callback_query
     if not query:
         return ConversationHandler.END
-    
+
     await query.answer()
-    
+
     # Show book details with purchase button
     message_text = (
         f"📖 {BOOK_DETAILS['title']}\n\n"
@@ -63,12 +66,12 @@ async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"💰 قیمت: {BOOK_DETAILS['price']:,} تومان\n\n"
         "برای خرید کتاب روی دکمه زیر کلیک کنید:"
     )
-    
+
     keyboard = [
         [InlineKeyboardButton("🛍 خرید کتاب", callback_data="start_book_purchase")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
     ]
-    
+
     await query.edit_message_text(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -76,83 +79,100 @@ async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
     return ConversationHandler.END
 
-async def start_book_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+async def start_book_purchase(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Start book purchase process"""
     query = update.callback_query
     if not query:
         return ConversationHandler.END
-    
+
     await query.answer()
-    
+
     # Store book details in context
     context.user_data["book_purchase"] = {
         "title": BOOK_DETAILS["title"],
         "price": BOOK_DETAILS["price"],
     }
-    
+
     await query.edit_message_text(
         "📮 لطفاً کد پستی ۱۰ رقمی خود را وارد کنید:",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-        ]]),
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+        ),
     )
     return BookPurchaseStates.POSTAL_CODE
+
 
 async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle postal code input"""
     postal_code = update.message.text.strip()
-    
+
     # Validate postal code (10 digits)
     if not postal_code.isdigit() or len(postal_code) != 10:
         await update.message.reply_text(
-            "❌ کد پستی باید ۱۰ رقم باشد.\n"
-            "لطفاً دوباره وارد کنید:",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-            ]]),
+            "❌ کد پستی باید ۱۰ رقم باشد.\n" "لطفاً دوباره وارد کنید:",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 انصراف", callback_data="cancel_book_purchase"
+                        )
+                    ]
+                ]
+            ),
         )
         return BookPurchaseStates.POSTAL_CODE
-    
+
     context.user_data["book_purchase"]["postal_code"] = postal_code
-    
+
     await update.message.reply_text(
         "📍 لطفاً آدرس کامل پستی خود را وارد کنید:",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-        ]]),
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+        ),
     )
     return BookPurchaseStates.ADDRESS
+
 
 async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle address input"""
     address = update.message.text.strip()
-    
+
     # Validate address length
     if len(address) < 10 or len(address) > 300:
         await update.message.reply_text(
-            "❌ آدرس باید بین ۱۰ تا ۳۰۰ کاراکتر باشد.\n"
-            "لطفاً دوباره وارد کنید:",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-            ]]),
+            "❌ آدرس باید بین ۱۰ تا ۳۰۰ کاراکتر باشد.\n" "لطفاً دوباره وارد کنید:",
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    [
+                        InlineKeyboardButton(
+                            "🔙 انصراف", callback_data="cancel_book_purchase"
+                        )
+                    ]
+                ]
+            ),
         )
         return BookPurchaseStates.ADDRESS
-    
+
     context.user_data["book_purchase"]["address"] = address
-    
+
     await update.message.reply_text(
         "📝 در صورت تمایل، توضیحات اضافه را وارد کنید:\n"
         "(برای رد کردن این مرحله روی /skip کلیک کنید)",
-        reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-        ]]),
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+        ),
     )
     return BookPurchaseStates.NOTES
+
 
 async def skip_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Skip notes and show payment info"""
     context.user_data["book_purchase"]["notes"] = ""
     return await show_payment_info(update, context)
+
 
 async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle additional notes"""
@@ -160,10 +180,11 @@ async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["book_purchase"]["notes"] = notes
     return await show_payment_info(update, context)
 
+
 async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show payment information"""
     book_data = context.user_data["book_purchase"]
-    
+
     message_text = (
         "💳 اطلاعات پرداخت:\n\n"
         f"📖 کتاب: {book_data['title']}\n"
@@ -174,26 +195,41 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
         "❗️ پس از تایید پرداخت توسط ادمین، اطلاعات ارسال کتاب به شما اعلام خواهد شد."
     )
-    
+
     if isinstance(update, Update):
         if update.message:
             await update.message.reply_text(
                 message_text,
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-                ]]),
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "🔙 انصراف", callback_data="cancel_book_purchase"
+                            )
+                        ]
+                    ]
+                ),
             )
         elif update.callback_query:
             await update.callback_query.edit_message_text(
                 message_text,
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")
-                ]]),
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                "🔙 انصراف", callback_data="cancel_book_purchase"
+                            )
+                        ]
+                    ]
+                ),
             )
-    
+
     return BookPurchaseStates.PAYMENT
 
-async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+async def handle_payment_receipt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Handle payment receipt photo"""
     if "book_purchase" not in context.user_data:
         await update.message.reply_text(
@@ -201,10 +237,10 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=build_main_menu_keyboard(),
         )
         return ConversationHandler.END
-    
+
     book_data = context.user_data["book_purchase"]
     storage: StudentStorage = context.bot_data["storage"]
-    
+
     # Save book purchase data
     if not storage.save_book_purchase(update.effective_user.id, book_data):
         await update.message.reply_text(
@@ -212,7 +248,7 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=build_main_menu_keyboard(),
         )
         return ConversationHandler.END
-    
+
     # Forward receipt to admin #1 (first admin in list)
     admin_id = config.bot.admin_user_ids[0]
     student = storage.get_student(update.effective_user.id)
@@ -227,7 +263,7 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
         f"/confirm_payment {update.effective_user.id}"
     )
-    
+
     try:
         await context.bot.forward_message(
             chat_id=admin_id,
@@ -240,10 +276,10 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         )
     except Exception as e:
         logger.error(f"Error forwarding receipt to admin: {e}")
-    
+
     # Clear book purchase data
     del context.user_data["book_purchase"]
-    
+
     await update.message.reply_text(
         "✅ سفارش کتاب شما با موفقیت ثبت شد.\n\n"
         "پس از تایید پرداخت توسط ادمین، اطلاعات ارسال کتاب به شما اعلام خواهد شد.",
@@ -251,7 +287,10 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
     )
     return ConversationHandler.END
 
-async def cancel_book_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+
+async def cancel_book_purchase(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Cancel book purchase process"""
     query = update.callback_query
     if query:
@@ -260,11 +299,12 @@ async def cancel_book_purchase(update: Update, context: ContextTypes.DEFAULT_TYP
             "❌ فرآیند خرید کتاب لغو شد.",
             reply_markup=build_main_menu_keyboard(),
         )
-    
+
     if "book_purchase" in context.user_data:
         del context.user_data["book_purchase"]
-    
+
     return ConversationHandler.END
+
 
 def build_book_purchase_conversation() -> ConversationHandler:
     """Build the book purchase conversation handler"""
@@ -289,7 +329,9 @@ def build_book_purchase_conversation() -> ConversationHandler:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(cancel_book_purchase, pattern="^cancel_book_purchase$"),
+            CallbackQueryHandler(
+                cancel_book_purchase, pattern="^cancel_book_purchase$"
+            ),
             CommandHandler("cancel", cancel_book_purchase),
         ],
         name="book_purchase",

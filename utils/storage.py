@@ -7,6 +7,7 @@ Thread-safe file operations with proper locking
 
 import os
 import json
+import time
 import asyncio
 import logging
 from typing import Dict, List, Optional, Any
@@ -16,7 +17,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 class StudentStorage:
-    """Thread-safe JSON storage for student data"""
+    """Thread-safe JSON storage for student data with caching"""
 
     def __init__(self, data_dir: str = "data"):
         self.data_dir = Path(data_dir)
@@ -24,6 +25,9 @@ class StudentStorage:
         self.courses_file = self.data_dir / "courses.json"
         self.purchases_file = self.data_dir / "purchases.json"
         self.lock = asyncio.Lock()
+        self._cache = {}
+        self._cache_ttl = 300  # 5 minutes
+        self._last_cache_update = {}
         self._initialize_files()
 
     def _initialize_files(self):
@@ -43,23 +47,46 @@ class StudentStorage:
             self._save_json(self.purchases_file, {"purchases": []})
 
     def _load_json(self, file_path: Path) -> Dict[str, Any]:
-        """Load JSON file safely"""
+        """Load JSON file safely with caching"""
         try:
+            # Check cache first
+            cache_key = str(file_path)
+            now = time.time()
+            if (
+                cache_key in self._cache
+                and cache_key in self._last_cache_update
+                and now - self._last_cache_update[cache_key] < self._cache_ttl
+            ):
+                return self._cache[cache_key]
+
+            # Load from file
             if not file_path.exists():
                 return {}
             with open(file_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                # Update cache
+                self._cache[cache_key] = data
+                self._last_cache_update[cache_key] = now
+                return data
         except json.JSONDecodeError:
             logger.error(f"Error reading {file_path}")
             return {}
 
     def _save_json(self, file_path: Path, data: Dict[str, Any]):
-        """Save JSON file safely"""
+        """Save JSON file safely and update cache"""
         try:
             with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            # Update cache
+            cache_key = str(file_path)
+            self._cache[cache_key] = data
+            self._last_cache_update[cache_key] = time.time()
         except Exception as e:
             logger.error(f"Error saving {file_path}: {e}")
+            # Invalidate cache on error
+            cache_key = str(file_path)
+            self._cache.pop(cache_key, None)
+            self._last_cache_update.pop(cache_key, None)
 
     def save_student(self, student_data: Dict[str, Any]) -> bool:
         """Save student data to JSON file"""
