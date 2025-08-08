@@ -141,6 +141,8 @@ logs/*.log
 .env.production
 config_secret.py
 secrets.py
+env.txt
+*.env
 
 # IDE
 .vscode/
