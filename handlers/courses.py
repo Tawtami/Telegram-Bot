@@ -9,9 +9,12 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
+import logging
 from config import config
 from utils.storage import StudentStorage
 from ui.keyboards import build_main_menu_keyboard
+
+logger = logging.getLogger(__name__)
 
 
 async def handle_free_courses(
@@ -185,46 +188,65 @@ async def handle_purchased_courses(
 
     await query.answer()
 
-    # Get user's purchased courses
+    # Get user's courses
     storage: StudentStorage = context.bot_data["storage"]
-    student = storage.get_student(query.from_user.id)
+    user_courses = storage.get_user_courses(query.from_user.id)
 
-    if not student or not student.get("purchased_courses"):
+    if not user_courses["purchased_courses"] and not user_courses["free_courses"]:
         await query.edit_message_text(
-            "🛒 دوره‌های خریداری‌شده:\n\n" "شما هنوز هیچ دوره‌ای خریداری نکرده‌اید.",
+            "🛒 دوره‌های شما:\n\n" "شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید.",
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
             ),
         )
         return
 
-    # Example course details (in production, load from database)
-    course_details = {
-        "paid1": {
-            "title": "دوره جامع ریاضی کنکور",
-            "link": "https://skyroom.online/course1",
-        },
-        "paid2": {
-            "title": "دوره فشرده هندسه",
-            "link": "https://skyroom.online/course2",
-        },
-    }
+    # Load course details from JSON
+    import json
+    try:
+        with open("data/courses.json", "r", encoding="utf-8") as f:
+            all_courses = json.load(f)
+        course_details = {c["course_id"]: c for c in all_courses}
+    except:
+        course_details = {}
 
-    # Build purchased courses list
-    message_text = "🛒 دوره‌های خریداری‌شده:\n\n"
+    # Build courses list
+    message_text = "🛒 دوره‌های شما:\n\n"
     keyboard = []
 
-    for course_id in student["purchased_courses"]:
-        if course_id in course_details:
-            course = course_details[course_id]
-            message_text += f"📚 {course['title']}\n"
-            keyboard.append(
-                [
-                    InlineKeyboardButton(
-                        text=f"🔗 ورود به {course['title']}", url=course["link"]
+    # Show free courses
+    if user_courses["free_courses"]:
+        message_text += "🎓 **دوره‌های رایگان:**\n"
+        for course_id in user_courses["free_courses"]:
+            if course_id in course_details:
+                course = course_details[course_id]
+                message_text += f"📚 {course['title']}\n"
+                if course.get("schedule"):
+                    message_text += f"📅 {course['schedule']}\n"
+                if course.get("platform"):
+                    message_text += f"📍 {course['platform']}\n"
+                message_text += "\n"
+
+    # Show purchased courses
+    if user_courses["purchased_courses"]:
+        message_text += "💼 **دوره‌های خریداری‌شده:**\n"
+        for course_id in user_courses["purchased_courses"]:
+            if course_id in course_details:
+                course = course_details[course_id]
+                message_text += f"📚 {course['title']}\n"
+                if course.get("link"):
+                    keyboard.append(
+                        [
+                            InlineKeyboardButton(
+                                text=f"🔗 ورود به {course['title']}", url=course["link"]
+                            )
+                        ]
                     )
-                ]
-            )
+                else:
+                    message_text += f"📝 {course.get('description', '')}\n"
+                    if course.get("schedule"):
+                        message_text += f"📅 {course['schedule']}\n"
+                message_text += "\n"
 
     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
 
@@ -249,12 +271,24 @@ async def handle_course_registration(
     _, course_type, course_id = query.data.split("_", 2)
     storage: StudentStorage = context.bot_data["storage"]
 
+    # Load course details from JSON
+    import json
+    try:
+        with open("data/courses.json", "r", encoding="utf-8") as f:
+            all_courses = json.load(f)
+        course = next((c for c in all_courses if c["course_id"] == course_id), None)
+    except:
+        course = None
+
     if course_type == "free":
         # Register for free course
-        if storage.save_course_registration(query.from_user.id, course_id):
+        if storage.save_course_registration(query.from_user.id, course_id, is_paid=False):
+            course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
-                "✅ ثبت‌نام شما در دوره رایگان با موفقیت انجام شد.\n\n"
-                "جزئیات دوره به زودی برای شما ارسال خواهد شد.",
+                f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد.\n\n"
+                f"📅 زمان: {course.get('schedule', 'به زودی اعلام می‌شود')}\n"
+                f"📍 پلتفرم: {course.get('platform', 'اسکای‌روم')}\n\n"
+                "جزئیات بیشتر به زودی برای شما ارسال خواهد شد.",
                 reply_markup=build_main_menu_keyboard(),
             )
         else:
@@ -264,13 +298,28 @@ async def handle_course_registration(
             )
     else:
         # Show payment info for paid course
-        await query.edit_message_text(
-            "💳 اطلاعات پرداخت:\n\n"
+        course_title = course["title"] if course else "دوره تخصصی"
+        course_price = course.get("price", 0) if course else 0
+        
+        payment_text = (
+            f"💳 اطلاعات پرداخت برای {course_title}:\n\n"
+        )
+        
+        if course_price > 0:
+            payment_text += f"💰 مبلغ: {course_price:,} تومان\n\n"
+        else:
+            payment_text += "💰 مبلغ: تماس بگیرید\n\n"
+            
+        payment_text += (
             "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
             "6037-9974-1234-5678\n"
             "به نام: استاد حاتمی\n\n"
             "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
-            "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.",
+            "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
+        )
+        
+        await query.edit_message_text(
+            payment_text,
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🔙 انصراف", callback_data="back_to_menu")]]
             ),
@@ -284,35 +333,98 @@ async def handle_payment_receipt(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
     """Handle payment receipt photo"""
-    if not context.user_data.get("pending_course"):
+    storage: StudentStorage = context.bot_data["storage"]
+    student = storage.get_student(update.effective_user.id)
+    
+    if not student:
         await update.message.reply_text(
-            "❌ هیچ دوره‌ای در انتظار پرداخت نیست.",
+            "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
             reply_markup=build_main_menu_keyboard(),
         )
         return
 
-    course_id = context.user_data["pending_course"]
-    storage: StudentStorage = context.bot_data["storage"]
+    # Check if it's a course payment
+    if context.user_data.get("pending_course"):
+        course_id = context.user_data["pending_course"]
+        
+        # Add to pending payments
+        if not storage.add_pending_payment(update.effective_user.id, course_id):
+            await update.message.reply_text(
+                "❌ خطا در ثبت پرداخت. لطفاً دوباره تلاش کنید.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+            return
 
-    # Add to pending payments
-    if not storage.add_pending_payment(update.effective_user.id, course_id):
+        # Load course details
+        import json
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            course = next((c for c in all_courses if c["course_id"] == course_id), None)
+            course_title = course["title"] if course else course_id
+        except:
+            course_title = course_id
+
+        caption = (
+            f"🧾 رسید پرداخت دوره\n\n"
+            f"📚 دوره: {course_title}\n"
+            f"👤 کاربر: {student['first_name']} {student['last_name']}\n"
+            f"📱 شماره: {student.get('phone_number', 'ثبت نشده')}\n"
+            f"🆔 شناسه کاربری: {update.effective_user.id}\n"
+            f"🏙 شهر: {student['city']}\n\n"
+            f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
+            f"/confirm_payment {update.effective_user.id}"
+        )
+
+        # Clear pending course
+        del context.user_data["pending_course"]
+        
+        success_message = (
+            "✅ رسید پرداخت دوره شما دریافت شد.\n\n"
+            "پس از تایید توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
+        )
+
+    # Check if it's a book payment
+    elif context.user_data.get("book_purchase"):
+        book_data = context.user_data["book_purchase"]
+        
+        # Save book purchase
+        if not storage.save_book_purchase(update.effective_user.id, book_data):
+            await update.message.reply_text(
+                "❌ خطا در ثبت سفارش کتاب. لطفاً دوباره تلاش کنید.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+            return
+
+        caption = (
+            f"🧾 رسید پرداخت کتاب\n\n"
+            f"📖 کتاب: {book_data.get('title', 'انفجار خلاقیت ریاضی')}\n"
+            f"👤 کاربر: {student['first_name']} {student['last_name']}\n"
+            f"📱 شماره: {student.get('phone_number', 'ثبت نشده')}\n"
+            f"🆔 شناسه کاربری: {update.effective_user.id}\n"
+            f"📍 آدرس: {book_data.get('address', 'ثبت نشده')}\n"
+            f"📮 کد پستی: {book_data.get('postal_code', 'ثبت نشده')}\n"
+            f"📝 توضیحات: {book_data.get('notes', 'ندارد')}\n\n"
+            f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
+            f"/confirm_payment {update.effective_user.id}"
+        )
+
+        # Clear book purchase data
+        del context.user_data["book_purchase"]
+        
+        success_message = (
+            "✅ رسید پرداخت کتاب شما دریافت شد.\n\n"
+            "پس از تایید توسط ادمین، کتاب در روز شنبه ارسال خواهد شد."
+        )
+
+    else:
         await update.message.reply_text(
-            "❌ خطا در ثبت پرداخت. لطفاً دوباره تلاش کنید.",
+            "❌ هیچ پرداختی در انتظار نیست.",
             reply_markup=build_main_menu_keyboard(),
         )
         return
 
     # Forward receipt to admins
-    student = storage.get_student(update.effective_user.id)
-    caption = (
-        f"🧾 رسید پرداخت دوره\n\n"
-        f"کاربر: {student['first_name']} {student['last_name']}\n"
-        f"شناسه کاربری: {update.effective_user.id}\n"
-        f"شناسه دوره: {course_id}\n\n"
-        f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
-        f"/confirm_payment {update.effective_user.id}"
-    )
-
     for admin_id in config.bot.admin_user_ids:
         try:
             await context.bot.forward_message(
@@ -327,11 +439,7 @@ async def handle_payment_receipt(
         except Exception as e:
             logger.error(f"Error forwarding receipt to admin {admin_id}: {e}")
 
-    # Clear pending course
-    del context.user_data["pending_course"]
-
     await update.message.reply_text(
-        "✅ رسید پرداخت شما دریافت شد.\n\n"
-        "پس از تایید توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.",
+        success_message,
         reply_markup=build_main_menu_keyboard(),
     )

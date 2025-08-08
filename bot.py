@@ -42,6 +42,7 @@ from utils.storage import StudentStorage
 from utils.error_handler import error_handler
 from utils.rate_limiter import rate_limiter
 from utils.performance_monitor import monitor
+from ui.keyboards import build_register_keyboard
 
 # Configure logging
 logging.basicConfig(
@@ -181,6 +182,8 @@ async def main() -> None:
         # Add handlers
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("students", students_command))
+        application.add_handler(CommandHandler("profile", profile_command))
+        application.add_handler(CommandHandler("help", help_command))
         application.add_handler(
             CommandHandler("confirm_payment", confirm_payment_command)
         )

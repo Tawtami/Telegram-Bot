@@ -155,6 +155,9 @@ class StudentStorage:
                 if course_id not in student["free_courses"]:
                     student["free_courses"].append(course_id)
 
+            # Update last activity
+            student["last_activity"] = datetime.now().isoformat()
+            
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error saving course registration: {e}")
@@ -212,7 +215,25 @@ class StudentStorage:
             if course_id not in student["pending_payments"]:
                 student["pending_payments"].append(course_id)
 
+            # Update last activity
+            student["last_activity"] = datetime.now().isoformat()
+            
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error adding pending payment: {e}")
             return False
+
+    def get_user_courses(self, user_id: int) -> Dict[str, list]:
+        """Get user's enrolled courses (both free and paid)"""
+        try:
+            student = self.get_student(user_id)
+            if not student:
+                return {"free_courses": [], "purchased_courses": []}
+            
+            return {
+                "free_courses": student.get("free_courses", []),
+                "purchased_courses": student.get("purchased_courses", [])
+            }
+        except Exception as e:
+            logger.error(f"Error getting user courses: {e}")
+            return {"free_courses": [], "purchased_courses": []}
