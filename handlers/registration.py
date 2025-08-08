@@ -240,9 +240,7 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CONFIRM
 
 
-async def back_to_province(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to province selection"""
     query = update.callback_query
     if query:
