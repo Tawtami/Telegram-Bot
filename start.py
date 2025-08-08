@@ -91,18 +91,18 @@ async def setup_webhook():
     """Setup webhook for Railway deployment"""
     try:
         from bot import main as bot_main
-        
+
         # Set environment variables for webhook
         port = int(os.environ.get("PORT", 8080))
         railway_public_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
-        
+
         if railway_public_url:
             webhook_url = f"https://{railway_public_url}"
             os.environ["WEBHOOK_URL"] = webhook_url
             logger.info(f"🌐 Webhook URL set to: {webhook_url}")
-        
+
         return await bot_main()
-        
+
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")
         sys.exit(1)

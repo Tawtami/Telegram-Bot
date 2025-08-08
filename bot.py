@@ -241,7 +241,7 @@ async def main() -> None:
         logger.info("🚀 Starting bot...")
         await application.initialize()
         await application.start()
-        
+
         # Check if we're in a deployment environment
         port = int(os.environ.get("PORT", 0))
         if port > 0:
@@ -252,7 +252,7 @@ async def main() -> None:
                     listen="0.0.0.0",
                     port=port,
                     webhook_url=webhook_url,
-                    drop_pending_updates=True
+                    drop_pending_updates=True,
                 )
                 logger.info(f"🌐 Webhook started on port {port}")
             else:
