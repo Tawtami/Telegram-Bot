@@ -239,7 +239,7 @@ async def main() -> None:
 
         # Start the bot
         logger.info("🚀 Starting bot...")
-        
+
         # Check if we're in a deployment environment
         port = int(os.environ.get("PORT", 0))
         if port > 0:
