@@ -1,5 +1,6 @@
 # Core dependencies
-python-telegram-bot>=21.0.0
+# Pin to PTB v20.x since code uses Application.updater APIs removed in v21
+python-telegram-bot>=20.3,<21.0
 python-dotenv>=1.0.0
 
 # Utility packages

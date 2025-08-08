@@ -27,6 +27,7 @@ class PerformanceMetrics:
     min_duration: float = float("inf")
     max_duration: float = 0.0
     durations: deque = field(default_factory=lambda: deque(maxlen=1000))
+    request_timestamps: deque = field(default_factory=lambda: deque(maxlen=3000))
     error_count: int = 0
     last_request: Optional[float] = None
     avg_duration: float = 0.0
@@ -49,8 +50,9 @@ class PerformanceMetrics:
         if duration > self.max_duration:
             self.max_duration = duration
 
-        # Add to durations list
+        # Add to durations list and timestamps
         self.durations.append(duration)
+        self.request_timestamps.append(timestamp)
 
         # Update statistics
         self._update_statistics()
@@ -101,14 +103,15 @@ class PerformanceMetrics:
         }
 
     def _calculate_rpm(self) -> float:
-        """Calculate requests per minute"""
-        if not self.last_request or len(self.durations) < 2:
+        """Calculate requests per minute based on timestamps in the last 60s"""
+        if not self.last_request or not self.request_timestamps:
             return 0.0
 
-        # Calculate RPM based on last 60 seconds
-        cutoff_time = time.time() - 60
-        recent_requests = sum(1 for _ in self.durations if _ > cutoff_time)
-        return round(recent_requests, 2)
+        cutoff_time = time.time() - 60.0
+        # Remove timestamps older than 60s
+        while self.request_timestamps and self.request_timestamps[0] < cutoff_time:
+            self.request_timestamps.popleft()
+        return float(len(self.request_timestamps))
 
 
 @dataclass

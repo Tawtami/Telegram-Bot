@@ -105,7 +105,7 @@ async def handle_menu_selection(
         await query.edit_message_text(
             profile_text,
             reply_markup=_MAIN_MENU_KEYBOARD,
-            parse_mode=ParseMode.HTML,
+            parse_mode=ParseMode.MARKDOWN,
         )
         return
 

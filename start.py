@@ -20,62 +20,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Global flags for health check
+"""
+Note: Railway will health-check the web process via PORT; our bot's webhook/polling
+is managed in bot.py. Keep startup minimal and avoid running a separate HTTP server
+that conflicts with the PTB webhook server.
+"""
+
+
 is_bot_ready = False
 is_shutting_down = False
-health_server = None
 
 
-class HealthCheckHandler(BaseHTTPRequestHandler):
-    """Enhanced health check handler for Railway"""
-
-    def log_message(self, format, *args):
-        """Disable request logging"""
-        pass
-
-    def do_GET(self):
-        """Handle GET request"""
-        if self.path == "/":
-            # Always return 200 during startup
-            self.send_success_response()
-        else:
-            self.send_response(404)
-            self.end_headers()
-
-    def send_success_response(self):
-        """Send 200 OK response"""
-        self.send_response(200)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        response = {
-            "status": "healthy",
-            "service": "Telegram Bot",
-            "version": "ptb",
-            "timestamp": int(time.time()),
-            "bot_ready": is_bot_ready,
-        }
-        self.wfile.write(json.dumps(response).encode())
-
-
-def start_health_server():
-    """Start health check server in background"""
-    global health_server
-    try:
-        port = int(os.environ.get("PORT", 8080))
-        health_server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-        logger.info(f"Health check server started on port {port}")
-        health_server.serve_forever()
-    except Exception as e:
-        logger.error(f"Failed to start health server: {e}")
-        sys.exit(1)
+def _noop_health_server():
+    return None
 
 
 def stop_health_server():
-    """Stop the health check server"""
-    global health_server
-    if health_server:
-        health_server.shutdown()
-        health_server.server_close()
+    return None
 
 
 def handle_shutdown(signum, frame):
@@ -128,12 +89,7 @@ async def main():
 
         logger.info("🚀 Starting Telegram Bot...")
 
-        # Start health check server in a separate thread
-        health_thread = threading.Thread(target=start_health_server, daemon=True)
-        health_thread.start()
-
-        # Give health server time to start
-        await asyncio.sleep(2)
+        # No separate health server; PTB webhook will bind to PORT if configured
 
         # Setup webhook and run bot
         is_bot_ready = True

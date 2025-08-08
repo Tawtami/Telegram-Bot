@@ -141,7 +141,7 @@ async def profile_command(update: Update, context: Any) -> None:
         "برای ویرایش اطلاعات، لطفاً دوباره ثبت‌نام کنید."
     )
 
-    await update.message.reply_text(profile_text)
+    await update.message.reply_text(profile_text, parse_mode="Markdown")
 
 
 async def help_command(update: Update, context: Any) -> None:

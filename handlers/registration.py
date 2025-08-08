@@ -240,6 +240,57 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CONFIRM
 
 
+async def back_to_province(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
+    """Navigate back to province selection"""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await query.edit_message_text(
+            "لطفاً استان خود را انتخاب کنید:",
+            reply_markup=build_provinces_keyboard(config.provinces),
+        )
+    # Clear dependent fields
+    context.user_data.pop("city", None)
+    context.user_data.pop("grade", None)
+    context.user_data.pop("field", None)
+    return RegistrationStates.PROVINCE
+
+
+async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Navigate back to city selection for the chosen province"""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        province = context.user_data.get("province")
+        if not province:
+            # If province missing, go back to province step
+            return await back_to_province(update, context)
+        await query.edit_message_text(
+            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
+            reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+        )
+    # Clear dependent fields
+    context.user_data.pop("grade", None)
+    context.user_data.pop("field", None)
+    return RegistrationStates.CITY
+
+
+async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Navigate back to grade selection"""
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await query.edit_message_text(
+            "لطفاً پایه تحصیلی خود را انتخاب کنید:",
+            reply_markup=build_grades_keyboard(config.grades),
+        )
+    # Clear dependent field
+    context.user_data.pop("field", None)
+    return RegistrationStates.GRADE
+
+
 async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle registration confirmation"""
     query = update.callback_query
@@ -302,16 +353,29 @@ def build_registration_conversation() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, phone_number)
             ],
             RegistrationStates.PROVINCE: [
-                CallbackQueryHandler(province, pattern="^province:")
+                CallbackQueryHandler(province, pattern="^province:"),
+                CallbackQueryHandler(cancel, pattern="^cancel_reg$"),
             ],
-            RegistrationStates.CITY: [CallbackQueryHandler(city, pattern="^city:")],
-            RegistrationStates.GRADE: [CallbackQueryHandler(grade, pattern="^grade:")],
-            RegistrationStates.FIELD: [CallbackQueryHandler(field, pattern="^major:")],
+            RegistrationStates.CITY: [
+                CallbackQueryHandler(city, pattern="^city:"),
+                CallbackQueryHandler(back_to_province, pattern="^back_to_province$"),
+            ],
+            RegistrationStates.GRADE: [
+                CallbackQueryHandler(grade, pattern="^grade:"),
+                CallbackQueryHandler(back_to_city, pattern="^back_to_city$"),
+            ],
+            RegistrationStates.FIELD: [
+                CallbackQueryHandler(field, pattern="^major:"),
+                CallbackQueryHandler(back_to_grade, pattern="^back_to_grade$"),
+            ],
             RegistrationStates.CONFIRM: [
                 CallbackQueryHandler(confirm, pattern="^(confirm|cancel)_reg$")
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[
+            CommandHandler("cancel", cancel),
+            CallbackQueryHandler(cancel, pattern="^cancel_reg$"),
+        ],
         name="registration",
         persistent=False,
         per_message=True,
