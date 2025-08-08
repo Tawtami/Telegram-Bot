@@ -51,7 +51,8 @@ def handle_shutdown(signum, frame):
 async def setup_webhook():
     """Setup webhook for Railway deployment"""
     try:
-        from bot import main as bot_main
+        # Import the main function directly from bot module
+        from bot import main
 
         # Set environment variables for webhook
         port = int(os.environ.get("PORT", 8080))
@@ -62,8 +63,8 @@ async def setup_webhook():
             os.environ["WEBHOOK_URL"] = webhook_url
             logger.info(f"🌐 Webhook URL set to: {webhook_url}")
 
-        # Run the bot directly - it will handle its own event loop
-        await bot_main()
+        # Run the bot's main function directly
+        await main()
 
     except ImportError as e:
         logger.error(f"❌ Import error: {e}")
