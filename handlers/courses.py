@@ -203,6 +203,7 @@ async def handle_purchased_courses(
 
     # Load course details from JSON
     import json
+
     try:
         with open("data/courses.json", "r", encoding="utf-8") as f:
             all_courses = json.load(f)
@@ -273,6 +274,7 @@ async def handle_course_registration(
 
     # Load course details from JSON
     import json
+
     try:
         with open("data/courses.json", "r", encoding="utf-8") as f:
             all_courses = json.load(f)
@@ -282,7 +284,9 @@ async def handle_course_registration(
 
     if course_type == "free":
         # Register for free course
-        if storage.save_course_registration(query.from_user.id, course_id, is_paid=False):
+        if storage.save_course_registration(
+            query.from_user.id, course_id, is_paid=False
+        ):
             course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
                 f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد.\n\n"
@@ -300,16 +304,14 @@ async def handle_course_registration(
         # Show payment info for paid course
         course_title = course["title"] if course else "دوره تخصصی"
         course_price = course.get("price", 0) if course else 0
-        
-        payment_text = (
-            f"💳 اطلاعات پرداخت برای {course_title}:\n\n"
-        )
-        
+
+        payment_text = f"💳 اطلاعات پرداخت برای {course_title}:\n\n"
+
         if course_price > 0:
             payment_text += f"💰 مبلغ: {course_price:,} تومان\n\n"
         else:
             payment_text += "💰 مبلغ: تماس بگیرید\n\n"
-            
+
         payment_text += (
             "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
             "6037-9974-1234-5678\n"
@@ -317,7 +319,7 @@ async def handle_course_registration(
             "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
             "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
         )
-        
+
         await query.edit_message_text(
             payment_text,
             reply_markup=InlineKeyboardMarkup(
@@ -335,7 +337,7 @@ async def handle_payment_receipt(
     """Handle payment receipt photo"""
     storage: StudentStorage = context.bot_data["storage"]
     student = storage.get_student(update.effective_user.id)
-    
+
     if not student:
         await update.message.reply_text(
             "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
@@ -346,7 +348,7 @@ async def handle_payment_receipt(
     # Check if it's a course payment
     if context.user_data.get("pending_course"):
         course_id = context.user_data["pending_course"]
-        
+
         # Add to pending payments
         if not storage.add_pending_payment(update.effective_user.id, course_id):
             await update.message.reply_text(
@@ -357,6 +359,7 @@ async def handle_payment_receipt(
 
         # Load course details
         import json
+
         try:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
@@ -378,7 +381,7 @@ async def handle_payment_receipt(
 
         # Clear pending course
         del context.user_data["pending_course"]
-        
+
         success_message = (
             "✅ رسید پرداخت دوره شما دریافت شد.\n\n"
             "پس از تایید توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
@@ -387,7 +390,7 @@ async def handle_payment_receipt(
     # Check if it's a book payment
     elif context.user_data.get("book_purchase"):
         book_data = context.user_data["book_purchase"]
-        
+
         # Save book purchase
         if not storage.save_book_purchase(update.effective_user.id, book_data):
             await update.message.reply_text(
@@ -411,7 +414,7 @@ async def handle_payment_receipt(
 
         # Clear book purchase data
         del context.user_data["book_purchase"]
-        
+
         success_message = (
             "✅ رسید پرداخت کتاب شما دریافت شد.\n\n"
             "پس از تایید توسط ادمین، کتاب در روز شنبه ارسال خواهد شد."
