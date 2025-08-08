@@ -8,12 +8,9 @@ import time
 import asyncio
 import logging
 import traceback
-from typing import Dict, List, Any, Optional, Callable, Union
+from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
-from config import Config
-
-# from .performance_monitor import monitor  # Will be initialized later
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -100,30 +97,21 @@ class ErrorHandler:
 
     def _classify_error(self, error: Exception) -> tuple[ErrorSeverity, ErrorCategory]:
         """Classify error based on type and message"""
-        error_type = type(error).__name__
         error_message = str(error).lower()
 
-        # Classification logic
         if isinstance(error, ValueError) or "validation" in error_message:
             return ErrorSeverity.MEDIUM, ErrorCategory.VALIDATION
-
-        elif isinstance(error, ConnectionError) or "network" in error_message:
+        if isinstance(error, ConnectionError) or "network" in error_message:
             return ErrorSeverity.HIGH, ErrorCategory.NETWORK
-
-        elif isinstance(error, FileNotFoundError) or "database" in error_message:
+        if isinstance(error, FileNotFoundError) or "database" in error_message:
             return ErrorSeverity.HIGH, ErrorCategory.DATABASE
-
-        elif isinstance(error, PermissionError) or "auth" in error_message:
+        if isinstance(error, PermissionError) or "auth" in error_message:
             return ErrorSeverity.HIGH, ErrorCategory.AUTHENTICATION
-
-        elif isinstance(error, KeyboardInterrupt):
+        if isinstance(error, KeyboardInterrupt):
             return ErrorSeverity.LOW, ErrorCategory.SYSTEM
-
-        elif isinstance(error, MemoryError):
+        if isinstance(error, MemoryError):
             return ErrorSeverity.CRITICAL, ErrorCategory.SYSTEM
-
-        else:
-            return ErrorSeverity.MEDIUM, ErrorCategory.UNKNOWN
+        return ErrorSeverity.MEDIUM, ErrorCategory.UNKNOWN
 
     async def handle_error(
         self,
@@ -174,9 +162,6 @@ class ErrorHandler:
             log_level, f"Error [{error_id}]: {error} in {handler_name or 'unknown'}"
         )
 
-        # Log to performance monitor
-        # await monitor.log_error(error_info.error_type, handler_name, user_id)
-
         # Call category-specific handlers
         await self._call_error_handlers(error_info)
 
@@ -211,56 +196,6 @@ class ErrorHandler:
                 await recovery_strategy(error_info)
             except Exception as e:
                 logger.error(f"Error in recovery strategy: {e}")
-
-    async def handle_user_error(
-        self,
-        message_or_callback: Any,
-        error_message: str,
-        error_type: str = "user_error",
-    ):
-        """Handle user-facing errors with appropriate response"""
-        try:
-            # Log user error
-            await self.handle_error(
-                Exception(error_message),
-                handler_name=error_type,
-                context={"user_facing": True},
-            )
-
-            # Send user-friendly message
-            if hasattr(message_or_callback, "answer"):
-                await message_or_callback.answer(f"❌ {error_message}")
-            elif hasattr(message_or_callback, "message"):
-                await message_or_callback.message.answer(f"❌ {error_message}")
-            elif hasattr(message_or_callback, "edit_text"):
-                await message_or_callback.edit_text(f"❌ {error_message}")
-
-        except Exception as e:
-            logger.error(f"Error sending error message: {e}")
-
-    async def handle_system_error(
-        self, message_or_callback: Any, error: Exception, context: str
-    ):
-        """Handle system errors with error ID for tracking"""
-        try:
-            # Handle the error
-            error_info = await self.handle_error(error, context)
-
-            # Send user-friendly message with error ID
-            error_msg = (
-                f"خطای سیستمی رخ داده است. کد خطا: {error_info.error_id}\n"
-                f"لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید."
-            )
-
-            if hasattr(message_or_callback, "answer"):
-                await message_or_callback.answer(error_msg)
-            elif hasattr(message_or_callback, "message"):
-                await message_or_callback.message.answer(error_msg)
-            elif hasattr(message_or_callback, "edit_text"):
-                await message_or_callback.edit_text(error_msg)
-
-        except Exception as e:
-            logger.error(f"Error sending system error message: {e}")
 
     def register_error_handler(self, category: ErrorCategory, handler: Callable):
         """Register error handler for specific category"""
@@ -316,25 +251,18 @@ class ErrorHandler:
 
     # Default error handlers
     async def _handle_validation_error(self, error_info: ErrorInfo):
-        """Handle validation errors"""
         logger.info(f"Validation error handled: {error_info.error_message}")
 
     async def _handle_network_error(self, error_info: ErrorInfo):
-        """Handle network errors"""
         logger.warning(f"Network error detected: {error_info.error_message}")
-        # Could implement retry logic here
 
     async def _handle_database_error(self, error_info: ErrorInfo):
-        """Handle database errors"""
         logger.error(f"Database error: {error_info.error_message}")
-        # Could implement connection retry or fallback
 
     async def _handle_auth_error(self, error_info: ErrorInfo):
-        """Handle authentication errors"""
         logger.warning(f"Authentication error: {error_info.error_message}")
 
     async def _handle_system_error(self, error_info: ErrorInfo):
-        """Handle system errors"""
         logger.error(f"System error: {error_info.error_message}")
         if error_info.severity == ErrorSeverity.CRITICAL:
             logger.critical("Critical system error detected!")
@@ -342,3 +270,12 @@ class ErrorHandler:
 
 # Global error handler instance
 error_handler = ErrorHandler()
+
+
+# PTB-compatible error handler function
+async def ptb_error_handler(update, context) -> None:
+    try:
+        err = getattr(context, "error", None)
+        await error_handler.handle_error(err or Exception("Unknown error"), handler_name="ptb_error_handler")
+    except Exception as e:
+        logger.error(f"Failed to handle error: {e}")

@@ -39,7 +39,7 @@ from handlers.books import build_book_purchase_conversation
 from handlers.social import handle_social_media
 from handlers.contact import handle_contact_us
 from utils.storage import StudentStorage
-from utils.error_handler import error_handler
+from utils.error_handler import ptb_error_handler
 from utils.rate_limiter import rate_limiter
 from utils.performance_monitor import monitor
 from ui.keyboards import build_register_keyboard
@@ -232,7 +232,7 @@ async def main() -> None:
         )
 
         # Error handler
-        application.add_error_handler(error_handler)
+        application.add_error_handler(ptb_error_handler)
 
         # Start the bot
         logger.info("🚀 Starting bot...")
