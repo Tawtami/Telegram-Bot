@@ -7,6 +7,7 @@ This is a **public repository**. Never commit sensitive information like bot tok
 ## 📋 **Setup Steps**
 
 ### 1. **Get Your Bot Token**
+
 1. Message [@BotFather](https://t.me/botfather) on Telegram
 2. Create a new bot with `/newbot`
 3. Copy the token you receive
@@ -14,6 +15,7 @@ This is a **public repository**. Never commit sensitive information like bot tok
 ### 2. **Set Environment Variables**
 
 **Option A: Create .env file (Recommended)**
+
 ```bash
 # Create a .env file in the project root
 BOT_TOKEN=your_actual_bot_token_here
@@ -21,6 +23,7 @@ ADMIN_USER_IDS=your_telegram_user_id,another_admin_id
 ```
 
 **Option B: Set system environment variables**
+
 ```bash
 # Windows (PowerShell)
 $env:BOT_TOKEN="your_actual_bot_token_here"
@@ -33,15 +36,18 @@ export BOT_TOKEN="your_actual_bot_token_here"
 ```
 
 ### 3. **Configure Admin Users**
+
 - Get your Telegram user ID by messaging [@userinfobot](https://t.me/userinfobot)
 - Add admin IDs to `ADMIN_USER_IDS` (comma-separated)
 
 ### 4. **Install Dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 5. **Run the Bot**
+
 ```bash
 python bot.py
 ```
