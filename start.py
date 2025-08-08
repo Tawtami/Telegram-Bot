@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Railway startup script for Telegram Bot (PTB-based)
-Ensures proper initialization and error handling
+Ensures proper initialization and error handling with webhook support
 """
 
 import os
@@ -87,6 +87,30 @@ def handle_shutdown(signum, frame):
     sys.exit(0)
 
 
+async def setup_webhook():
+    """Setup webhook for Railway deployment"""
+    try:
+        from bot import main as bot_main
+        
+        # Set environment variables for webhook
+        port = int(os.environ.get("PORT", 8080))
+        railway_public_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
+        
+        if railway_public_url:
+            webhook_url = f"https://{railway_public_url}"
+            os.environ["WEBHOOK_URL"] = webhook_url
+            logger.info(f"🌐 Webhook URL set to: {webhook_url}")
+        
+        return await bot_main()
+        
+    except ImportError as e:
+        logger.error(f"❌ Import error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"💥 Fatal error during bot startup: {e}")
+        sys.exit(1)
+
+
 async def main():
     """Main startup function"""
     global is_bot_ready
@@ -111,19 +135,9 @@ async def main():
         # Give health server time to start
         await asyncio.sleep(2)
 
-        # Import and initialize bot
-        try:
-            from bot import main as bot_main
-
-            is_bot_ready = True
-            # Run the bot in the current event loop
-            await bot_main()
-        except ImportError as e:
-            logger.error(f"❌ Import error: {e}")
-            sys.exit(1)
-        except Exception as e:
-            logger.error(f"💥 Fatal error during bot startup: {e}")
-            sys.exit(1)
+        # Setup webhook and run bot
+        is_bot_ready = True
+        await setup_webhook()
 
     except Exception as e:
         logger.error(f"💥 Fatal error during startup: {e}")

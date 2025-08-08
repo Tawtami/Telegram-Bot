@@ -314,4 +314,5 @@ def build_registration_conversation() -> ConversationHandler:
         fallbacks=[CommandHandler("cancel", cancel)],
         name="registration",
         persistent=False,
+        per_message=True,
     )

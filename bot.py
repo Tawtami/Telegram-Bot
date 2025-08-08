@@ -241,7 +241,28 @@ async def main() -> None:
         logger.info("🚀 Starting bot...")
         await application.initialize()
         await application.start()
-        await application.updater.start_polling()
+        
+        # Check if we're in a deployment environment
+        port = int(os.environ.get("PORT", 0))
+        if port > 0:
+            # Use webhook for deployment
+            webhook_url = os.environ.get("WEBHOOK_URL")
+            if webhook_url:
+                await application.updater.start_webhook(
+                    listen="0.0.0.0",
+                    port=port,
+                    webhook_url=webhook_url,
+                    drop_pending_updates=True
+                )
+                logger.info(f"🌐 Webhook started on port {port}")
+            else:
+                # Fallback to polling if no webhook URL
+                await application.updater.start_polling(drop_pending_updates=True)
+                logger.info("📡 Polling started")
+        else:
+            # Use polling for local development
+            await application.updater.start_polling(drop_pending_updates=True)
+            logger.info("📡 Polling started")
 
         # Keep the bot running
         try:
