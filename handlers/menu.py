@@ -89,19 +89,23 @@ async def handle_menu_selection(
             return
 
         profile_text = (
-            "👤 پروفایل شما:\n\n"
-            f"نام: {student['first_name']}\n"
-            f"نام خانوادگی: {student['last_name']}\n"
-            f"استان: {student['province']}\n"
-            f"شهر: {student['city']}\n"
-            f"پایه تحصیلی: {student['grade']}\n"
-            f"رشته تحصیلی: {student['field']}\n\n"
-            f"تاریخ ثبت‌نام: {student['registration_date'][:10]}"
+            "👤 **پروفایل شما** (فقط نمایش):\n\n"
+            f"📝 **نام:** {student['first_name']}\n"
+            f"📝 **نام خانوادگی:** {student['last_name']}\n"
+            f"📱 **شماره تماس:** {student.get('phone_number', 'ثبت نشده')}\n"
+            f"📍 **استان:** {student['province']}\n"
+            f"🏙 **شهر:** {student['city']}\n"
+            f"📚 **پایه تحصیلی:** {student['grade']}\n"
+            f"🎓 **رشته تحصیلی:** {student['field']}\n\n"
+            f"📅 **تاریخ ثبت‌نام:** {student['registration_date'][:10]}\n\n"
+            "ℹ️ **نکته:** این بخش فقط برای نمایش اطلاعات است و قابل ویرایش نیست.\n"
+            "برای تغییر اطلاعات، لطفاً دوباره ثبت‌نام کنید."
         )
 
         await query.edit_message_text(
             profile_text,
             reply_markup=_MAIN_MENU_KEYBOARD,
+            parse_mode=ParseMode.HTML,
         )
         return
 

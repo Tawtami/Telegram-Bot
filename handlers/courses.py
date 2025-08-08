@@ -77,7 +77,8 @@ async def handle_free_courses(
             ]
         )
 
-    message_text += "📩 ثبت‌نام سریع فقط با یه پیام به:\n👉 @ostad_hatami\n\n✏️ فقط بنویس: اسمت + پایه + کلاس + شهر"
+    message_text += "🎓 **دوره‌های رایگان نیازی به پرداخت ندارند!**\n\n"
+    message_text += "📩 برای ثبت‌نام سریع:\n👉 @ostad_hatami\n\n✏️ فقط بنویس: اسمت + پایه + کلاس + شهر"
 
     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
 
@@ -194,10 +195,16 @@ async def handle_purchased_courses(
 
     if not user_courses["purchased_courses"] and not user_courses["free_courses"]:
         await query.edit_message_text(
-            "🛒 دوره‌های شما:\n\n" "شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید.",
+            "🛒 **دوره‌های شما:**\n\n"
+            "شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید.\n\n"
+            "🎓 برای ثبت‌نام در دوره‌های رایگان:\n"
+            "📚 دوره‌های رایگان جمعه\n\n"
+            "💼 برای دوره‌های تخصصی:\n"
+            "📞 تماس با @ostad_hatami",
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
             ),
+            parse_mode=ParseMode.HTML,
         )
         return
 
@@ -283,15 +290,16 @@ async def handle_course_registration(
         course = None
 
     if course_type == "free":
-        # Register for free course
+        # Register for free course - NO PAYMENT REQUIRED
         if storage.save_course_registration(
             query.from_user.id, course_id, is_paid=False
         ):
             course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
-                f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد.\n\n"
+                f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد!\n\n"
                 f"📅 زمان: {course.get('schedule', 'به زودی اعلام می‌شود')}\n"
                 f"📍 پلتفرم: {course.get('platform', 'اسکای‌روم')}\n\n"
+                "🎓 این دوره کاملاً رایگان است و نیازی به پرداخت ندارد.\n"
                 "جزئیات بیشتر به زودی برای شما ارسال خواهد شد.",
                 reply_markup=build_main_menu_keyboard(),
             )
