@@ -25,6 +25,7 @@ is_bot_ready = False
 is_shutting_down = False
 health_server = None
 
+
 class HealthCheckHandler(BaseHTTPRequestHandler):
     """Enhanced health check handler for Railway"""
 
@@ -51,9 +52,10 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
             "service": "Telegram Bot",
             "version": "ptb",
             "timestamp": int(time.time()),
-            "bot_ready": is_bot_ready
+            "bot_ready": is_bot_ready,
         }
         self.wfile.write(json.dumps(response).encode())
+
 
 def start_health_server():
     """Start health check server in background"""
@@ -67,12 +69,14 @@ def start_health_server():
         logger.error(f"Failed to start health server: {e}")
         sys.exit(1)
 
+
 def stop_health_server():
     """Stop the health check server"""
     global health_server
     if health_server:
         health_server.shutdown()
         health_server.server_close()
+
 
 def handle_shutdown(signum, frame):
     """Handle shutdown signals"""
@@ -81,6 +85,7 @@ def handle_shutdown(signum, frame):
     is_shutting_down = True
     stop_health_server()
     sys.exit(0)
+
 
 async def main():
     """Main startup function"""
@@ -109,6 +114,7 @@ async def main():
         # Import and initialize bot
         try:
             from bot import main as bot_main
+
             is_bot_ready = True
             await bot_main()
         except ImportError as e:
@@ -123,6 +129,7 @@ async def main():
         sys.exit(1)
     finally:
         stop_health_server()
+
 
 if __name__ == "__main__":
     try:
