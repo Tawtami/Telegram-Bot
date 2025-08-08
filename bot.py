@@ -267,5 +267,8 @@ async def main() -> None:
         sys.exit(1)
 
 
+# When running directly (not imported), start the bot
 if __name__ == "__main__":
-    asyncio.run(main())
+    # For local development only - Railway uses start.py
+    # asyncio.run(main())  # Commented out to prevent nested event loops
+    pass
