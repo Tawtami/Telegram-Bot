@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Global flags for health check
 is_bot_ready = False
 is_shutting_down = False
-
+health_server = None
 
 class HealthCheckHandler(BaseHTTPRequestHandler):
     """Enhanced health check handler for Railway"""
@@ -35,14 +35,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         """Handle GET request"""
         if self.path == "/":
-            if is_shutting_down:
-                self.send_error_response("Service is shutting down")
-                return
-
-            if not is_bot_ready:
-                self.send_error_response("Service is starting")
-                return
-
+            # Always return 200 during startup
             self.send_success_response()
         else:
             self.send_response(404)
@@ -58,41 +51,36 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
             "service": "Telegram Bot",
             "version": "ptb",
             "timestamp": int(time.time()),
+            "bot_ready": is_bot_ready
         }
         self.wfile.write(json.dumps(response).encode())
-
-    def send_error_response(self, message: str):
-        """Send 503 Service Unavailable response"""
-        self.send_response(503)
-        self.send_header("Content-type", "application/json")
-        self.end_headers()
-        response = {
-            "status": "unhealthy",
-            "message": message,
-            "timestamp": int(time.time()),
-        }
-        self.wfile.write(json.dumps(response).encode())
-
 
 def start_health_server():
     """Start health check server in background"""
+    global health_server
     try:
         port = int(os.environ.get("PORT", 8080))
-        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        health_server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
         logger.info(f"Health check server started on port {port}")
-        server.serve_forever()
+        health_server.serve_forever()
     except Exception as e:
         logger.error(f"Failed to start health server: {e}")
         sys.exit(1)
 
+def stop_health_server():
+    """Stop the health check server"""
+    global health_server
+    if health_server:
+        health_server.shutdown()
+        health_server.server_close()
 
 def handle_shutdown(signum, frame):
     """Handle shutdown signals"""
     global is_shutting_down
     logger.info(f"Received signal {signum}, initiating shutdown...")
     is_shutting_down = True
+    stop_health_server()
     sys.exit(0)
-
 
 async def main():
     """Main startup function"""
@@ -111,14 +99,16 @@ async def main():
 
         logger.info("🚀 Starting Telegram Bot...")
 
-        # Start health check server in background
+        # Start health check server first
         health_thread = threading.Thread(target=start_health_server, daemon=True)
         health_thread.start()
+
+        # Give health server time to start
+        await asyncio.sleep(2)
 
         # Import and initialize bot
         try:
             from bot import main as bot_main
-
             is_bot_ready = True
             await bot_main()
         except ImportError as e:
@@ -131,7 +121,8 @@ async def main():
     except Exception as e:
         logger.error(f"💥 Fatal error during startup: {e}")
         sys.exit(1)
-
+    finally:
+        stop_health_server()
 
 if __name__ == "__main__":
     try:
