@@ -9,7 +9,7 @@ import re
 from enum import Enum
 from typing import Dict, Any
 
-from telegram import Update, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import (
     ContextTypes,
     ConversationHandler,
@@ -73,6 +73,9 @@ async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.callback_query.answer()
     await update.callback_query.edit_message_text(
         "👋 به فرآیند ثبت‌نام خوش آمدید!\n\n" "لطفاً نام خود را به فارسی وارد کنید:",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_reg")]]
+        ),
     )
     return RegistrationStates.FIRST_NAME
 

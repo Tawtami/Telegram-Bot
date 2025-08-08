@@ -266,8 +266,16 @@ async def handle_payment_receipt(
         )
         return ConversationHandler.END
 
-    # Forward receipt to admin #1 (first admin in list)
-    admin_id = config.bot.admin_user_ids[0]
+    # Forward receipt ONLY to the primary admin (Master Hatami)
+    # Expect first ID in ADMIN_USER_IDS to be Master Hatami
+    admin_id = config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    if not admin_id:
+        logger.error("No admin IDs configured; cannot forward book receipt")
+        await update.message.reply_text(
+            "❌ تنظیمات ادمین یافت نشد. لطفاً با پشتیبانی تماس بگیرید.",
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return ConversationHandler.END
     student = storage.get_student(update.effective_user.id)
     caption = (
         f"🧾 رسید پرداخت کتاب\n\n"

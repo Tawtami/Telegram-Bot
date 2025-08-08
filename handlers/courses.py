@@ -435,20 +435,23 @@ async def handle_payment_receipt(
         )
         return
 
-    # Forward receipt to admins
-    for admin_id in config.bot.admin_user_ids:
+    # Forward receipt ONLY to the primary admin (Master Hatami)
+    primary_admin_id = config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    if not primary_admin_id:
+        logger.error("No admin IDs configured; cannot forward receipt")
+    else:
         try:
             await context.bot.forward_message(
-                chat_id=admin_id,
+                chat_id=primary_admin_id,
                 from_chat_id=update.effective_chat.id,
                 message_id=update.message.message_id,
             )
             await context.bot.send_message(
-                chat_id=admin_id,
+                chat_id=primary_admin_id,
                 text=caption,
             )
         except Exception as e:
-            logger.error(f"Error forwarding receipt to admin {admin_id}: {e}")
+            logger.error(f"Error forwarding receipt to admin {primary_admin_id}: {e}")
 
     await update.message.reply_text(
         success_message,
