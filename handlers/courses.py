@@ -195,7 +195,7 @@ async def handle_purchased_courses(
 
     if not user_courses["purchased_courses"] and not user_courses["free_courses"]:
         await query.edit_message_text(
-            "🛒 **دوره‌های شما:**\n\n"
+            "🛒 **سبد خرید من:**\n\n"
             "شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید.\n\n"
             "🎓 برای ثبت‌نام در دوره‌های رایگان:\n"
             "📚 دوره‌های رایگان جمعه\n\n"
@@ -219,7 +219,7 @@ async def handle_purchased_courses(
         course_details = {}
 
     # Build courses list
-    message_text = "🛒 دوره‌های شما:\n\n"
+    message_text = "🛒 **سبد خرید من:**\n\n"
     keyboard = []
 
     # Show free courses
@@ -233,16 +233,19 @@ async def handle_purchased_courses(
                     message_text += f"📅 {course['schedule']}\n"
                 if course.get("platform"):
                     message_text += f"📍 {course['platform']}\n"
-                message_text += "\n"
+                message_text += "✅ **وضعیت:** فعال\n\n"
 
     # Show purchased courses
     if user_courses["purchased_courses"]:
-        message_text += "💼 **دوره‌های خریداری‌شده:**\n"
+        message_text += "💼 **دوره‌های تخصصی:**\n"
         for course_id in user_courses["purchased_courses"]:
             if course_id in course_details:
                 course = course_details[course_id]
                 message_text += f"📚 {course['title']}\n"
+                
+                # Check if course is approved (has link)
                 if course.get("link"):
+                    message_text += "✅ **وضعیت:** تایید شده\n"
                     keyboard.append(
                         [
                             InlineKeyboardButton(
@@ -251,6 +254,7 @@ async def handle_purchased_courses(
                         ]
                     )
                 else:
+                    message_text += "⏳ **وضعیت:** در انتظار تایید ادمین\n"
                     message_text += f"📝 {course.get('description', '')}\n"
                     if course.get("schedule"):
                         message_text += f"📅 {course['schedule']}\n"
@@ -436,7 +440,9 @@ async def handle_payment_receipt(
         return
 
     # Forward receipt ONLY to the primary admin (Master Hatami)
-    primary_admin_id = config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    primary_admin_id = (
+        config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    )
     if not primary_admin_id:
         logger.error("No admin IDs configured; cannot forward receipt")
     else:

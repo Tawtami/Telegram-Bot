@@ -65,13 +65,13 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="💼 دوره‌های تخصصی", callback_data="paid_courses")],
         [
             InlineKeyboardButton(
-                text="🛒 دوره‌های خریداری‌شده", callback_data="purchased_courses"
+                text="🛒 سبد خرید من", callback_data="purchased_courses"
             )
         ],
         [InlineKeyboardButton(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")],
         [InlineKeyboardButton(text="🌐 شبکه‌های اجتماعی", callback_data="social_media")],
         [InlineKeyboardButton(text="☎️ ارتباط با ما", callback_data="contact_us")],
-        [InlineKeyboardButton(text="👤 پروفایل من", callback_data="profile")],
+        [InlineKeyboardButton(text="👤 پروفایل من", callback_data="menu_profile")],
     ]
     return InlineKeyboardMarkup(rows)
 
