@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 is_bot_ready = False
 is_shutting_down = False
 
+
 class HealthCheckHandler(BaseHTTPRequestHandler):
     """Enhanced health check handler for Railway"""
 
@@ -72,6 +73,7 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
         }
         self.wfile.write(json.dumps(response).encode())
 
+
 def start_health_server():
     """Start health check server in background"""
     try:
@@ -83,12 +85,14 @@ def start_health_server():
         logger.error(f"Failed to start health server: {e}")
         sys.exit(1)
 
+
 def handle_shutdown(signum, frame):
     """Handle shutdown signals"""
     global is_shutting_down
     logger.info(f"Received signal {signum}, initiating shutdown...")
     is_shutting_down = True
     sys.exit(0)
+
 
 async def main():
     """Main startup function"""
@@ -114,6 +118,7 @@ async def main():
         # Import and initialize bot
         try:
             from bot import main as bot_main
+
             is_bot_ready = True
             await bot_main()
         except ImportError as e:
@@ -126,6 +131,7 @@ async def main():
     except Exception as e:
         logger.error(f"💥 Fatal error during startup: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     try:

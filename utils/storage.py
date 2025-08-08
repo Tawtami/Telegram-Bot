@@ -16,6 +16,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class StudentStorage:
     """Thread-safe JSON storage for student data with caching"""
 
@@ -33,15 +34,15 @@ class StudentStorage:
     def _initialize_files(self):
         """Initialize JSON files with proper structure"""
         self.data_dir.mkdir(exist_ok=True)
-        
+
         # Initialize students.json
         if not self.students_file.exists():
             self._save_json(self.students_file, {"students": []})
-        
+
         # Initialize courses.json
         if not self.courses_file.exists():
             self._save_json(self.courses_file, {"courses": []})
-        
+
         # Initialize purchases.json
         if not self.purchases_file.exists():
             self._save_json(self.purchases_file, {"purchases": []})
@@ -93,18 +94,18 @@ class StudentStorage:
         try:
             data = self._load_json(self.students_file)
             students = data.get("students", [])
-            
+
             # Update existing student or add new one
             student_data["registration_date"] = datetime.now().isoformat()
             student_data["last_updated"] = datetime.now().isoformat()
-            
+
             for i, student in enumerate(students):
                 if student["user_id"] == student_data["user_id"]:
                     students[i] = student_data
                     break
             else:
                 students.append(student_data)
-            
+
             data["students"] = students
             self._save_json(self.students_file, data)
             return True
@@ -133,7 +134,9 @@ class StudentStorage:
             logger.error(f"Error getting all students: {e}")
             return []
 
-    def save_course_registration(self, user_id: int, course_id: str, is_paid: bool = False) -> bool:
+    def save_course_registration(
+        self, user_id: int, course_id: str, is_paid: bool = False
+    ) -> bool:
         """Save course registration"""
         try:
             student = self.get_student(user_id)
@@ -166,10 +169,10 @@ class StudentStorage:
 
             if "book_purchases" not in student:
                 student["book_purchases"] = []
-            
+
             book_data["purchase_date"] = datetime.now().isoformat()
             student["book_purchases"].append(book_data)
-            
+
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error saving book purchase: {e}")
