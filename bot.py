@@ -184,7 +184,7 @@ async def main() -> None:
         await application.initialize()
         await application.start()
         await application.updater.start_polling()
-        
+
         # Keep the bot running
         try:
             await asyncio.Event().wait()  # Wait indefinitely
@@ -198,6 +198,7 @@ async def main() -> None:
     except Exception as e:
         logger.error(f"❌ Error starting bot: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
