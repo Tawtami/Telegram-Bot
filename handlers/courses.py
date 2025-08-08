@@ -38,7 +38,7 @@ async def handle_free_courses(
             for course in all_courses
             if course["course_type"] == "free" and course["is_active"]
         ]
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         free_courses = []
 
     if not free_courses:
@@ -110,7 +110,7 @@ async def handle_paid_courses(
             for course in all_courses
             if course["course_type"] == "paid" and course["is_active"]
         ]
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         paid_courses = []
 
     if not paid_courses:
@@ -215,7 +215,7 @@ async def handle_purchased_courses(
         with open("data/courses.json", "r", encoding="utf-8") as f:
             all_courses = json.load(f)
         course_details = {c["course_id"]: c for c in all_courses}
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         course_details = {}
 
     # Build courses list
@@ -290,7 +290,7 @@ async def handle_course_registration(
         with open("data/courses.json", "r", encoding="utf-8") as f:
             all_courses = json.load(f)
         course = next((c for c in all_courses if c["course_id"] == course_id), None)
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         course = None
 
     if course_type == "free":
@@ -377,7 +377,7 @@ async def handle_payment_receipt(
                 all_courses = json.load(f)
             course = next((c for c in all_courses if c["course_id"] == course_id), None)
             course_title = course["title"] if course else course_id
-        except:
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
             course_title = course_id
 
         caption = (

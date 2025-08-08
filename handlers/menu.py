@@ -78,7 +78,10 @@ async def handle_menu_selection(
         return
 
     # Handle menu options
-    option = query.data.replace("menu_", "")
+    if query.data == "menu_profile":
+        option = "profile"
+    else:
+        option = query.data.replace("menu_", "")
 
     if option == "profile":
         if not student:

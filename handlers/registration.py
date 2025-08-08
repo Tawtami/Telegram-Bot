@@ -303,7 +303,16 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     # Save user data
     storage: StudentStorage = context.bot_data["storage"]
-    user_data = {"user_id": update.effective_user.id, **context.user_data}
+    user_data = {
+        "user_id": update.effective_user.id,
+        "first_name": context.user_data.get("first_name", ""),
+        "last_name": context.user_data.get("last_name", ""),
+        "phone_number": context.user_data.get("phone_number", ""),
+        "province": context.user_data.get("province", ""),
+        "city": context.user_data.get("city", ""),
+        "grade": context.user_data.get("grade", ""),
+        "field": context.user_data.get("field", ""),
+    }
 
     if not storage.save_student(user_data):
         await query.edit_message_text(

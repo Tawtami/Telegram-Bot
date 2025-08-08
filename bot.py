@@ -248,7 +248,7 @@ async def main() -> None:
             # Use webhook for deployment
             webhook_url = os.environ.get("WEBHOOK_URL")
             if webhook_url:
-                await application.updater.start_webhook(
+                await application.run_webhook(
                     listen="0.0.0.0",
                     port=port,
                     webhook_url=webhook_url,
@@ -257,11 +257,11 @@ async def main() -> None:
                 logger.info(f"🌐 Webhook started on port {port}")
             else:
                 # Fallback to polling if no webhook URL
-                await application.updater.start_polling(drop_pending_updates=True)
+                await application.run_polling(drop_pending_updates=True)
                 logger.info("📡 Polling started")
         else:
             # Use polling for local development
-            await application.updater.start_polling(drop_pending_updates=True)
+            await application.run_polling(drop_pending_updates=True)
             logger.info("📡 Polling started")
 
         # Keep the bot running
@@ -270,7 +270,6 @@ async def main() -> None:
         except KeyboardInterrupt:
             pass
         finally:
-            await application.updater.stop()
             await application.stop()
             await application.shutdown()
 
