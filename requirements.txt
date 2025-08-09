@@ -1,6 +1,6 @@
 # Core dependencies
-# Pin to PTB v20.x since code uses Application.updater APIs removed in v21
-python-telegram-bot>=20.3,<21.0
+# Pin to PTB v20.x and include webhooks extra for Application.run_webhook support
+python-telegram-bot[webhooks]>=20.3,<21.0
 python-dotenv>=1.0.0
 
 # Utility packages
