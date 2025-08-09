@@ -233,18 +233,24 @@ def main() -> None:
         logger.info("🚀 Starting bot...")
 
         port = int(os.environ.get("PORT", 0))
-        webhook_url = os.environ.get("WEBHOOK_URL")
+        webhook_url_root = os.environ.get("WEBHOOK_URL")
         force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
 
-        if not force_polling and port > 0 and webhook_url:
+        if not force_polling and port > 0 and webhook_url_root:
+            # Serve webhook at a secret path (token) and register the full URL
+            token = config.bot_token
+            url_path = token
+            full_webhook_url = f"{webhook_url_root.rstrip('/')}/{url_path}"
+
             application.run_webhook(
                 listen="0.0.0.0",
                 port=port,
-                webhook_url=webhook_url,
+                url_path=url_path,
+                webhook_url=full_webhook_url,
                 # Avoid calling getUpdates while webhook is active
                 drop_pending_updates=False,
             )
-            logger.info(f"🌐 Webhook started on port {port}")
+            logger.info(f"🌐 Webhook started on port {port} with path '/{url_path}'")
         else:
             application.run_polling(drop_pending_updates=False)
             logger.info("📡 Polling started")
