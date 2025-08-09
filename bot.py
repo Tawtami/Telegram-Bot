@@ -315,8 +315,10 @@ def main() -> None:
         if not force_polling and port > 0 and webhook_url_root:
             # Serve webhook on root path for Railway compatibility
             full_webhook_url = webhook_url_root.rstrip("/")
-            
-            logger.info(f"🔧 Starting webhook on port {port} with URL: {full_webhook_url}")
+
+            logger.info(
+                f"🔧 Starting webhook on port {port} with URL: {full_webhook_url}"
+            )
             logger.info(f"🔧 Webhook path: /")
 
             application.run_webhook(

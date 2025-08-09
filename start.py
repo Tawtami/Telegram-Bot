@@ -36,11 +36,13 @@ def main() -> None:
         # Import and run the bot's async main once
         from bot import main as bot_main
 
-        # Always expose a health endpoint on PORT for Railway healthcheck
+        # Use PORT+1 for health server to avoid conflict with webhook
         port = int(os.getenv("PORT", "0") or 0)
         webhook_url = os.getenv("WEBHOOK_URL")
 
         if port > 0:
+            health_port = port + 1
+
             class HealthHandler(BaseHTTPRequestHandler):
                 def do_GET(self):
                     self.send_response(200)
@@ -53,14 +55,14 @@ def main() -> None:
 
             def run_health():
                 try:
-                    httpd = HTTPServer(("0.0.0.0", port), HealthHandler)
+                    httpd = HTTPServer(("0.0.0.0", health_port), HealthHandler)
                     httpd.serve_forever()
                 except Exception:
                     pass
 
             t = threading.Thread(target=run_health, daemon=True)
             t.start()
-            logger.info(f"✅ Health server started on port {port}")
+            logger.info(f"✅ Health server started on port {health_port}")
 
         # Call synchronous bot.main() to let PTB own the event loop
         bot_main()
