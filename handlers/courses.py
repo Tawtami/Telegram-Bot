@@ -85,7 +85,7 @@ async def handle_free_courses(
     await query.edit_message_text(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode=ParseMode.HTML,
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
@@ -175,7 +175,7 @@ async def handle_paid_courses(
     await query.edit_message_text(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode=ParseMode.HTML,
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
@@ -204,7 +204,7 @@ async def handle_purchased_courses(
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
             ),
-            parse_mode=ParseMode.HTML,
+            parse_mode=ParseMode.MARKDOWN,
         )
         return
 
@@ -265,7 +265,7 @@ async def handle_purchased_courses(
     await query.edit_message_text(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode=ParseMode.HTML,
+        parse_mode=ParseMode.MARKDOWN,
     )
 
 
@@ -280,7 +280,15 @@ async def handle_course_registration(
     await query.answer()
 
     # Parse course type and ID
-    _, course_type, course_id = query.data.split("_", 2)
+    # Expected format: register_course_<type>_<course_id>
+    prefix = "register_course_"
+    if not query.data.startswith(prefix):
+        return
+    rest = query.data[len(prefix) :]
+    try:
+        course_type, course_id = rest.split("_", 1)
+    except ValueError:
+        course_type, course_id = "paid", rest
     storage: StudentStorage = context.bot_data["storage"]
 
     # Load course details from JSON

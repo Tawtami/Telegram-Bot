@@ -23,7 +23,7 @@ from telegram.ext import (
 
 from config import config
 from handlers.registration import build_registration_conversation
-from handlers.books import build_book_purchase_conversation, show_book_info
+from handlers.books import build_book_purchase_conversation
 from handlers.menu import (
     send_main_menu,
     handle_menu_selection,
@@ -230,9 +230,7 @@ async def main() -> None:
         application.add_handler(
             CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
         )
-        application.add_handler(
-            CallbackQueryHandler(show_book_info, pattern="^book_info$")
-        )
+        # 'book_info' is handled inside the book purchase conversation entry points
 
         # Error handler
         application.add_error_handler(ptb_error_handler)
