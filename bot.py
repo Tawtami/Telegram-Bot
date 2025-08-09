@@ -10,6 +10,7 @@ import sys
 import logging
 import asyncio
 from typing import Dict, Any
+import hashlib
 
 from telegram import Update
 from telegram.ext import (
@@ -237,9 +238,9 @@ def main() -> None:
         force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
 
         if not force_polling and port > 0 and webhook_url_root:
-            # Serve webhook at a secret path (token) and register the full URL
+            # Serve webhook at a secret, colon-free path to avoid proxy issues
             token = config.bot_token
-            url_path = token
+            url_path = hashlib.sha256(token.encode("utf-8")).hexdigest()
             full_webhook_url = f"{webhook_url_root.rstrip('/')}/{url_path}"
 
             application.run_webhook(
