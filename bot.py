@@ -234,8 +234,9 @@ def main() -> None:
 
         port = int(os.environ.get("PORT", 0))
         webhook_url = os.environ.get("WEBHOOK_URL")
+        force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
 
-        if port > 0 and webhook_url:
+        if not force_polling and port > 0 and webhook_url:
             application.run_webhook(
                 listen="0.0.0.0",
                 port=port,

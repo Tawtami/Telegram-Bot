@@ -173,3 +173,9 @@ The optimized bot provides:
 ---
 
 **🎓 Production-ready, high-performance bot for math class registration! 🚀** 
+
+## Operations (Railway)
+- Required variables: `BOT_TOKEN`, `ADMIN_USER_IDS`, `PAYMENT_CARD_NUMBER`, `PAYMENT_PAYEE_NAME`.
+- Webhook mode: set `WEBHOOK_URL=https://<your-domain>` or `RAILWAY_PUBLIC_DOMAIN=<your-domain>` (no scheme). The app will auto-register webhook.
+- Polling mode: remove webhook vars or set `FORCE_POLLING=true`.
+- Healthcheck: in polling mode a tiny HTTP server responds 200 OK at `/`; in webhook mode PTB binds the port.
