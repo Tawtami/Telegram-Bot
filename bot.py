@@ -238,9 +238,8 @@ def main() -> None:
         force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
 
         if not force_polling and port > 0 and webhook_url_root:
-            # Serve webhook at a secret, colon-free path to avoid proxy issues
-            token = config.bot_token
-            url_path = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            # Serve webhook on a stable path to avoid proxy incompatibilities
+            url_path = "webhook"
             full_webhook_url = f"{webhook_url_root.rstrip('/')}/{url_path}"
 
             application.run_webhook(
