@@ -12,6 +12,7 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from config import Config
 
+
 # Optional decorator for wrapping handlers with rate limiting
 def rate_limit_handler(level: str = "default"):
     """Decorator to rate-limit PTB handler callbacks by user ID.
@@ -21,6 +22,7 @@ def rate_limit_handler(level: str = "default"):
         async def handler(update, context):
             ...
     """
+
     def _decorator(func):
         async def _wrapped(update, context, *args, **kwargs):
             try:
@@ -39,6 +41,7 @@ def rate_limit_handler(level: str = "default"):
         return _wrapped
 
     return _decorator
+
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +129,8 @@ class RateLimiter:
     def __init__(self, default_config: Optional[RateLimitConfig] = None):
         config_instance = Config()
         self.default_config = default_config or RateLimitConfig(
-            max_requests=config_instance.performance.max_requests_per_minute, window_seconds=60
+            max_requests=config_instance.performance.max_requests_per_minute,
+            window_seconds=60,
         )
         self.limits: Dict[str, RateLimitEntry] = {}
         self.stats = {
