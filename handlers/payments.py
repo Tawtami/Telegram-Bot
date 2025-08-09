@@ -14,7 +14,9 @@ from ui.keyboards import build_main_menu_keyboard
 
 
 @rate_limit_handler("default")
-async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_payment_receipt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     """Handle incoming payment receipt photo for courses or books.
 
     - If context.user_data["pending_course"] is set: treat as course payment → add pending, forward to admin
@@ -66,7 +68,9 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         try:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
-            course = next((c for c in all_courses if c.get("course_id") == course_id), None)
+            course = next(
+                (c for c in all_courses if c.get("course_id") == course_id), None
+            )
             course_title = course.get("title") if course else course_id
         except Exception:
             course_title = course_id
@@ -130,7 +134,9 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         return
 
     # Forward receipt to primary admin
-    primary_admin_id = config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    primary_admin_id = (
+        config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
+    )
     if primary_admin_id:
         try:
             await context.bot.forward_message(
@@ -142,6 +148,6 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
         except Exception:
             pass
 
-    await update.message.reply_text(success_message, reply_markup=build_main_menu_keyboard())
-
-
+    await update.message.reply_text(
+        success_message, reply_markup=build_main_menu_keyboard()
+    )

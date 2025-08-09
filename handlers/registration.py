@@ -89,9 +89,7 @@ async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     name = update.message.text.strip()
     is_valid, result = Validator.validate_name(name, "نام")
     if not is_valid:
-        await update.message.reply_text(
-            result
-        )
+        await update.message.reply_text(result)
         return RegistrationStates.FIRST_NAME
 
     context.user_data["first_name"] = result
@@ -105,9 +103,7 @@ async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     name = update.message.text.strip()
     is_valid, result = Validator.validate_name(name, "نام خانوادگی")
     if not is_valid:
-        await update.message.reply_text(
-            result
-        )
+        await update.message.reply_text(result)
         return RegistrationStates.LAST_NAME
 
     context.user_data["last_name"] = result

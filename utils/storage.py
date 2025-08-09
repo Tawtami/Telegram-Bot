@@ -157,7 +157,7 @@ class StudentStorage:
 
             # Update last activity
             student["last_activity"] = datetime.now().isoformat()
-            
+
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error saving course registration: {e}")
@@ -217,7 +217,7 @@ class StudentStorage:
 
             # Update last activity
             student["last_activity"] = datetime.now().isoformat()
-            
+
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error adding pending payment: {e}")
@@ -229,10 +229,10 @@ class StudentStorage:
             student = self.get_student(user_id)
             if not student:
                 return {"free_courses": [], "purchased_courses": []}
-            
+
             return {
                 "free_courses": student.get("free_courses", []),
-                "purchased_courses": student.get("purchased_courses", [])
+                "purchased_courses": student.get("purchased_courses", []),
             }
         except Exception as e:
             logger.error(f"Error getting user courses: {e}")
