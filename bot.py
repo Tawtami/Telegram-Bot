@@ -187,22 +187,46 @@ def main() -> None:
         application.add_handler(CommandHandler("students", students_command))
         application.add_handler(CommandHandler("profile", profile_command))
         application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("confirm_payment", confirm_payment_command))
+        application.add_handler(
+            CommandHandler("confirm_payment", confirm_payment_command)
+        )
 
         application.add_handler(build_registration_conversation())
         application.add_handler(build_book_purchase_conversation())
 
-        application.add_handler(CallbackQueryHandler(handle_menu_selection, pattern="^menu_"))
-        application.add_handler(CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$"))
+        application.add_handler(
+            CallbackQueryHandler(handle_menu_selection, pattern="^menu_")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$")
+        )
 
-        application.add_handler(CallbackQueryHandler(handle_free_courses, pattern="^free_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_purchased_courses, pattern="^purchased_courses$"))
-        application.add_handler(CallbackQueryHandler(handle_course_registration, pattern="^register_course_"))
-        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt))
+        application.add_handler(
+            CallbackQueryHandler(handle_free_courses, pattern="^free_courses$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(
+                handle_purchased_courses, pattern="^purchased_courses$"
+            )
+        )
+        application.add_handler(
+            CallbackQueryHandler(
+                handle_course_registration, pattern="^register_course_"
+            )
+        )
+        application.add_handler(
+            MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt)
+        )
 
-        application.add_handler(CallbackQueryHandler(handle_social_media, pattern="^social_media$"))
-        application.add_handler(CallbackQueryHandler(handle_contact_us, pattern="^contact_us$"))
+        application.add_handler(
+            CallbackQueryHandler(handle_social_media, pattern="^social_media$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
+        )
 
         application.add_error_handler(ptb_error_handler)
 
