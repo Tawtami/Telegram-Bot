@@ -36,13 +36,11 @@ def main() -> None:
         # Import and run the bot's async main once
         from bot import main as bot_main
 
-        # If WEBHOOK_URL is not set, run polling but expose a tiny health endpoint
-        # on PORT so Railway healthcheck passes.
-        webhook_url = os.getenv("WEBHOOK_URL")
+        # Always expose a health endpoint on PORT for Railway healthcheck
         port = int(os.getenv("PORT", "0") or 0)
+        webhook_url = os.getenv("WEBHOOK_URL")
 
-        if not webhook_url and port > 0:
-
+        if port > 0:
             class HealthHandler(BaseHTTPRequestHandler):
                 def do_GET(self):
                     self.send_response(200)
