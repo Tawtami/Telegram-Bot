@@ -12,11 +12,13 @@ from telegram.constants import ParseMode
 import logging
 from config import config
 from utils.storage import StudentStorage
+from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 
 logger = logging.getLogger(__name__)
 
 
+@rate_limit_handler("default")
 async def handle_free_courses(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -89,6 +91,7 @@ async def handle_free_courses(
     )
 
 
+@rate_limit_handler("default")
 async def handle_paid_courses(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -179,6 +182,7 @@ async def handle_paid_courses(
     )
 
 
+@rate_limit_handler("default")
 async def handle_purchased_courses(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -269,6 +273,7 @@ async def handle_purchased_courses(
     )
 
 
+@rate_limit_handler("default")
 async def handle_course_registration(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -334,8 +339,8 @@ async def handle_course_registration(
 
         payment_text += (
             "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
-            "6037-9974-1234-5678\n"
-            "به نام: استاد حاتمی\n\n"
+            f"{config.bot.payment_card_number}\n"
+            f"به نام: {config.bot.payment_payee_name}\n\n"
             "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
             "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
         )
@@ -351,6 +356,7 @@ async def handle_course_registration(
         context.user_data["pending_course"] = course_id
 
 
+@rate_limit_handler("default")
 async def handle_payment_receipt(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:

@@ -20,6 +20,8 @@ from telegram.ext import (
 )
 
 from config import config
+from utils.validators import Validator
+from utils.rate_limiter import rate_limit_handler
 from utils.storage import StudentStorage
 from ui.keyboards import (
     build_register_keyboard,
@@ -66,6 +68,7 @@ def _is_iranian_phone(phone: str) -> bool:
     return any(re.match(pattern, phone) for pattern in patterns)
 
 
+@rate_limit_handler("registration")
 async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start registration process"""
     context.user_data.clear()  # Clear any previous registration data
@@ -80,59 +83,55 @@ async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return RegistrationStates.FIRST_NAME
 
 
+@rate_limit_handler("registration")
 async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle first name input"""
     name = update.message.text.strip()
-    if not _is_persian_text(name):
+    is_valid, result = Validator.validate_name(name, "نام")
+    if not is_valid:
         await update.message.reply_text(
-            "❌ نام باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.\n" "لطفاً دوباره وارد کنید:"
+            result
         )
         return RegistrationStates.FIRST_NAME
 
-    context.user_data["first_name"] = name
+    context.user_data["first_name"] = result
     await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
     return RegistrationStates.LAST_NAME
 
 
+@rate_limit_handler("registration")
 async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle last name input"""
     name = update.message.text.strip()
-    if not _is_persian_text(name):
+    is_valid, result = Validator.validate_name(name, "نام خانوادگی")
+    if not is_valid:
         await update.message.reply_text(
-            "❌ نام خانوادگی باید فارسی و بین ۲ تا ۵۰ کاراکتر باشد.\n"
-            "لطفاً دوباره وارد کنید:"
+            result
         )
         return RegistrationStates.LAST_NAME
 
-    context.user_data["last_name"] = name
+    context.user_data["last_name"] = result
     await update.message.reply_text(
         "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
     )
     return RegistrationStates.PHONE_NUMBER
 
 
+@rate_limit_handler("registration")
 async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle phone number input"""
     phone = update.message.text.strip()
-
-    if not _is_iranian_phone(phone):
-        await update.message.reply_text(
-            "❌ شماره تماس نامعتبر است.\n"
-            "لطفاً شماره معتبر ایرانی وارد کنید:\n"
-            "مثال: 09123456789 یا 9123456789"
-        )
+    is_valid, result = Validator.validate_phone(phone)
+    if not is_valid:
+        await update.message.reply_text(result)
         return RegistrationStates.PHONE_NUMBER
 
-    # Normalize phone number to 09xxxxxxxxx format
-    phone = re.sub(r"[\s\-]", "", phone)
-    if phone.startswith("9"):
-        phone = "0" + phone
-    elif phone.startswith("+98"):
-        phone = "0" + phone[3:]
-    elif phone.startswith("0098"):
-        phone = "0" + phone[4:]
+    # Convert normalized +98... to 09... format for display consistency
+    normalized = result
+    if normalized.startswith("+98"):
+        normalized = "0" + normalized[3:]
 
-    context.user_data["phone_number"] = phone
+    context.user_data["phone_number"] = normalized
     await update.message.reply_text(
         "لطفاً استان خود را انتخاب کنید:",
         reply_markup=build_provinces_keyboard(config.provinces),
@@ -140,6 +139,7 @@ async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return RegistrationStates.PROVINCE
 
 
+@rate_limit_handler("registration")
 async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle province selection"""
     query = update.callback_query
@@ -161,6 +161,7 @@ async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CITY
 
 
+@rate_limit_handler("registration")
 async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle city selection"""
     query = update.callback_query
@@ -183,6 +184,7 @@ async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.GRADE
 
 
+@rate_limit_handler("registration")
 async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle grade selection"""
     query = update.callback_query
@@ -204,6 +206,7 @@ async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.FIELD
 
 
+@rate_limit_handler("registration")
 async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle field of study selection"""
     query = update.callback_query
@@ -240,6 +243,7 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CONFIRM
 
 
+@rate_limit_handler("registration")
 async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to province selection"""
     query = update.callback_query
@@ -256,6 +260,7 @@ async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return RegistrationStates.PROVINCE
 
 
+@rate_limit_handler("registration")
 async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to city selection for the chosen province"""
     query = update.callback_query
@@ -275,6 +280,7 @@ async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return RegistrationStates.CITY
 
 
+@rate_limit_handler("registration")
 async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to grade selection"""
     query = update.callback_query
@@ -289,6 +295,7 @@ async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return RegistrationStates.GRADE
 
 
+@rate_limit_handler("registration")
 async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle registration confirmation"""
     query = update.callback_query
@@ -334,6 +341,7 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+@rate_limit_handler("registration")
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel registration"""
     await update.message.reply_text(

@@ -8,7 +8,7 @@ Thread-safe file operations with proper locking
 import os
 import json
 import time
-import asyncio
+import threading
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
@@ -25,7 +25,8 @@ class StudentStorage:
         self.students_file = self.data_dir / "students.json"
         self.courses_file = self.data_dir / "courses.json"
         self.purchases_file = self.data_dir / "purchases.json"
-        self.lock = asyncio.Lock()
+        # Use a thread lock to guard file writes (PTB handlers run concurrently)
+        self.lock = threading.Lock()
         self._cache = {}
         self._cache_ttl = 300  # 5 minutes
         self._last_cache_update = {}
@@ -39,9 +40,7 @@ class StudentStorage:
         if not self.students_file.exists():
             self._save_json(self.students_file, {"students": []})
 
-        # Initialize courses.json
-        if not self.courses_file.exists():
-            self._save_json(self.courses_file, {"courses": []})
+        # Do not initialize courses.json here; it is a data source list managed separately
 
         # Initialize purchases.json
         if not self.purchases_file.exists():
@@ -76,12 +75,13 @@ class StudentStorage:
     def _save_json(self, file_path: Path, data: Dict[str, Any]):
         """Save JSON file safely and update cache"""
         try:
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            # Update cache
-            cache_key = str(file_path)
-            self._cache[cache_key] = data
-            self._last_cache_update[cache_key] = time.time()
+            with self.lock:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                # Update cache
+                cache_key = str(file_path)
+                self._cache[cache_key] = data
+                self._last_cache_update[cache_key] = time.time()
         except Exception as e:
             logger.error(f"Error saving {file_path}: {e}")
             # Invalidate cache on error

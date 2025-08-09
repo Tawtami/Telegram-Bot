@@ -34,8 +34,8 @@ from handlers.courses import (
     handle_paid_courses,
     handle_purchased_courses,
     handle_course_registration,
-    handle_payment_receipt,
 )
+from handlers.payments import handle_payment_receipt
 from handlers.social import handle_social_media
 from handlers.contact import handle_contact_us
 from utils.storage import StudentStorage

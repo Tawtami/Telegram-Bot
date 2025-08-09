@@ -24,6 +24,7 @@ from telegram.constants import ParseMode
 
 from config import config
 from utils.storage import StudentStorage
+from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 
 
@@ -61,6 +62,7 @@ BOOK_DETAILS = {
 }
 
 
+@rate_limit_handler("default")
 async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show book information and start purchase process"""
     query = update.callback_query
@@ -99,6 +101,7 @@ async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     return ConversationHandler.END
 
 
+@rate_limit_handler("default")
 async def start_book_purchase(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:
@@ -124,6 +127,7 @@ async def start_book_purchase(
     return BookPurchaseStates.POSTAL_CODE
 
 
+@rate_limit_handler("registration")
 async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle postal code input"""
     postal_code = update.message.text.strip()
@@ -155,6 +159,7 @@ async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return BookPurchaseStates.ADDRESS
 
 
+@rate_limit_handler("registration")
 async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle address input"""
     address = update.message.text.strip()
@@ -187,12 +192,14 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return BookPurchaseStates.NOTES
 
 
+@rate_limit_handler("registration")
 async def skip_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Skip notes and show payment info"""
     context.user_data["book_purchase"]["notes"] = ""
     return await show_payment_info(update, context)
 
 
+@rate_limit_handler("registration")
 async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle additional notes"""
     notes = update.message.text.strip()
@@ -200,6 +207,7 @@ async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return await show_payment_info(update, context)
 
 
+@rate_limit_handler("default")
 async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show payment information"""
     book_data = context.user_data["book_purchase"]
@@ -209,8 +217,8 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"📖 کتاب: {book_data['title']}\n"
         f"💰 مبلغ: {book_data['price']:,} تومان\n\n"
         "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
-        "6037-9974-1234-5678\n"
-        "به نام: استاد حاتمی\n\n"
+        f"{config.bot.payment_card_number}\n"
+        f"به نام: {config.bot.payment_payee_name}\n\n"
         "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
         "❗️ پس از تایید پرداخت توسط ادمین، اطلاعات ارسال کتاب به شما اعلام خواهد شد."
     )
@@ -246,6 +254,7 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return BookPurchaseStates.PAYMENT
 
 
+@rate_limit_handler("default")
 async def handle_payment_receipt(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> int:

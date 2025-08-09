@@ -12,6 +12,36 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from config import Config
 
+# Optional decorator for wrapping handlers with rate limiting
+def rate_limit_handler(level: str = "default"):
+    """Decorator to rate-limit PTB handler callbacks by user ID.
+
+    Usage:
+        @rate_limit_handler("registration")
+        async def handler(update, context):
+            ...
+    """
+    def _decorator(func):
+        async def _wrapped(update, context, *args, **kwargs):
+            try:
+                user_id = str(getattr(update.effective_user, "id", "0"))
+                allowed = await multi_rate_limiter.is_allowed(user_id, level=level)
+                if not allowed:
+                    # Soft-fail: inform user politely without flooding
+                    chat = update.effective_chat
+                    if chat is not None:
+                        await chat.send_message(
+                            "⏳ درخواست‌های شما بیش از حد مجاز است. لطفاً چند لحظه دیگر دوباره تلاش کنید.")
+                    return
+            except Exception:
+                # In case of any error in rate limiting, fall through to handler
+                pass
+            return await func(update, context, *args, **kwargs)
+
+        return _wrapped
+
+    return _decorator
+
 logger = logging.getLogger(__name__)
 
 
