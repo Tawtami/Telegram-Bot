@@ -7,6 +7,7 @@
 A **high-performance**, **production-ready** Telegram bot for registering students in free online math classes conducted by "Ostad Hatami" via Skyroom.
 
 ### 🚀 Performance Features
+
 - **Async caching system** for 3x faster response times
 - **Rate limiting** with anti-spam protection
 - **Performance monitoring** with detailed metrics
@@ -17,6 +18,7 @@ A **high-performance**, **production-ready** Telegram bot for registering studen
 ## ✨ Features
 
 ### Core Features
+
 - **7-step registration process** with FSM
 - **Real-time validation** for Persian names and Iranian phone numbers
 - **Interactive keyboards** for easy selection
@@ -25,6 +27,7 @@ A **high-performance**, **production-ready** Telegram bot for registering studen
 - **Contact sharing** support for phone numbers
 
 ### Performance Optimizations
+
 - **Async file operations** with file locking
 - **In-memory caching** with TTL expiration
 - **Rate limiting** (10 requests/minute per user)
@@ -37,17 +40,20 @@ A **high-performance**, **production-ready** Telegram bot for registering studen
 ## 🚀 Quick Start
 
 ### 1. Install Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 2. Set Up Environment
+
 ```bash
 cp env.txt .env
 # Edit .env with your BOT_TOKEN
 ```
 
 ### 3. Run Bot
+
 ```bash
 python bot.py
 ```
@@ -86,6 +92,7 @@ python bot.py
 ## 📊 Data Storage
 
 User data is stored in JSON format:
+
 ```json
 {
   "user_id": 123456789,
@@ -104,17 +111,20 @@ User data is stored in JSON format:
 ## 🛠️ Configuration
 
 ### Supported Grades
+
 - دهم (10th Grade)
 - یازدهم (11th Grade)
 - دوازدهم (12th Grade)
 
 ### Supported Majors
+
 - ریاضی (Mathematics)
 - تجربی (Biology)
 - انسانی (Humanities)
 - هنر (Arts)
 
 ### Phone Number Formats
+
 - `+989121234567`
 - `09121234567`
 - `9121234567`
@@ -123,6 +133,7 @@ User data is stored in JSON format:
 ## 🔒 Security & Performance
 
 ### Security
+
 - **Input validation** for all fields
 - **User-specific files** - No cross-user data access
 - **Comprehensive error handling** with system error IDs
@@ -130,6 +141,7 @@ User data is stored in JSON format:
 - **Rate limiting** to prevent abuse
 
 ### Performance Monitoring
+
 - **Request time tracking** for all handlers
 - **Error count monitoring** by type
 - **User activity tracking**
@@ -138,6 +150,7 @@ User data is stored in JSON format:
 - **Automatic cleanup** of expired data
 
 ### Configuration Options
+
 ```env
 MAX_REQUESTS_PER_MINUTE=10      # Rate limit per user
 CACHE_TTL_SECONDS=300           # Cache expiration time
@@ -155,6 +168,7 @@ LOG_LEVEL=INFO                  # Logging level
 ## 📊 Performance Metrics
 
 The optimized bot provides:
+
 - **Sub-second response times** for most operations
 - **Memory-efficient** user data management
 - **Scalable architecture** supporting hundreds of concurrent users
@@ -172,9 +186,10 @@ The optimized bot provides:
 
 ---
 
-**🎓 Production-ready, high-performance bot for math class registration! 🚀** 
+**🎓 Production-ready, high-performance bot for math class registration! 🚀**
 
 ## Operations (Railway)
+
 - Required variables: `BOT_TOKEN`, `ADMIN_USER_IDS`, `PAYMENT_CARD_NUMBER`, `PAYMENT_PAYEE_NAME`.
 - Webhook mode: set `WEBHOOK_URL=https://<your-domain>` or `RAILWAY_PUBLIC_DOMAIN=<your-domain>` (no scheme). The app will auto-register webhook.
 - Polling mode: remove webhook vars or set `FORCE_POLLING=true`.
