@@ -7,7 +7,8 @@ Delegates lifecycle to PTB; avoids nested event loops.
 import os
 import sys
 import logging
-import asyncio
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -34,6 +35,33 @@ def main() -> None:
 
         # Import and run the bot's async main once
         from bot import main as bot_main
+        
+        # If WEBHOOK_URL is not set, run polling but expose a tiny health endpoint
+        # on PORT so Railway healthcheck passes.
+        webhook_url = os.getenv("WEBHOOK_URL")
+        port = int(os.getenv("PORT", "0") or 0)
+
+        if not webhook_url and port > 0:
+            class HealthHandler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/plain; charset=utf-8")
+                    self.end_headers()
+                    self.wfile.write(b"OK")
+
+                def log_message(self, format, *args):
+                    return
+
+            def run_health():
+                try:
+                    httpd = HTTPServer(("0.0.0.0", port), HealthHandler)
+                    httpd.serve_forever()
+                except Exception:
+                    pass
+
+            t = threading.Thread(target=run_health, daemon=True)
+            t.start()
+            logger.info(f"✅ Health server started on port {port}")
 
         # Call synchronous bot.main() to let PTB own the event loop
         bot_main()
