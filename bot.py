@@ -184,6 +184,7 @@ async def mycourses_command(update: Update, context: Any) -> None:
     """Handle /mycourses command - Show user's purchased courses"""
     # Redirect to the purchased courses handler
     from handlers.courses import handle_purchased_courses
+
     await handle_purchased_courses(update, context)
 
 
@@ -191,6 +192,7 @@ async def book_command(update: Update, context: Any) -> None:
     """Handle /book command - Show book information"""
     # Redirect to the book info handler
     from handlers.books import handle_book_info
+
     await handle_book_info(update, context)
 
 
@@ -198,6 +200,7 @@ async def contact_command(update: Update, context: Any) -> None:
     """Handle /contact command - Show contact information"""
     # Redirect to the contact handler
     from handlers.contact import handle_contact_us
+
     await handle_contact_us(update, context)
 
 
@@ -205,6 +208,7 @@ async def social_command(update: Update, context: Any) -> None:
     """Handle /social command - Show social media links"""
     # Redirect to the social media handler
     from handlers.social import handle_social_media
+
     await handle_social_media(update, context)
 
 
@@ -230,7 +234,7 @@ async def about_command(update: Update, context: Any) -> None:
         "**💡 شعار:**\n"
         "ریاضی را آسان و لذت‌بخش یاد بگیرید!"
     )
-    
+
     await update.message.reply_text(about_text, parse_mode="Markdown")
 
 
