@@ -1,3 +1,0 @@
-[33m129cb85[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Fix: Final bot optimizations for Railway deployment stability
-[33m7abbb4d[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix: Critical event loop and ConversationHandler issues causing bot crashes on Railway - Remove duplicate initialize/start calls - Fix per_message=True warnings - Proper async handling in start.py
-[33mdaec0ee[m Fix: Replace bare except statements with specific exception handling in courses.py for better error handling and code quality
