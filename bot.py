@@ -240,11 +240,12 @@ def main() -> None:
                 listen="0.0.0.0",
                 port=port,
                 webhook_url=webhook_url,
-                drop_pending_updates=True,
+                # Avoid calling getUpdates while webhook is active
+                drop_pending_updates=False,
             )
             logger.info(f"🌐 Webhook started on port {port}")
         else:
-            application.run_polling(drop_pending_updates=True)
+            application.run_polling(drop_pending_updates=False)
             logger.info("📡 Polling started")
 
     except Exception as e:
