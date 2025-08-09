@@ -127,7 +127,7 @@ async def start_book_purchase(
     return BookPurchaseStates.POSTAL_CODE
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle postal code input"""
     postal_code = update.message.text.strip()
@@ -159,7 +159,7 @@ async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return BookPurchaseStates.ADDRESS
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle address input"""
     address = update.message.text.strip()
@@ -192,14 +192,14 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return BookPurchaseStates.NOTES
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def skip_notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Skip notes and show payment info"""
     context.user_data["book_purchase"]["notes"] = ""
     return await show_payment_info(update, context)
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def notes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle additional notes"""
     notes = update.message.text.strip()

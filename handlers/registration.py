@@ -68,7 +68,7 @@ def _is_iranian_phone(phone: str) -> bool:
     return any(re.match(pattern, phone) for pattern in patterns)
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start registration process"""
     context.user_data.clear()  # Clear any previous registration data
@@ -83,7 +83,7 @@ async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE)
     return RegistrationStates.FIRST_NAME
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle first name input"""
     name = update.message.text.strip()
@@ -97,7 +97,7 @@ async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.LAST_NAME
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle last name input"""
     name = update.message.text.strip()
@@ -113,7 +113,7 @@ async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.PHONE_NUMBER
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle phone number input"""
     phone = update.message.text.strip()
@@ -135,7 +135,7 @@ async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return RegistrationStates.PROVINCE
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle province selection"""
     query = update.callback_query
@@ -157,7 +157,7 @@ async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CITY
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle city selection"""
     query = update.callback_query
@@ -180,7 +180,7 @@ async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.GRADE
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle grade selection"""
     query = update.callback_query
@@ -202,7 +202,7 @@ async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.FIELD
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle field of study selection"""
     query = update.callback_query
@@ -239,7 +239,7 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return RegistrationStates.CONFIRM
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to province selection"""
     query = update.callback_query
@@ -256,7 +256,7 @@ async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     return RegistrationStates.PROVINCE
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to city selection for the chosen province"""
     query = update.callback_query
@@ -276,7 +276,7 @@ async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
     return RegistrationStates.CITY
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Navigate back to grade selection"""
     query = update.callback_query
@@ -291,7 +291,7 @@ async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return RegistrationStates.GRADE
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle registration confirmation"""
     query = update.callback_query
@@ -337,7 +337,7 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
-@rate_limit_handler("registration")
+@rate_limit_handler("default")
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel registration"""
     await update.message.reply_text(

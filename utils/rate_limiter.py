@@ -28,10 +28,8 @@ def rate_limit_handler(level: str = "default"):
                 allowed = await multi_rate_limiter.is_allowed(user_id, level=level)
                 if not allowed:
                     # Soft-fail: inform user politely without flooding
-                    chat = update.effective_chat
-                    if chat is not None:
-                        await chat.send_message(
-                            "⏳ درخواست‌های شما بیش از حد مجاز است. لطفاً چند لحظه دیگر دوباره تلاش کنید.")
+                    # Quietly ignore to avoid flooding the chat; user can retry.
+                    # Optionally send a gentle notice at most once per 10s per user.
                     return
             except Exception:
                 # In case of any error in rate limiting, fall through to handler
@@ -271,11 +269,13 @@ class MultiLevelRateLimiter:
 
         # Default limiters
         self.limiters["default"] = RateLimiter()
+        # Registration flow can involve many quick interactions (callbacks/messages).
+        # Make this lenient to avoid blocking normal use: 60 actions/min, no penalty.
         self.limiters["registration"] = RateLimiter(
             RateLimitConfig(
-                max_requests=5,  # 5 registration attempts per hour
-                window_seconds=3600,
-                penalty_seconds=1800,  # 30 minute penalty
+                max_requests=60,
+                window_seconds=60,
+                penalty_seconds=0,
             )
         )
         self.limiters["admin"] = RateLimiter(
