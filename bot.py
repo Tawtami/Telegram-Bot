@@ -168,10 +168,13 @@ async def help_command(update: Update, context: Any) -> None:
     await update.message.reply_text(help_text)
 
 
-async def main() -> None:
-    """Initialize and start the bot"""
+def main() -> None:
+    """Initialize and start the bot (synchronous entrypoint).
+
+    PTB manages the asyncio event loop internally via run_polling/run_webhook,
+    so we avoid wrapping it in asyncio.run to prevent loop close errors.
+    """
     try:
-        # Initialize bot application
         application = Application.builder().token(config.bot_token).build()
 
         # Initialize storage
@@ -184,89 +187,49 @@ async def main() -> None:
         application.add_handler(CommandHandler("students", students_command))
         application.add_handler(CommandHandler("profile", profile_command))
         application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(
-            CommandHandler("confirm_payment", confirm_payment_command)
-        )
+        application.add_handler(CommandHandler("confirm_payment", confirm_payment_command))
 
-        # Registration conversation
         application.add_handler(build_registration_conversation())
-
-        # Book purchase conversation
         application.add_handler(build_book_purchase_conversation())
 
-        # Menu handlers
-        application.add_handler(
-            CallbackQueryHandler(handle_menu_selection, pattern="^menu_")
-        )
-        application.add_handler(
-            CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$")
-        )
+        application.add_handler(CallbackQueryHandler(handle_menu_selection, pattern="^menu_"))
+        application.add_handler(CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$"))
 
-        # Course handlers
-        application.add_handler(
-            CallbackQueryHandler(handle_free_courses, pattern="^free_courses$")
-        )
-        application.add_handler(
-            CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$")
-        )
-        application.add_handler(
-            CallbackQueryHandler(
-                handle_purchased_courses, pattern="^purchased_courses$"
-            )
-        )
-        application.add_handler(
-            CallbackQueryHandler(
-                handle_course_registration, pattern="^register_course_"
-            )
-        )
-        application.add_handler(
-            MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt)
-        )
+        application.add_handler(CallbackQueryHandler(handle_free_courses, pattern="^free_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_purchased_courses, pattern="^purchased_courses$"))
+        application.add_handler(CallbackQueryHandler(handle_course_registration, pattern="^register_course_"))
+        application.add_handler(MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt))
 
-        # Other menu handlers
-        application.add_handler(
-            CallbackQueryHandler(handle_social_media, pattern="^social_media$")
-        )
-        application.add_handler(
-            CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
-        )
-        # 'book_info' is handled inside the book purchase conversation entry points
+        application.add_handler(CallbackQueryHandler(handle_social_media, pattern="^social_media$"))
+        application.add_handler(CallbackQueryHandler(handle_contact_us, pattern="^contact_us$"))
 
-        # Error handler
         application.add_error_handler(ptb_error_handler)
 
-        # Start the bot
         logger.info("🚀 Starting bot...")
 
-        # Check if we're in a deployment environment
         port = int(os.environ.get("PORT", 0))
-        if port > 0:
-            # Use webhook for deployment
-            webhook_url = os.environ.get("WEBHOOK_URL")
-            if webhook_url:
-                await application.run_webhook(
-                    listen="0.0.0.0",
-                    port=port,
-                    webhook_url=webhook_url,
-                    drop_pending_updates=True,
-                )
-                logger.info(f"🌐 Webhook started on port {port}")
-            else:
-                # Fallback to polling if no webhook URL
-                await application.run_polling(drop_pending_updates=True)
-                logger.info("📡 Polling started")
+        webhook_url = os.environ.get("WEBHOOK_URL")
+
+        if port > 0 and webhook_url:
+            application.run_webhook(
+                listen="0.0.0.0",
+                port=port,
+                webhook_url=webhook_url,
+                drop_pending_updates=True,
+            )
+            logger.info(f"🌐 Webhook started on port {port}")
         else:
-            # Use polling for local development
-            await application.run_polling(drop_pending_updates=True)
+            application.run_polling(drop_pending_updates=True)
             logger.info("📡 Polling started")
 
     except Exception as e:
         logger.error(f"❌ Error starting bot: {e}")
+        # Exit non-zero to signal Railway to restart
         sys.exit(1)
 
 
 # When running directly (not imported), start the bot
 if __name__ == "__main__":
     # For local development only - Railway uses start.py
-    # asyncio.run(main())  # Commented out to prevent nested event loops
-    pass
+    main()

@@ -34,8 +34,8 @@ def main() -> None:
 
         # Import and run the bot's async main once
         from bot import main as bot_main
-
-        asyncio.run(bot_main())
+        # Call synchronous bot.main() to let PTB own the event loop
+        bot_main()
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
     except Exception as e:
