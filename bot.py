@@ -239,7 +239,7 @@ def main() -> None:
 
         if not force_polling and port > 0 and webhook_url_root:
             # Serve webhook on root path for Railway compatibility
-            full_webhook_url = webhook_url_root.rstrip('/')
+            full_webhook_url = webhook_url_root.rstrip("/")
 
             application.run_webhook(
                 listen="0.0.0.0",
