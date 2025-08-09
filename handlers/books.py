@@ -63,6 +63,37 @@ BOOK_DETAILS = {
 
 
 @rate_limit_handler("default")
+async def handle_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /book command - Show book information"""
+    # Show book details
+    message_text = (
+        f"📘 کتاب «{BOOK_DETAILS['title']}»\n"
+        f"{BOOK_DETAILS['subtitle']}\n\n"
+        f"✍ تألیف: {BOOK_DETAILS['author']}\n"
+        f"📚 ویژه پایه‌های ۱۰، ۱۱ و ۱۲ رشته ریاضی و تجربی\n"
+        f"📄 {BOOK_DETAILS['pages']} صفحه | 💰 قیمت: {BOOK_DETAILS['price']:,} تومان\n"
+        f"📦 ارسال فقط روزهای شنبه با پست\n\n"
+        f"🔍 فصل‌های اصلی:\n"
+        f"1️⃣ حل خلاقانه معادلات و نامعادلات\n"
+        f"2️⃣ اتحادهای مفهومی و کاربردی\n"
+        f"3️⃣ تکنیک این‌همانی در تست‌ها (مطابق کنکور ۱۴۰۴)\n"
+        f"4️⃣ تحلیل نمودارها با کاربرد کنکوری\n\n"
+        f"✨ این کتاب فقط یک مجموعه تست نیست؛ مرجعی مفهومی برای یادگیری عمیق ریاضی است.\n\n"
+        f"🛒 برای خرید، از منوی اصلی گزینه «کتاب انفجار خلاقیت» را انتخاب کنید."
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")],
+    ]
+
+    await update.message.reply_text(
+        message_text,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.HTML,
+    )
+
+
+@rate_limit_handler("default")
 async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Show book information and start purchase process"""
     query = update.callback_query

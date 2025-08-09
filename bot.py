@@ -152,7 +152,13 @@ async def help_command(update: Update, context: Any) -> None:
         "**دستورات اصلی:**\n"
         "📝 `/start` - شروع کار با ربات\n"
         "👤 `/profile` - مشاهده پروفایل\n"
-        "❓ `/help` - راهنما (همین پیام)\n\n"
+        "❓ `/help` - راهنما (همین پیام)\n"
+        "📚 `/courses` - مشاهده دوره‌ها\n"
+        "🛒 `/mycourses` - دوره‌های خریداری شده\n"
+        "📖 `/book` - اطلاعات کتاب\n"
+        "📞 `/contact` - ارتباط با ما\n"
+        "🌐 `/social` - شبکه‌های اجتماعی\n"
+        "ℹ️ `/about` - درباره استاد حاتمی\n\n"
         "**منوهای اصلی:**\n"
         "🎁 دوره‌های رایگان\n"
         "💼 دوره‌های تخصصی\n"
@@ -167,6 +173,65 @@ async def help_command(update: Update, context: Any) -> None:
     )
 
     await update.message.reply_text(help_text)
+
+
+async def courses_command(update: Update, context: Any) -> None:
+    """Handle /courses command - Show available courses"""
+    await send_main_menu(update, context)
+
+
+async def mycourses_command(update: Update, context: Any) -> None:
+    """Handle /mycourses command - Show user's purchased courses"""
+    # Redirect to the purchased courses handler
+    from handlers.courses import handle_purchased_courses
+    await handle_purchased_courses(update, context)
+
+
+async def book_command(update: Update, context: Any) -> None:
+    """Handle /book command - Show book information"""
+    # Redirect to the book info handler
+    from handlers.books import handle_book_info
+    await handle_book_info(update, context)
+
+
+async def contact_command(update: Update, context: Any) -> None:
+    """Handle /contact command - Show contact information"""
+    # Redirect to the contact handler
+    from handlers.contact import handle_contact_us
+    await handle_contact_us(update, context)
+
+
+async def social_command(update: Update, context: Any) -> None:
+    """Handle /social command - Show social media links"""
+    # Redirect to the social media handler
+    from handlers.social import handle_social_media
+    await handle_social_media(update, context)
+
+
+async def about_command(update: Update, context: Any) -> None:
+    """Handle /about command - Show information about Ostad Hatami"""
+    about_text = (
+        "👨‍🏫 **استاد حاتمی - کلاس‌های ریاضی**\n\n"
+        "**🎯 هدف:**\n"
+        "ارتقای سطح ریاضی دانش‌آموزان با روش‌های نوین و خلاقانه\n\n"
+        "**📚 خدمات:**\n"
+        "• دوره‌های رایگان پایه\n"
+        "• دوره‌های تخصصی پیشرفته\n"
+        "• کتاب انفجار خلاقیت ریاضی\n"
+        "• مشاوره تحصیلی\n\n"
+        "**🏆 ویژگی‌ها:**\n"
+        "• آموزش مفهومی و کاربردی\n"
+        "• حل مسئله با روش‌های خلاقانه\n"
+        "• پشتیبانی مستمر\n"
+        "• قیمت‌های مناسب\n\n"
+        "**📞 ارتباط:**\n"
+        "تلگرام: @ostad_hatami\n"
+        "ایمیل: info@ostadhatami.ir\n\n"
+        "**💡 شعار:**\n"
+        "ریاضی را آسان و لذت‌بخش یاد بگیرید!"
+    )
+    
+    await update.message.reply_text(about_text, parse_mode="Markdown")
 
 
 def main() -> None:
@@ -188,6 +253,12 @@ def main() -> None:
         application.add_handler(CommandHandler("students", students_command))
         application.add_handler(CommandHandler("profile", profile_command))
         application.add_handler(CommandHandler("help", help_command))
+        application.add_handler(CommandHandler("courses", courses_command))
+        application.add_handler(CommandHandler("mycourses", mycourses_command))
+        application.add_handler(CommandHandler("book", book_command))
+        application.add_handler(CommandHandler("contact", contact_command))
+        application.add_handler(CommandHandler("social", social_command))
+        application.add_handler(CommandHandler("about", about_command))
         application.add_handler(
             CommandHandler("confirm_payment", confirm_payment_command)
         )
