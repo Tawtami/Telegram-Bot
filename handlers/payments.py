@@ -12,6 +12,8 @@ from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+import hashlib
+import time
 
 
 @rate_limit_handler("default")
@@ -52,11 +54,9 @@ async def handle_payment_receipt(
     caption = None
     success_message = None
 
-    # Helper to build admin inline keyboard for approval/rejection
-    def admin_approval_keyboard(
-        student_id: int, item_type: str, item_id: str, item_title: str
-    ) -> InlineKeyboardMarkup:
-        data_prefix = f"pay:{student_id}:{item_type}:{item_id}"
+    # Helper to build admin inline keyboard for approval/rejection (token based)
+    def admin_approval_keyboard(token: str) -> InlineKeyboardMarkup:
+        data_prefix = f"pay:{token}"
         return InlineKeyboardMarkup(
             [
                 [
@@ -69,6 +69,8 @@ async def handle_payment_receipt(
                 ]
             ]
         )
+
+    payment_meta = {}
 
     # Course payment
     if context.user_data.get("pending_course"):
@@ -104,8 +106,11 @@ async def handle_payment_receipt(
             f"برای تایید/رد پرداخت از دکمه‌های زیر استفاده کنید."
         )
 
-        # Clear pending course
-        del context.user_data["pending_course"]
+        payment_meta = {
+            "item_type": "course",
+            "item_id": course_id,
+            "item_title": course_title,
+        }
 
         success_message = (
             "✅ رسید پرداخت دوره شما دریافت شد.\n\n"
@@ -135,8 +140,11 @@ async def handle_payment_receipt(
             f"برای تایید/رد پرداخت از دکمه‌های زیر استفاده کنید."
         )
 
-        # Clear book purchase data
-        del context.user_data["book_purchase"]
+        payment_meta = {
+            "item_type": "book",
+            "item_id": book_data.get("title", "book"),
+            "item_title": book_data.get("title", "book"),
+        }
 
         success_message = (
             "✅ رسید پرداخت کتاب شما دریافت شد.\n\n"
@@ -150,39 +158,45 @@ async def handle_payment_receipt(
         )
         return
 
-    # Forward receipt to primary admin
-    primary_admin_id = (
-        config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
-    )
-    if primary_admin_id:
+    # Generate token to correlate notifications across admins
+    token_source = f"{update.effective_user.id}:{payment_meta.get('item_type')}:{payment_meta.get('item_id')}:{time.time()}"
+    token = hashlib.sha1(token_source.encode()).hexdigest()[:16]
+
+    # Track admin messages for this token
+    notifications = context.bot_data.setdefault("payment_notifications", {})
+    notifications[token] = {
+        "student_id": update.effective_user.id,
+        "item_type": payment_meta.get("item_type"),
+        "item_id": payment_meta.get("item_id"),
+        "item_title": payment_meta.get("item_title"),
+        "messages": [],  # list of (admin_id, message_id)
+        "processed": False,
+        "decision": None,
+        "decided_by": None,
+    }
+
+    kb = admin_approval_keyboard(token)
+
+    # Send to ALL admins: forward photo + details with buttons
+    for admin_id in (config.bot.admin_user_ids or []):
         try:
             await context.bot.forward_message(
-                chat_id=primary_admin_id,
+                chat_id=admin_id,
                 from_chat_id=update.effective_chat.id,
                 message_id=update.message.message_id,
             )
-            # Build per-item keyboard
-            if context.user_data.get("pending_course"):
-                kb = admin_approval_keyboard(
-                    student_id=update.effective_user.id,
-                    item_type="course",
-                    item_id=context.user_data.get("pending_course"),
-                    item_title=course_title,
-                )
-            elif context.user_data.get("book_purchase"):
-                kb = admin_approval_keyboard(
-                    student_id=update.effective_user.id,
-                    item_type="book",
-                    item_id=book_data.get("title", "book"),
-                    item_title=book_data.get("title", "book"),
-                )
-            else:
-                kb = None
-            await context.bot.send_message(
-                chat_id=primary_admin_id, text=caption, reply_markup=kb
+            sent = await context.bot.send_message(
+                chat_id=admin_id, text=caption, reply_markup=kb
             )
+            notifications[token]["messages"].append((admin_id, sent.message_id))
         except Exception:
-            pass
+            continue
+
+    # Clear context markers
+    if context.user_data.get("pending_course"):
+        del context.user_data["pending_course"]
+    if context.user_data.get("book_purchase"):
+        del context.user_data["book_purchase"]
 
     await update.message.reply_text(
         success_message, reply_markup=build_main_menu_keyboard()
@@ -199,10 +213,9 @@ async def handle_payment_decision(
         return
     await query.answer()
 
-    data = query.data  # format: pay:{student_id}:{item_type}:{item_id}:{decision}
+    data = query.data  # format: pay:{token}:{decision}
     try:
-        _, student_id_str, item_type, item_id, decision = data.split(":", 4)
-        student_id = int(student_id_str)
+        _, token, decision = data.split(":", 2)
     except Exception:
         return
 
@@ -212,9 +225,27 @@ async def handle_payment_decision(
         return
 
     storage: StudentStorage = context.bot_data["storage"]
+    notifications = context.bot_data.setdefault("payment_notifications", {})
+    meta = notifications.get(token)
+    if not meta:
+        await query.edit_message_text("⛔️ اطلاعات پرداخت یافت نشد یا منقضی شده است.")
+        return
+
+    # If already processed, disable this keyboard too
+    if meta.get("processed"):
+        try:
+            await query.edit_message_reply_markup(reply_markup=None)
+        except Exception:
+            pass
+        return
 
     # Update user data accordingly and notify
     try:
+        student_id = meta["student_id"]
+        item_type = meta["item_type"]
+        item_id = meta["item_id"]
+        item_title = meta.get("item_title") or item_id
+
         if decision == "approve":
             if item_type == "course":
                 # Move pending course to purchased
@@ -230,18 +261,26 @@ async def handle_payment_decision(
                     student["pending_payments"] = pend
                     student["purchased_courses"] = purchased
                     storage.save_student(student)
+            elif item_type == "book":
+                # Mark matching book purchase as approved (flag)
+                student = storage.get_student(student_id)
+                if student:
+                    purchases = student.get("book_purchases", [])
+                    for p in reversed(purchases):
+                        if p.get("title") == item_title:
+                            p["approved"] = True
+                            break
+                    storage.save_student(student)
             # Notify student
             await context.bot.send_message(
                 chat_id=student_id,
                 text=(
-                    f"✅ پرداخت شما برای «{item_id}» تایید شد."
+                    f"✅ پرداخت شما برای «{item_title}» تایید شد."
                     if item_type == "book"
-                    else f"✅ پرداخت شما برای دوره «{item_id}» تایید شد."
+                    else f"✅ پرداخت شما برای دوره «{item_title}» تایید شد."
                 ),
             )
-            await query.edit_message_text(
-                "✅ پرداخت تایید شد و به کاربر اطلاع داده شد."
-            )
+            result_text = "✅ پرداخت تایید شد و به کاربر اطلاع داده شد."
         elif decision == "reject":
             await context.bot.send_message(
                 chat_id=student_id,
@@ -249,7 +288,23 @@ async def handle_payment_decision(
                     "❌ پرداخت شما تایید نشد. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
                 ),
             )
-            await query.edit_message_text("❌ پرداخت رد شد و به کاربر اطلاع داده شد.")
+            result_text = "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
+
+        # Mark processed and disable buttons for all admin messages
+        meta["processed"] = True
+        meta["decision"] = decision
+        meta["decided_by"] = user_id
+
+        for admin_id, msg_id in meta.get("messages", []):
+            try:
+                await context.bot.edit_message_reply_markup(
+                    chat_id=admin_id, message_id=msg_id, reply_markup=None
+                )
+                await context.bot.edit_message_text(
+                    chat_id=admin_id, message_id=msg_id, text=result_text
+                )
+            except Exception:
+                continue
     except Exception:
         pass
 
@@ -262,6 +317,6 @@ def build_payment_handlers():
         MessageHandler(filters.PHOTO, handle_payment_receipt),
         CallbackQueryHandler(
             handle_payment_decision,
-            pattern=r"^pay:\d+:(course|book):.+:(approve|reject)$",
+            pattern=r"^pay:[a-f0-9]{16}:(approve|reject)$",
         ),
     ]
