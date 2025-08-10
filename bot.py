@@ -70,6 +70,7 @@ from utils.rate_limiter import rate_limiter, multi_rate_limiter, rate_limit_hand
 from utils.storage import StudentStorage
 from utils.error_handler import ptb_error_handler
 from ui.keyboards import build_register_keyboard
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -557,6 +558,47 @@ async def status_command(update: Update, context: Any) -> None:
         await update.effective_message.reply_text("❌ خطا در دریافت وضعیت ربات.")
 
 
+@rate_limit_handler("admin")
+async def payments_audit_command(update: Update, context: Any) -> None:
+    """Audit recent payment decisions and pending items (admin only)."""
+    try:
+        if not await _ensure_admin(update):
+            return
+
+        notifications = context.bot_data.get("payment_notifications", {})
+        if not notifications:
+            await update.effective_message.reply_text("هیچ پرداختی ثبت نشده است.")
+            return
+
+        # Build a concise audit log
+        lines = ["🧾 گزارش پرداخت‌ها:"]
+        # Sort by created_at desc
+        entries = sorted(
+            notifications.items(), key=lambda kv: kv[1].get("created_at", 0), reverse=True
+        )
+        for token, meta in entries[:20]:
+            created = datetime.fromtimestamp(meta.get("created_at", 0)).strftime("%Y-%m-%d %H:%M")
+            decided_at = (
+                datetime.fromtimestamp(meta["decided_at"]).strftime("%Y-%m-%d %H:%M")
+                if meta.get("decided_at")
+                else "—"
+            )
+            status = (
+                "در انتظار"
+                if not meta.get("processed")
+                else ("تایید" if meta.get("decision") == "approve" else "رد")
+            )
+            lines.append(
+                f"• {created} | کاربر {meta['student_id']} | {meta.get('item_type','?')} «{meta.get('item_title','?')}» | وضعیت: {status} | تصمیم‌گیر: {meta.get('decided_by','—')} | زمان تصمیم: {decided_at} | توکن: {token}"
+            )
+
+        text = "\n".join(lines)
+        await update.effective_message.reply_text(text)
+    except Exception as e:
+        logger.error(f"Error in payments_audit_command: {e}")
+        await update.effective_message.reply_text("❌ خطا در گزارش پرداخت‌ها.")
+
+
 async def setup_handlers(application: Application) -> None:
     """Setup all bot handlers"""
     try:
@@ -600,6 +642,7 @@ async def setup_handlers(application: Application) -> None:
             CommandHandler("confirm_payment", confirm_payment_command), group=1
         )
         application.add_handler(CommandHandler("status", status_command), group=1)
+        application.add_handler(CommandHandler("payments_audit", payments_audit_command), group=1)
 
         # Add conversation handlers
         registration_conv = build_registration_conversation()

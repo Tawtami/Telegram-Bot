@@ -173,6 +173,8 @@ async def handle_payment_receipt(
         "processed": False,
         "decision": None,
         "decided_by": None,
+        "created_at": time.time(),
+        "decided_at": None,
     }
 
     kb = admin_approval_keyboard(token)
@@ -294,6 +296,7 @@ async def handle_payment_decision(
         meta["processed"] = True
         meta["decision"] = decision
         meta["decided_by"] = user_id
+        meta["decided_at"] = time.time()
 
         for admin_id, msg_id in meta.get("messages", []):
             try:
