@@ -97,23 +97,51 @@ class StudentStorage:
     def save_student(self, student_data: Dict[str, Any]) -> bool:
         """Save student data to JSON file"""
         try:
+            # Validate required fields
+            required_fields = [
+                "user_id",
+                "first_name",
+                "last_name",
+                "province",
+                "city",
+                "grade",
+                "field",
+            ]
+            for field in required_fields:
+                if field not in student_data or not student_data[field]:
+                    logger.error(f"Missing required field: {field}")
+                    return False
+
+            # Validate user_id is integer
+            try:
+                user_id = int(student_data["user_id"])
+            except (ValueError, TypeError):
+                logger.error(f"Invalid user_id: {student_data['user_id']}")
+                return False
+
             data = self._load_json(self.students_file)
             students = data.get("students", [])
 
-            # Update existing student or add new one
-            student_data["registration_date"] = datetime.now().isoformat()
-            student_data["last_updated"] = datetime.now().isoformat()
-
+            # Check if student already exists
+            existing_index = None
             for i, student in enumerate(students):
-                if student["user_id"] == student_data["user_id"]:
-                    students[i] = student_data
+                if student.get("user_id") == user_id:
+                    existing_index = i
                     break
-            else:
-                students.append(student_data)
 
-            data["students"] = students
-            self._save_json(self.students_file, data)
+            # Add timestamp
+            student_data["last_updated"] = datetime.now().isoformat()
+            if existing_index is None:
+                student_data["registration_date"] = datetime.now().isoformat()
+                students.append(student_data)
+            else:
+                students[existing_index] = student_data
+
+            # Save updated data
+            self._save_json(self.students_file, {"students": students})
+            logger.info(f"Student data saved/updated for user {user_id}")
             return True
+
         except Exception as e:
             logger.error(f"Error saving student data: {e}")
             return False

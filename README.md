@@ -61,9 +61,11 @@ BOT_TOKEN=123456:ABC...
 ADMIN_USER_IDS=12345678,87654321
 PAYMENT_CARD_NUMBER=6037-9977-1234-5678
 PAYMENT_PAYEE_NAME=استاد حاتمی
-# For Railway webhook deployment
+# Webhook (Railway)
 RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
+# Optional explicit URL (otherwise derived from domain)
 WEBHOOK_URL=https://your-app.up.railway.app
+WEBHOOK_SECRET=<random-32-chars>
 PORT=8080
 ```
 
@@ -77,8 +79,10 @@ python start.py
 
 - `Procfile` uses `python start.py`
 - Healthcheck at `/` returns `OK`
-- Webhook is set to `https://<RAILWAY_PUBLIC_DOMAIN>/webhook/<hash>` automatically
+- Webhook is set to `https://<RAILWAY_PUBLIC_DOMAIN>/webhook/<hash>` automatically with secret token header validation
 - No long polling in production
+
+If you see 409 errors in Telegram webhook set, the app auto-deletes any existing webhook and retries. Ensure `WEBHOOK_URL` or `RAILWAY_PUBLIC_DOMAIN` and `PORT` are set by Railway.
 
 ## 📁 Project Structure
 

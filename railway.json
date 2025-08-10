@@ -6,11 +6,12 @@
   "deploy": {
     "startCommand": "python start.py",
     "healthcheckPath": "/",
-    "healthcheckTimeout": 120,
+    "healthcheckTimeout": 60,
     "healthcheckInterval": 30,
+    "healthcheckMethod": "GET",
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 3,
+    "restartPolicyMaxRetries": 5,
     "numReplicas": 1,
-    "healthcheckEnabled": false
+    "healthcheckEnabled": true
   }
 }

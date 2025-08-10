@@ -3,7 +3,7 @@
 Minimal Railway startup script for Telegram Bot (PTB-based)
 Delegates lifecycle to PTB; avoids nested event loops.
 Updated: Fixed port conflicts and PTB warnings
-Last update: 2025-08-10 07:35 - Simplified startup for Railway deployment
+Last update: 2025-01-15 - Production-ready Railway deployment
 """
 
 import os
@@ -25,8 +25,9 @@ warnings.filterwarnings(
     module="handlers.books",
 )
 
+# Configure logging for Railway
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -39,11 +40,37 @@ def _prepare_webhook_env() -> None:
         os.environ["WEBHOOK_URL"] = webhook_url
         logger.info(f"🌐 Webhook URL set to: {webhook_url}")
 
+    # Log important environment variables
+    logger.info(
+        f"🚀 Starting bot with environment: {os.environ.get('ENVIRONMENT', 'production')}"
+    )
+    logger.info(f"🔧 Force polling: {os.environ.get('FORCE_POLLING', 'false')}")
+    logger.info(f"🌍 Port: {os.environ.get('PORT', 'not set')}")
+
+
+def _validate_environment() -> bool:
+    """Validate that required environment variables are set."""
+    required_vars = ["BOT_TOKEN"]
+
+    missing_vars = []
+    for var in required_vars:
+        if not os.environ.get(var):
+            missing_vars.append(var)
+
+    if missing_vars:
+        logger.error(
+            f"❌ Missing required environment variables: {', '.join(missing_vars)}"
+        )
+        return False
+
+    return True
+
 
 def main() -> None:
     try:
-        if not os.getenv("BOT_TOKEN"):
-            logger.error("BOT_TOKEN environment variable is not set!")
+        logger.info("🚀 Starting Ostad Hatami Bot...")
+
+        if not _validate_environment():
             sys.exit(1)
 
         _prepare_webhook_env()
@@ -53,7 +80,13 @@ def main() -> None:
 
         bot_main()
     except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt, shutting down...")
+        logger.info("🛑 Received keyboard interrupt, shutting down...")
+    except ImportError as e:
+        logger.error(f"💥 Import error: {e}")
+        logger.error(
+            "Please ensure all dependencies are installed: pip install -r requirements.txt"
+        )
+        sys.exit(1)
     except Exception as e:
         logger.error(f"💥 Fatal error: {e}")
         sys.exit(1)

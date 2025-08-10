@@ -121,6 +121,18 @@ class BotConfig:
 دقت فرمایید اطلاعات به‌درستی وارد شود."""
 
 
+@dataclass
+class WebhookConfig:
+    """Webhook configuration for Railway deployment"""
+
+    enabled: bool = True
+    url: str = ""
+    path: str = ""
+    port: int = 0
+    drop_pending_updates: bool = True
+    secret_token: str = ""
+
+
 class Config:
     """Main configuration class"""
 
@@ -136,6 +148,9 @@ class Config:
             else:
                 print("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
                 self.bot_token = "DEVELOPMENT_TOKEN_PLACEHOLDER"
+
+        # Webhook configuration for Railway
+        self.webhook = self._setup_webhook_config()
 
         # Initialize configuration sections
         self.database = DatabaseConfig(
@@ -176,12 +191,20 @@ class Config:
             == "true",
         )
 
+        # Admin user IDs from environment
+        admin_ids_str = os.getenv("ADMIN_USER_IDS", "")
+        admin_user_ids = []
+        if admin_ids_str:
+            try:
+                admin_user_ids = [
+                    int(uid.strip()) for uid in admin_ids_str.split(",") if uid.strip()
+                ]
+            except ValueError as e:
+                print(f"⚠️ Warning: Invalid ADMIN_USER_IDS format: {e}")
+                admin_user_ids = []
+
         self.bot = BotConfig(
-            admin_user_ids=[
-                int(uid)
-                for uid in os.getenv("ADMIN_USER_IDS", "").split(",")
-                if uid.strip()
-            ],
+            admin_user_ids=admin_user_ids if admin_user_ids else None,
             maintenance_mode=os.getenv("MAINTENANCE_MODE", "false").lower() == "true",
             payment_card_number=os.getenv("PAYMENT_CARD_NUMBER", "6037-9974-1234-5678"),
             payment_payee_name=os.getenv("PAYMENT_PAYEE_NAME", "استاد حاتمی"),
@@ -607,6 +630,53 @@ class Config:
             "website": "www.ostadhatami.ir",
         }
 
+    def _setup_webhook_config(self) -> WebhookConfig:
+        """Setup webhook configuration for Railway deployment"""
+        # Get port from Railway
+        port = int(os.environ.get("PORT", 0))
+
+        # Get webhook URL from environment or construct from Railway domain
+        webhook_url = os.environ.get("WEBHOOK_URL", "")
+        railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "")
+
+        # Check if we're forcing polling mode
+        force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
+
+        if not webhook_url and railway_domain and not force_polling:
+            webhook_url = f"https://{railway_domain}"
+
+        # Determine if webhook should be enabled
+        enabled = bool(webhook_url and port > 0 and not force_polling)
+
+        # Generate webhook path (secure hash-based)
+        import hashlib
+
+        if self.bot_token and self.bot_token != "DEVELOPMENT_TOKEN_PLACEHOLDER":
+            token_hash = hashlib.sha256(self.bot_token.encode()).hexdigest()[:24]
+            path = f"/webhook/{token_hash}"
+        else:
+            path = "/webhook/dev"
+
+        # Generate secret token if not provided
+        secret_token = os.environ.get("WEBHOOK_SECRET", "")
+        if (
+            not secret_token
+            and self.bot_token
+            and self.bot_token != "DEVELOPMENT_TOKEN_PLACEHOLDER"
+        ):
+            secret_token = hashlib.sha256(
+                (self.bot_token + "webhook_secret").encode()
+            ).hexdigest()[:32]
+
+        return WebhookConfig(
+            enabled=enabled,
+            url=webhook_url,
+            path=path,
+            port=port,
+            drop_pending_updates=True,
+            secret_token=secret_token,
+        )
+
     def validate(self) -> bool:
         """Validate configuration settings"""
         try:
@@ -619,6 +689,16 @@ class Config:
             assert (
                 self.security.max_name_length > self.security.min_name_length
             ), "Max name length must be greater than min"
+
+            # Validate webhook configuration
+            if self.webhook.enabled:
+                assert (
+                    self.webhook.url
+                ), "Webhook URL is required when webhook is enabled"
+                assert (
+                    self.webhook.port > 0
+                ), "Port must be positive when webhook is enabled"
+
             return True
         except AssertionError as e:
             raise ValueError(f"Configuration validation failed: {e}")
@@ -627,6 +707,11 @@ class Config:
         """Convert configuration to dictionary for logging"""
         return {
             "bot_token": "***" if self.bot_token else None,
+            "webhook": {
+                "enabled": self.webhook.enabled,
+                "url": self.webhook.url,
+                "port": self.webhook.port,
+            },
             "database": {
                 "type": self.database.type,
                 "path": self.database.path,
@@ -651,6 +736,9 @@ class Config:
                 "name": self.bot.name,
                 "version": self.bot.version,
                 "maintenance_mode": self.bot.maintenance_mode,
+                "admin_count": (
+                    len(self.bot.admin_user_ids) if self.bot.admin_user_ids else 0
+                ),
             },
         }
 

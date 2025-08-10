@@ -145,31 +145,35 @@ class RateLimiter:
     async def is_allowed(
         self, user_id: str, config: Optional[RateLimitConfig] = None
     ) -> bool:
-        """Check if request is allowed for user"""
-        async with self._lock:
+        """Check if user is allowed to make a request"""
+        try:
             return self._is_allowed_sync(user_id, config)
+        except Exception as e:
+            logger.error(f"Rate limiter error for user {user_id}: {e}")
+            # In case of error, allow the request to prevent blocking users
+            return True
 
     def _is_allowed_sync(
         self, user_id: str, config: Optional[RateLimitConfig] = None
     ) -> bool:
-        """Synchronous check if request is allowed"""
-        self.stats["total_requests"] += 1
-
-        # Get or create rate limit entry
-        if user_id not in self.limits:
-            self.limits[user_id] = RateLimitEntry(config or self.default_config)
-            self.stats["unique_users"] = len(self.limits)
-
-        entry = self.limits[user_id]
-        timestamp = time.time()
-
-        # Check if request is allowed
-        if entry.add_request(timestamp):
-            self.stats["allowed_requests"] += 1
-            return True
-        else:
-            self.stats["blocked_requests"] += 1
+        """Synchronous version of is_allowed for internal use"""
+        if not user_id:
             return False
+
+        # Use default config if none provided
+        if config is None:
+            config = self.default_config
+
+        # Get or create user entry
+        if user_id not in self.limits:
+            self.limits[user_id] = RateLimitEntry(config)
+        else:
+            # Update config if it changed
+            if self.limits[user_id].config != config:
+                self.limits[user_id] = RateLimitEntry(config)
+
+        # Check if allowed
+        return self.limits[user_id].add_request(time.time())
 
     async def get_user_stats(self, user_id: str) -> Optional[Dict]:
         """Get rate limit statistics for a specific user"""
