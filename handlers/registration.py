@@ -10,47 +10,17 @@ import re
 from enum import Enum
 from typing import Dict, Any
 
-# Try to import telegram modules with fallback
-try:
-    from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-    from telegram.ext import (
-        ConversationHandler,
-        CommandHandler,
-        MessageHandler,
-        CallbackQueryHandler,
-        filters,
-    )
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram.ext import (
+    ConversationHandler,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    filters,
+)
 
-    TELEGRAM_AVAILABLE = True
-except ImportError:
-    print("⚠️ Warning: telegram modules not available in registration handler")
-    TELEGRAM_AVAILABLE = False
-
-    # Create dummy classes for development
-    class Update:
-        pass
-
-    class InlineKeyboardMarkup:
-        pass
-
-    class InlineKeyboardButton:
-        pass
-
-    class ConversationHandler:
-        pass
-
-    class CommandHandler:
-        pass
-
-    class MessageHandler:
-        pass
-
-    class CallbackQueryHandler:
-        pass
-
-    class filters:
-        pass
-
+# Guard for environments where Telegram Update may differ (kept for clarity)
+TELEGRAM_AVAILABLE = True
 
 from config import config
 from utils.validators import Validator

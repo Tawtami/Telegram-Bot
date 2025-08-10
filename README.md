@@ -48,15 +48,15 @@ pip install -r requirements.txt
 ### 2. Set Up Environment
 
 ```bash
-cp env.txt .env
-# Edit .env with your BOT_TOKEN
+cp env.example .env
+# Edit .env with your BOT_TOKEN and other values
 ```
 
 ### 3. Environment Variables
 
 Create `.env` (or set via Railway variables):
 
-```
+```env
 BOT_TOKEN=123456:ABC...
 ADMIN_USER_IDS=12345678,87654321
 PAYMENT_CARD_NUMBER=6037-9977-1234-5678
@@ -71,7 +71,7 @@ PORT=8080
 
 ### 4. Run (local)
 
-```
+```bash
 python start.py
 ```
 
@@ -86,7 +86,7 @@ If you see 409 errors in Telegram webhook set, the app auto-deletes any existing
 
 ## 📁 Project Structure
 
-```
+```text
 📦 Optimized-Telegram-Bot/
 ├── 🐍 bot.py              # High-performance bot (~45KB)
 ├── 📄 requirements.txt     # Minimal dependencies
@@ -190,7 +190,7 @@ LOG_LEVEL=INFO                  # Logging level
 
 - **Telegram:** @Ostad_Hatami
 - **Email:** info@ostadhatami.ir
-- **Website:** www.ostadhatami.ir
+- **Website:** `www.ostadhatami.ir`
 
 ## 📊 Performance Metrics
 

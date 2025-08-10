@@ -26,6 +26,7 @@ from config import config
 from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
+from handlers.payments import handle_payment_receipt as unified_payment_receipt
 
 
 # States for the book purchase conversation
@@ -286,72 +287,9 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 @rate_limit_handler("default")
-async def handle_payment_receipt(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
-    """Handle payment receipt photo"""
-    if "book_purchase" not in context.user_data:
-        await update.message.reply_text(
-            "❌ خطا در فرآیند خرید. لطفاً دوباره تلاش کنید.",
-            reply_markup=build_main_menu_keyboard(),
-        )
-        return ConversationHandler.END
-
-    book_data = context.user_data["book_purchase"]
-    storage: StudentStorage = context.bot_data["storage"]
-
-    # Save book purchase data
-    if not storage.save_book_purchase(update.effective_user.id, book_data):
-        await update.message.reply_text(
-            "❌ خطا در ثبت سفارش. لطفاً دوباره تلاش کنید.",
-            reply_markup=build_main_menu_keyboard(),
-        )
-        return ConversationHandler.END
-
-    # Forward receipt ONLY to the primary admin (Master Hatami)
-    # Expect first ID in ADMIN_USER_IDS to be Master Hatami
-    admin_id = config.bot.admin_user_ids[0] if config.bot.admin_user_ids else None
-    if not admin_id:
-        logger.error("No admin IDs configured; cannot forward book receipt")
-        await update.message.reply_text(
-            "❌ تنظیمات ادمین یافت نشد. لطفاً با پشتیبانی تماس بگیرید.",
-            reply_markup=build_main_menu_keyboard(),
-        )
-        return ConversationHandler.END
-    student = storage.get_student(update.effective_user.id)
-    caption = (
-        f"🧾 رسید پرداخت کتاب\n\n"
-        f"کتاب: {book_data['title']}\n"
-        f"کاربر: {student['first_name']} {student['last_name']}\n"
-        f"شناسه کاربری: {update.effective_user.id}\n\n"
-        f"📍 آدرس:\n{book_data['address']}\n"
-        f"📮 کد پستی: {book_data['postal_code']}\n"
-        f"📝 توضیحات: {book_data['notes']}\n\n"
-        f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
-        f"/confirm_payment {update.effective_user.id}"
-    )
-
-    try:
-        await context.bot.forward_message(
-            chat_id=admin_id,
-            from_chat_id=update.effective_chat.id,
-            message_id=update.message.message_id,
-        )
-        await context.bot.send_message(
-            chat_id=admin_id,
-            text=caption,
-        )
-    except Exception as e:
-        logger.error(f"Error forwarding receipt to admin: {e}")
-
-    # Clear book purchase data
-    del context.user_data["book_purchase"]
-
-    await update.message.reply_text(
-        "✅ سفارش کتاب شما با موفقیت ثبت شد.\n\n"
-        "پس از تایید پرداخت توسط ادمین، اطلاعات ارسال کتاب به شما اعلام خواهد شد.",
-        reply_markup=build_main_menu_keyboard(),
-    )
+async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Delegate to unified payment receipt handler"""
+    await unified_payment_receipt(update, context)
     return ConversationHandler.END
 
 

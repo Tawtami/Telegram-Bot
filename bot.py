@@ -29,105 +29,46 @@ warnings.filterwarnings(
     module="handlers.books",
 )
 
-# Try to import telegram modules with fallback
-try:
-    from telegram import Update
-    from telegram.ext import (
-        Application,
-        ApplicationBuilder,
-        CommandHandler,
-        MessageHandler,
-        CallbackQueryHandler,
-        ConversationHandler,
-        filters,
-        AIORateLimiter,
-        ApplicationHandlerStop,
-    )
-
-    TELEGRAM_AVAILABLE = True
-except ImportError:
-    print("⚠️ Warning: python-telegram-bot not installed. Bot functionality disabled.")
-    TELEGRAM_AVAILABLE = False
-
-    # Create dummy classes for development
-    class Update:
-        pass
-
-    class Application:
-        pass
-
+# Import telegram modules
+from telegram import Update
+from telegram.ext import (
+    Application,
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ConversationHandler,
+    filters,
+    AIORateLimiter,
+    ApplicationHandlerStop,
+)
 
 from config import config
 
-# Import handlers with fallback
-try:
-    from handlers.registration import build_registration_conversation
-    from handlers.menu import build_menu_handlers
-    from handlers.courses import build_course_handlers
-    from handlers.books import build_book_purchase_conversation
-    from handlers.payments import build_payment_handlers
-    from handlers.contact import build_contact_handlers
-    from handlers.social import build_social_handlers
+# Import handlers
+from handlers.registration import build_registration_conversation
+from handlers.menu import (
+    build_menu_handlers,
+    send_main_menu,
+    handle_menu_selection,
+    handle_back_to_menu,
+)
+from handlers.courses import (
+    build_course_handlers,
+    handle_free_courses,
+    handle_paid_courses,
+    handle_purchased_courses,
+    handle_course_registration,
+)
+from handlers.books import build_book_purchase_conversation, handle_book_info
+from handlers.payments import build_payment_handlers, handle_payment_receipt
+from handlers.contact import build_contact_handlers, handle_contact_us
+from handlers.social import build_social_handlers, handle_social_media
 
-    # Also import the specific handler functions
-    from handlers.menu import (
-        send_main_menu,
-        handle_menu_selection,
-        handle_back_to_menu,
-    )
-    from handlers.courses import (
-        handle_free_courses,
-        handle_paid_courses,
-        handle_purchased_courses,
-        handle_course_registration,
-    )
-    from handlers.payments import handle_payment_receipt
-    from handlers.social import handle_social_media
-    from handlers.contact import handle_contact_us
-
-    HANDLERS_AVAILABLE = True
-except ImportError as e:
-    print(f"⚠️ Warning: Some handlers not available: {e}")
-    HANDLERS_AVAILABLE = False
-
-    # Create dummy functions for development
-    def build_registration_conversation():
-        return None
-
-    def build_menu_handlers():
-        return []
-
-    def build_course_handlers():
-        return []
-
-    def build_book_purchase_conversation():
-        return None
-
-    def build_payment_handlers():
-        return []
-
-    def build_contact_handlers():
-        return []
-
-    def build_social_handlers():
-        return []
-
-    # Import real handler functions
-    from handlers.menu import send_main_menu, handle_menu_selection, handle_back_to_menu
-    from handlers.courses import (
-        handle_free_courses,
-        handle_paid_courses,
-        handle_purchased_courses,
-        handle_course_registration,
-    )
-    from handlers.payments import handle_payment_receipt
-    from handlers.social import handle_social_media
-    from handlers.contact import handle_contact_us
-
-
+# Import utilities
+from utils.rate_limiter import rate_limiter, multi_rate_limiter, rate_limit_handler
 from utils.storage import StudentStorage
 from utils.error_handler import ptb_error_handler
-from utils.rate_limiter import rate_limiter, multi_rate_limiter, rate_limit_handler
 from ui.keyboards import build_register_keyboard
 
 # Configure logging
@@ -483,8 +424,6 @@ async def mycourses_command(update: Update, context: Any) -> None:
     """Handle /mycourses command - Show user's purchased courses"""
     try:
         # Redirect to the purchased courses handler
-        from handlers.courses import handle_purchased_courses
-
         await handle_purchased_courses(update, context)
     except Exception as e:
         logger.error(f"Error in mycourses_command: {e}")
@@ -496,8 +435,6 @@ async def book_command(update: Update, context: Any) -> None:
     """Handle /book command - Show book information"""
     try:
         # Redirect to the book info handler
-        from handlers.books import handle_book_info
-
         await handle_book_info(update, context)
     except Exception as e:
         logger.error(f"Error in book_command: {e}")
@@ -509,8 +446,6 @@ async def contact_command(update: Update, context: Any) -> None:
     """Handle /contact command - Show contact information"""
     try:
         # Redirect to the contact handler
-        from handlers.contact import handle_contact_us
-
         await handle_contact_us(update, context)
     except Exception as e:
         logger.error(f"Error in contact_command: {e}")
@@ -522,8 +457,6 @@ async def social_command(update: Update, context: Any) -> None:
     """Handle /social command - Show social media links"""
     try:
         # Redirect to the social media handler
-        from handlers.social import handle_social_media
-
         await handle_social_media(update, context)
     except Exception as e:
         logger.error(f"Error in social_command: {e}")
@@ -667,14 +600,39 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(CommandHandler("status", status_command))
 
         # Add conversation handlers
-        if HANDLERS_AVAILABLE:
-            registration_conv = build_registration_conversation()
-            if registration_conv:
-                application.add_handler(registration_conv)
+        registration_conv = build_registration_conversation()
+        if registration_conv:
+            application.add_handler(registration_conv)
 
-            book_conv = build_book_purchase_conversation()
-            if book_conv:
-                application.add_handler(book_conv)
+        # Add menu handlers
+        menu_handlers = build_menu_handlers()
+        for handler in menu_handlers:
+            application.add_handler(handler)
+
+        # Add course handlers
+        course_handlers = build_course_handlers()
+        for handler in course_handlers:
+            application.add_handler(handler)
+
+        # Add book handlers
+        book_handlers = build_book_purchase_conversation()
+        if book_handlers:
+            application.add_handler(book_handlers)
+
+        # Add payment handlers
+        payment_handlers = build_payment_handlers()
+        for handler in payment_handlers:
+            application.add_handler(handler)
+
+        # Add contact handlers
+        contact_handlers = build_contact_handlers()
+        for handler in contact_handlers:
+            application.add_handler(handler)
+
+        # Add social handlers
+        social_handlers = build_social_handlers()
+        for handler in social_handlers:
+            application.add_handler(handler)
 
         # Add callback query handlers
         application.add_handler(
@@ -684,15 +642,28 @@ async def setup_handlers(application: Application) -> None:
             CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$")
         )
 
+        # Add registration back handlers
+        from handlers.registration import back_to_province, back_to_city, back_to_grade
+
         application.add_handler(
-            CallbackQueryHandler(handle_free_courses, pattern="^free_courses$")
+            CallbackQueryHandler(back_to_province, pattern="^back_to_province$")
         )
         application.add_handler(
-            CallbackQueryHandler(handle_paid_courses, pattern="^paid_courses$")
+            CallbackQueryHandler(back_to_city, pattern="^back_to_city$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(back_to_grade, pattern="^back_to_grade$")
+        )
+
+        application.add_handler(
+            CallbackQueryHandler(handle_free_courses, pattern="^courses_free$")
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_paid_courses, pattern="^courses_paid$")
         )
         application.add_handler(
             CallbackQueryHandler(
-                handle_purchased_courses, pattern="^purchased_courses$"
+                handle_purchased_courses, pattern="^courses_purchased$"
             )
         )
         application.add_handler(
@@ -700,15 +671,20 @@ async def setup_handlers(application: Application) -> None:
                 handle_course_registration, pattern="^register_course_"
             )
         )
-        application.add_handler(
-            MessageHandler(filters.PHOTO & ~filters.COMMAND, handle_payment_receipt)
-        )
+        # Payment receipt handler is provided by build_payment_handlers()
 
         application.add_handler(
             CallbackQueryHandler(handle_social_media, pattern="^social_media$")
         )
         application.add_handler(
             CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
+        )
+
+        # Add book info handler
+        from handlers.books import show_book_info
+
+        application.add_handler(
+            CallbackQueryHandler(show_book_info, pattern="^book_info$")
         )
 
         # Add error handler
@@ -900,12 +876,7 @@ async def run_polling_mode(application: Application) -> None:
 def main() -> None:
     """Initialize and start the bot (synchronous entrypoint)."""
     try:
-        # Check if telegram modules are available
-        if not TELEGRAM_AVAILABLE:
-            print("❌ Cannot start bot: python-telegram-bot not installed")
-            print("💡 To install: pip install python-telegram-bot[webhooks]")
-            print("💡 Or run: pip install -r requirements.txt")
-            return
+        # Validate configuration
 
         # Validate configuration
         try:
