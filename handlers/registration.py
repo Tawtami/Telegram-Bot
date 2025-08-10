@@ -104,6 +104,7 @@ async def start_registration_cmd(update: Update, context: Any) -> int:
     )
     return RegistrationStates.FIRST_NAME
 
+
 @rate_limit_handler("default")
 async def first_name(update: Update, context: Any) -> int:
     """Handle first name input"""
