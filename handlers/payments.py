@@ -5,12 +5,13 @@ Unified payment receipt handler for both courses and book purchases
 """
 
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from config import config
 from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 @rate_limit_handler("default")
@@ -51,6 +52,18 @@ async def handle_payment_receipt(
     caption = None
     success_message = None
 
+    # Helper to build admin inline keyboard for approval/rejection
+    def admin_approval_keyboard(student_id: int, item_type: str, item_id: str, item_title: str) -> InlineKeyboardMarkup:
+        data_prefix = f"pay:{student_id}:{item_type}:{item_id}"
+        return InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton("✅ تأیید پرداخت", callback_data=f"{data_prefix}:approve"),
+                    InlineKeyboardButton("❌ رد پرداخت", callback_data=f"{data_prefix}:reject"),
+                ]
+            ]
+        )
+
     # Course payment
     if context.user_data.get("pending_course"):
         course_id = context.user_data["pending_course"]
@@ -82,8 +95,7 @@ async def handle_payment_receipt(
             f"📱 شماره: {student.get('phone_number', 'ثبت نشده')}\n"
             f"🆔 شناسه کاربری: {update.effective_user.id}\n"
             f"🏙 شهر: {student['city']}\n\n"
-            f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
-            f"/confirm_payment {update.effective_user.id}"
+            f"برای تایید/رد پرداخت از دکمه‌های زیر استفاده کنید."
         )
 
         # Clear pending course
@@ -114,8 +126,7 @@ async def handle_payment_receipt(
             f"📍 آدرس: {book_data.get('address', 'ثبت نشده')}\n"
             f"📮 کد پستی: {book_data.get('postal_code', 'ثبت نشده')}\n"
             f"📝 توضیحات: {book_data.get('notes', 'ندارد')}\n\n"
-            f"برای تایید پرداخت از دستور زیر استفاده کنید:\n"
-            f"/confirm_payment {update.effective_user.id}"
+            f"برای تایید/رد پرداخت از دکمه‌های زیر استفاده کنید."
         )
 
         # Clear book purchase data
@@ -144,7 +155,26 @@ async def handle_payment_receipt(
                 from_chat_id=update.effective_chat.id,
                 message_id=update.message.message_id,
             )
-            await context.bot.send_message(chat_id=primary_admin_id, text=caption)
+            # Build per-item keyboard
+            if context.user_data.get("pending_course"):
+                kb = admin_approval_keyboard(
+                    student_id=update.effective_user.id,
+                    item_type="course",
+                    item_id=context.user_data.get("pending_course"),
+                    item_title=course_title,
+                )
+            elif context.user_data.get("book_purchase"):
+                kb = admin_approval_keyboard(
+                    student_id=update.effective_user.id,
+                    item_type="book",
+                    item_id=book_data.get("title", "book"),
+                    item_title=book_data.get("title", "book"),
+                )
+            else:
+                kb = None
+            await context.bot.send_message(
+                chat_id=primary_admin_id, text=caption, reply_markup=kb
+            )
         except Exception:
             pass
 
@@ -153,10 +183,72 @@ async def handle_payment_receipt(
     )
 
 
+# Callback handlers for admin approval/rejection
+@rate_limit_handler("admin")
+async def handle_payment_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    data = query.data  # format: pay:{student_id}:{item_type}:{item_id}:{decision}
+    try:
+        _, student_id_str, item_type, item_id, decision = data.split(":", 4)
+        student_id = int(student_id_str)
+    except Exception:
+        return
+
+    user_id = update.effective_user.id
+    if user_id not in context.bot_data.get("config").bot.admin_user_ids:
+        await query.edit_message_text("⛔️ مجاز نیست.")
+        return
+
+    storage: StudentStorage = context.bot_data["storage"]
+
+    # Update user data accordingly and notify
+    try:
+        if decision == "approve":
+            if item_type == "course":
+                # Move pending course to purchased
+                student = storage.get_student(student_id)
+                if student and item_id:
+                    # Remove from pending and add to purchased
+                    pend = student.get("pending_payments", [])
+                    if item_id in pend:
+                        pend.remove(item_id)
+                    purchased = student.get("purchased_courses", [])
+                    if item_id not in purchased:
+                        purchased.append(item_id)
+                    student["pending_payments"] = pend
+                    student["purchased_courses"] = purchased
+                    storage.save_student(student)
+            # Notify student
+            await context.bot.send_message(
+                chat_id=student_id,
+                text=(
+                    f"✅ پرداخت شما برای «{item_id}» تایید شد."
+                    if item_type == "book"
+                    else f"✅ پرداخت شما برای دوره «{item_id}» تایید شد."
+                ),
+            )
+            await query.edit_message_text("✅ پرداخت تایید شد و به کاربر اطلاع داده شد.")
+        elif decision == "reject":
+            await context.bot.send_message(
+                chat_id=student_id,
+                text=(
+                    "❌ پرداخت شما تایید نشد. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
+                ),
+            )
+            await query.edit_message_text("❌ پرداخت رد شد و به کاربر اطلاع داده شد.")
+    except Exception:
+        pass
+
+
 def build_payment_handlers():
     """Build and return payment handlers for registration in bot.py"""
     from telegram.ext import MessageHandler, filters
 
     return [
         MessageHandler(filters.PHOTO, handle_payment_receipt),
+        CallbackQueryHandler(handle_payment_decision, pattern=r"^pay:\d+:(course|book):.+:(approve|reject)$"),
     ]

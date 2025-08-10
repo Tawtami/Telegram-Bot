@@ -217,10 +217,20 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["book_purchase"]["address"] = address
 
     await update.message.reply_text(
-        "📝 در صورت تمایل، توضیحات اضافه را وارد کنید:\n"
-        "(برای رد کردن این مرحله روی /skip کلیک کنید)",
+        "📝 در صورت تمایل، توضیحات اضافه را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+            [
+                [
+                    InlineKeyboardButton(
+                        "رد کردن", callback_data="book_skip_notes"
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        "🔙 انصراف", callback_data="cancel_book_purchase"
+                    )
+                ],
+            ]
         ),
     )
     return BookPurchaseStates.NOTES
@@ -332,6 +342,7 @@ def build_book_purchase_conversation() -> ConversationHandler:
             BookPurchaseStates.NOTES: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, notes),
                 CommandHandler("skip", skip_notes),
+                CallbackQueryHandler(skip_notes, pattern="^book_skip_notes$"),
             ],
             BookPurchaseStates.PAYMENT: [
                 MessageHandler(filters.PHOTO, handle_payment_receipt),

@@ -84,6 +84,22 @@ python start.py
 
 If you see 409 errors in Telegram webhook set, the app auto-deletes any existing webhook and retries. Ensure `WEBHOOK_URL` or `RAILWAY_PUBLIC_DOMAIN` and `PORT` are set by Railway.
 
+### New admin payment verification flow
+
+- When users submit payment receipts (for courses or the book), admins will receive the forwarded photo and a message with two inline buttons:
+  - ✅ «تأیید پرداخت» — approves the payment and grants access immediately.
+  - ❌ «رد پرداخت» — rejects it and informs the user to contact `@ostad_hatami` if needed.
+
+Both admins listed in `ADMIN_USER_IDS` have identical privileges and can use these buttons.
+
+### Phone number normalization
+
+- Phone inputs may contain Persian digits; the bot normalizes and stores all numbers in English digits.
+
+### Book purchase description skip
+
+- In the book purchase flow, the description step includes a Persian inline button «رد کردن» to skip notes quickly.
+
 ## 📁 Project Structure
 
 ```text

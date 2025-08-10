@@ -26,6 +26,10 @@ class Validator:
     _email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     _url_pattern = re.compile(r"^https?://[^\s/$.?#].[^\s]*$")
 
+    # Digit maps for Persian and Arabic-Indic numerals to ASCII
+    _persian_digits = str.maketrans("۰۱۲۳۴۵۶۷۸۹", "0123456789")
+    _arabic_digits = str.maketrans("٠١٢٣٤٥٦٧٨٩", "0123456789")
+
     # Security patterns
     _sql_injection_pattern = re.compile(
         r"(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)",
@@ -61,6 +65,16 @@ class Validator:
             text = text[:max_length]
 
         return text
+
+    @classmethod
+    def convert_to_english_digits(cls, text: str) -> str:
+        """Convert Persian/Arabic-Indic digits to ASCII English digits."""
+        if not isinstance(text, str):
+            return text
+        # First convert Persian digits, then Arabic-Indic
+        converted = text.translate(cls._persian_digits)
+        converted = converted.translate(cls._arabic_digits)
+        return converted
 
     @classmethod
     def validate_name(cls, name: str, field_name: str = "نام") -> tuple[bool, str]:
@@ -101,12 +115,16 @@ class Validator:
             return False, "شماره تلفن نمی‌تواند خالی باشد."
 
         # Sanitize input
+        phone = cls.convert_to_english_digits(phone)
         phone = re.sub(r"[\s\-\(\)]", "", phone)
 
         # Check if any pattern matches
         for pattern in cls._phone_patterns:
             if pattern.match(phone):
-                return True, cls.normalize_phone(phone)
+                normalized = cls.normalize_phone(phone)
+                # Ensure normalized is strictly ASCII digits (no Persian digits)
+                normalized = cls.convert_to_english_digits(normalized)
+                return True, normalized
 
         return (
             False,
