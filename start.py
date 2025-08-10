@@ -3,15 +3,29 @@
 Minimal Railway startup script for Telegram Bot (PTB-based)
 Delegates lifecycle to PTB; avoids nested event loops.
 Updated: Fixed port conflicts and PTB warnings
-Last update: 2025-08-09 23:30 - Force Railway redeploy
-CI bypass: 2025-08-09 23:35 - Force immediate deployment
+Last update: 2025-08-10 07:25 - Suppress PTB warnings for proper deployment
 """
 
 import os
 import sys
 import logging
 import threading
+import warnings
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# Suppress specific PTB warnings that don't affect functionality
+warnings.filterwarnings(
+    "ignore", 
+    message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
+    category=UserWarning,
+    module="handlers.registration"
+)
+warnings.filterwarnings(
+    "ignore", 
+    message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
+    category=UserWarning,
+    module="handlers.books"
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

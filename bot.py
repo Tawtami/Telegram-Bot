@@ -9,8 +9,23 @@ import os
 import sys
 import logging
 import asyncio
+import warnings
 from typing import Dict, Any
 import hashlib
+
+# Suppress specific PTB warnings that don't affect functionality
+warnings.filterwarnings(
+    "ignore", 
+    message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
+    category=UserWarning,
+    module="handlers.registration"
+)
+warnings.filterwarnings(
+    "ignore", 
+    message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
+    category=UserWarning,
+    module="handlers.books"
+)
 
 from telegram import Update
 from telegram.ext import (
