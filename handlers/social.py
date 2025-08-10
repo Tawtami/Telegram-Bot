@@ -47,14 +47,15 @@ async def handle_social_media(
                 url=f"https://t.me/{SOCIAL_LINKS['telegram'].replace('@', '')}",
             )
         ],
-        [InlineKeyboardButton("📱 تماس تلفنی", url=f"tel:{SOCIAL_LINKS['phone']}")],
+        # Telegram does not allow 'tel:' URLs in inline buttons; show number in message instead
         [InlineKeyboardButton("📺 یوتیوب", url=SOCIAL_LINKS["youtube"])],
         [InlineKeyboardButton("📣 گروه تلگرام", url=SOCIAL_LINKS["telegram_group"])],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
     ]
 
+    # Append phone number into the message for copy/paste
     await query.edit_message_text(
-        message_text,
+        f"{message_text}\n\n📞 شماره تماس: {SOCIAL_LINKS['phone']}",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
 
