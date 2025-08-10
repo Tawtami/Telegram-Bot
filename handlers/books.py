@@ -220,11 +220,7 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "📝 در صورت تمایل، توضیحات اضافه را وارد کنید:",
         reply_markup=InlineKeyboardMarkup(
             [
-                [
-                    InlineKeyboardButton(
-                        "رد کردن", callback_data="book_skip_notes"
-                    )
-                ],
+                [InlineKeyboardButton("رد کردن", callback_data="book_skip_notes")],
                 [
                     InlineKeyboardButton(
                         "🔙 انصراف", callback_data="cancel_book_purchase"

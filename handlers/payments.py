@@ -53,13 +53,19 @@ async def handle_payment_receipt(
     success_message = None
 
     # Helper to build admin inline keyboard for approval/rejection
-    def admin_approval_keyboard(student_id: int, item_type: str, item_id: str, item_title: str) -> InlineKeyboardMarkup:
+    def admin_approval_keyboard(
+        student_id: int, item_type: str, item_id: str, item_title: str
+    ) -> InlineKeyboardMarkup:
         data_prefix = f"pay:{student_id}:{item_type}:{item_id}"
         return InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("✅ تأیید پرداخت", callback_data=f"{data_prefix}:approve"),
-                    InlineKeyboardButton("❌ رد پرداخت", callback_data=f"{data_prefix}:reject"),
+                    InlineKeyboardButton(
+                        "✅ تأیید پرداخت", callback_data=f"{data_prefix}:approve"
+                    ),
+                    InlineKeyboardButton(
+                        "❌ رد پرداخت", callback_data=f"{data_prefix}:reject"
+                    ),
                 ]
             ]
         )
@@ -185,7 +191,9 @@ async def handle_payment_receipt(
 
 # Callback handlers for admin approval/rejection
 @rate_limit_handler("admin")
-async def handle_payment_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def handle_payment_decision(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     query = update.callback_query
     if not query:
         return
@@ -231,7 +239,9 @@ async def handle_payment_decision(update: Update, context: ContextTypes.DEFAULT_
                     else f"✅ پرداخت شما برای دوره «{item_id}» تایید شد."
                 ),
             )
-            await query.edit_message_text("✅ پرداخت تایید شد و به کاربر اطلاع داده شد.")
+            await query.edit_message_text(
+                "✅ پرداخت تایید شد و به کاربر اطلاع داده شد."
+            )
         elif decision == "reject":
             await context.bot.send_message(
                 chat_id=student_id,
@@ -250,5 +260,8 @@ def build_payment_handlers():
 
     return [
         MessageHandler(filters.PHOTO, handle_payment_receipt),
-        CallbackQueryHandler(handle_payment_decision, pattern=r"^pay:\d+:(course|book):.+:(approve|reject)$"),
+        CallbackQueryHandler(
+            handle_payment_decision,
+            pattern=r"^pay:\d+:(course|book):.+:(approve|reject)$",
+        ),
     ]
