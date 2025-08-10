@@ -477,3 +477,15 @@ async def handle_payment_receipt(
         success_message,
         reply_markup=build_main_menu_keyboard(),
     )
+
+
+def build_course_handlers():
+    """Build and return course handlers for registration in bot.py"""
+    from telegram.ext import CallbackQueryHandler
+
+    return [
+        CallbackQueryHandler(handle_free_courses, pattern=r"^courses_free$"),
+        CallbackQueryHandler(handle_paid_courses, pattern=r"^courses_paid$"),
+        CallbackQueryHandler(handle_purchased_courses, pattern=r"^courses_purchased$"),
+        CallbackQueryHandler(handle_course_registration, pattern=r"^register_course_"),
+    ]

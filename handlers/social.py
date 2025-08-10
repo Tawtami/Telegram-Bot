@@ -57,3 +57,12 @@ async def handle_social_media(
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
+
+
+def build_social_handlers():
+    """Build and return social handlers for registration in bot.py"""
+    from telegram.ext import CallbackQueryHandler
+
+    return [
+        CallbackQueryHandler(handle_social_media, pattern=r"^social_media$"),
+    ]

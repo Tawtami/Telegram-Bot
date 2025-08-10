@@ -130,3 +130,14 @@ async def handle_back_to_menu(
 
     await query.answer()
     await send_main_menu(update, context)
+
+
+def build_menu_handlers():
+    """Build and return menu handlers for registration in bot.py"""
+    from telegram.ext import MessageHandler, CallbackQueryHandler, filters
+
+    return [
+        MessageHandler(filters.Regex(r"^🏠 منوی اصلی$"), send_main_menu),
+        CallbackQueryHandler(handle_menu_selection, pattern=r"^menu_"),
+        CallbackQueryHandler(handle_back_to_menu, pattern=r"^back_to_menu$"),
+    ]

@@ -405,3 +405,13 @@ def build_book_purchase_conversation() -> ConversationHandler:
         persistent=False,
         per_chat=True,
     )
+
+
+def build_book_handlers():
+    """Build and return book handlers for registration in bot.py"""
+    from telegram.ext import CommandHandler
+
+    return [
+        CommandHandler("book", handle_book_info),
+        build_book_purchase_conversation(),
+    ]

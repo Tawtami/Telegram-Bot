@@ -151,3 +151,12 @@ async def handle_payment_receipt(
     await update.message.reply_text(
         success_message, reply_markup=build_main_menu_keyboard()
     )
+
+
+def build_payment_handlers():
+    """Build and return payment handlers for registration in bot.py"""
+    from telegram.ext import MessageHandler, filters
+
+    return [
+        MessageHandler(filters.PHOTO, handle_payment_receipt),
+    ]

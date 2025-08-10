@@ -39,3 +39,12 @@ async def handle_contact_us(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
+
+
+def build_contact_handlers():
+    """Build and return contact handlers for registration in bot.py"""
+    from telegram.ext import CallbackQueryHandler
+
+    return [
+        CallbackQueryHandler(handle_contact_us, pattern=r"^contact_us$"),
+    ]
