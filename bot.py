@@ -80,7 +80,7 @@ logger = logging.getLogger(__name__)
 
 
 # Command handlers
-@rate_limit_handler("default")
+@rate_limit_handler("registration")
 async def start_command(update: Update, context: Any) -> None:
     """Handle /start command"""
     try:
@@ -648,7 +648,8 @@ async def setup_handlers(application: Application) -> None:
         from handlers.registration import back_to_province, back_to_city, back_to_grade
 
         application.add_handler(
-            CallbackQueryHandler(back_to_province, pattern="^back_to_province$"), group=1
+            CallbackQueryHandler(back_to_province, pattern="^back_to_province$"),
+            group=1,
         )
         application.add_handler(
             CallbackQueryHandler(back_to_city, pattern="^back_to_city$"), group=1
@@ -666,12 +667,14 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(
             CallbackQueryHandler(
                 handle_purchased_courses, pattern="^courses_purchased$"
-            ), group=1
+            ),
+            group=1,
         )
         application.add_handler(
             CallbackQueryHandler(
                 handle_course_registration, pattern="^register_course_"
-            ), group=1
+            ),
+            group=1,
         )
         # Payment receipt handler is provided by build_payment_handlers()
 

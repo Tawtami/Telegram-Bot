@@ -91,6 +91,7 @@ async def handle_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
     )
 
 
@@ -129,6 +130,7 @@ async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode=ParseMode.HTML,
+        disable_web_page_preview=True,
     )
     return ConversationHandler.END
 
