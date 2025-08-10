@@ -4,23 +4,7 @@
 Keyboard layouts for Ostad Hatami Bot
 """
 
-# Try to import telegram modules with fallback
-try:
-    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
-    TELEGRAM_AVAILABLE = True
-except ImportError:
-    print("⚠️ Warning: telegram modules not available in UI keyboards")
-    TELEGRAM_AVAILABLE = False
-
-    # Create dummy classes for development
-    class InlineKeyboardMarkup:
-        def __init__(self, *args, **kwargs):
-            pass
-
-    class InlineKeyboardButton:
-        def __init__(self, *args, **kwargs):
-            pass
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 from typing import List
@@ -79,11 +63,11 @@ def build_cities_keyboard(cities: List[str]) -> InlineKeyboardMarkup:
 def build_main_menu_keyboard() -> InlineKeyboardMarkup:
     """Get main menu keyboard"""
     rows = [
-        [InlineKeyboardButton(text="🎓 دوره‌های رایگان", callback_data="free_courses")],
-        [InlineKeyboardButton(text="💼 دوره‌های تخصصی", callback_data="paid_courses")],
+        [InlineKeyboardButton(text="🎓 دوره‌های رایگان", callback_data="courses_free")],
+        [InlineKeyboardButton(text="💼 دوره‌های تخصصی", callback_data="courses_paid")],
         [
             InlineKeyboardButton(
-                text="🛒 سبد خرید من", callback_data="purchased_courses"
+                text="🛒 سبد خرید من", callback_data="courses_purchased"
             )
         ],
         [InlineKeyboardButton(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")],

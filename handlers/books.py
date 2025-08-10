@@ -287,7 +287,9 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 @rate_limit_handler("default")
-async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def handle_payment_receipt(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> int:
     """Delegate to unified payment receipt handler"""
     await unified_payment_receipt(update, context)
     return ConversationHandler.END
