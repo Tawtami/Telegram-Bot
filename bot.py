@@ -583,110 +583,110 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(CallbackQueryHandler(block_banned_messages), group=0)
 
         # Add command handlers
-        application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("students", students_command))
-        application.add_handler(CommandHandler("broadcast", broadcast_command))
-        application.add_handler(CommandHandler("ban", ban_command))
-        application.add_handler(CommandHandler("unban", unban_command))
-        application.add_handler(CommandHandler("profile", profile_command))
-        application.add_handler(CommandHandler("help", help_command))
-        application.add_handler(CommandHandler("courses", courses_command))
-        application.add_handler(CommandHandler("mycourses", mycourses_command))
-        application.add_handler(CommandHandler("book", book_command))
-        application.add_handler(CommandHandler("contact", contact_command))
-        application.add_handler(CommandHandler("social", social_command))
-        application.add_handler(CommandHandler("about", about_command))
+        application.add_handler(CommandHandler("start", start_command), group=1)
+        application.add_handler(CommandHandler("students", students_command), group=1)
+        application.add_handler(CommandHandler("broadcast", broadcast_command), group=1)
+        application.add_handler(CommandHandler("ban", ban_command), group=1)
+        application.add_handler(CommandHandler("unban", unban_command), group=1)
+        application.add_handler(CommandHandler("profile", profile_command), group=1)
+        application.add_handler(CommandHandler("help", help_command), group=1)
+        application.add_handler(CommandHandler("courses", courses_command), group=1)
+        application.add_handler(CommandHandler("mycourses", mycourses_command), group=1)
+        application.add_handler(CommandHandler("book", book_command), group=1)
+        application.add_handler(CommandHandler("contact", contact_command), group=1)
+        application.add_handler(CommandHandler("social", social_command), group=1)
+        application.add_handler(CommandHandler("about", about_command), group=1)
         application.add_handler(
-            CommandHandler("confirm_payment", confirm_payment_command)
+            CommandHandler("confirm_payment", confirm_payment_command), group=1
         )
-        application.add_handler(CommandHandler("status", status_command))
+        application.add_handler(CommandHandler("status", status_command), group=1)
 
         # Add conversation handlers
         registration_conv = build_registration_conversation()
         if registration_conv:
-            application.add_handler(registration_conv)
+            application.add_handler(registration_conv, group=1)
 
         # Add menu handlers
         menu_handlers = build_menu_handlers()
         for handler in menu_handlers:
-            application.add_handler(handler)
+            application.add_handler(handler, group=1)
 
         # Add course handlers
         course_handlers = build_course_handlers()
         for handler in course_handlers:
-            application.add_handler(handler)
+            application.add_handler(handler, group=1)
 
         # Add book handlers
         book_handlers = build_book_purchase_conversation()
         if book_handlers:
-            application.add_handler(book_handlers)
+            application.add_handler(book_handlers, group=1)
 
         # Add payment handlers
         payment_handlers = build_payment_handlers()
         for handler in payment_handlers:
-            application.add_handler(handler)
+            application.add_handler(handler, group=1)
 
         # Add contact handlers
         contact_handlers = build_contact_handlers()
         for handler in contact_handlers:
-            application.add_handler(handler)
+            application.add_handler(handler, group=1)
 
         # Add social handlers
         social_handlers = build_social_handlers()
         for handler in social_handlers:
-            application.add_handler(handler)
+            application.add_handler(handler, group=1)
 
         # Add callback query handlers
         application.add_handler(
-            CallbackQueryHandler(handle_menu_selection, pattern="^menu_")
+            CallbackQueryHandler(handle_menu_selection, pattern="^menu_"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$")
+            CallbackQueryHandler(handle_back_to_menu, pattern="^back_to_menu$"), group=1
         )
 
         # Add registration back handlers
         from handlers.registration import back_to_province, back_to_city, back_to_grade
 
         application.add_handler(
-            CallbackQueryHandler(back_to_province, pattern="^back_to_province$")
+            CallbackQueryHandler(back_to_province, pattern="^back_to_province$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(back_to_city, pattern="^back_to_city$")
+            CallbackQueryHandler(back_to_city, pattern="^back_to_city$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(back_to_grade, pattern="^back_to_grade$")
+            CallbackQueryHandler(back_to_grade, pattern="^back_to_grade$"), group=1
         )
 
         application.add_handler(
-            CallbackQueryHandler(handle_free_courses, pattern="^courses_free$")
+            CallbackQueryHandler(handle_free_courses, pattern="^courses_free$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(handle_paid_courses, pattern="^courses_paid$")
+            CallbackQueryHandler(handle_paid_courses, pattern="^courses_paid$"), group=1
         )
         application.add_handler(
             CallbackQueryHandler(
                 handle_purchased_courses, pattern="^courses_purchased$"
-            )
+            ), group=1
         )
         application.add_handler(
             CallbackQueryHandler(
                 handle_course_registration, pattern="^register_course_"
-            )
+            ), group=1
         )
         # Payment receipt handler is provided by build_payment_handlers()
 
         application.add_handler(
-            CallbackQueryHandler(handle_social_media, pattern="^social_media$")
+            CallbackQueryHandler(handle_social_media, pattern="^social_media$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(handle_contact_us, pattern="^contact_us$")
+            CallbackQueryHandler(handle_contact_us, pattern="^contact_us$"), group=1
         )
 
         # Add book info handler
         from handlers.books import show_book_info
 
         application.add_handler(
-            CallbackQueryHandler(show_book_info, pattern="^book_info$")
+            CallbackQueryHandler(show_book_info, pattern="^book_info$"), group=1
         )
 
         # Add error handler
