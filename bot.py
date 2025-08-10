@@ -15,16 +15,16 @@ import hashlib
 
 # Suppress specific PTB warnings that don't affect functionality
 warnings.filterwarnings(
-    "ignore", 
+    "ignore",
     message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
     category=UserWarning,
-    module="handlers.registration"
+    module="handlers.registration",
 )
 warnings.filterwarnings(
-    "ignore", 
+    "ignore",
     message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
     category=UserWarning,
-    module="handlers.books"
+    module="handlers.books",
 )
 
 from telegram import Update
@@ -336,15 +336,59 @@ def main() -> None:
             )
             logger.info(f"🔧 Webhook path: /")
 
-            application.run_webhook(
-                listen="0.0.0.0",
-                port=port,
-                url_path="/",
-                webhook_url=full_webhook_url,
-                # Avoid calling getUpdates while webhook is active
-                drop_pending_updates=False,
-            )
-            logger.info(f"🌐 Webhook started on port {port} with path '/'")
+            # Create custom webhook server that handles both health checks and webhooks
+            from http.server import HTTPServer, BaseHTTPRequestHandler
+            import json
+
+            class HealthCheckWebhookHandler(BaseHTTPRequestHandler):
+                def do_GET(self):
+                    """Handle health check requests from Railway"""
+                    if self.path == "/":
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/plain; charset=utf-8")
+                        self.end_headers()
+                        self.wfile.write(b"OK")
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+
+                def do_POST(self):
+                    """Handle webhook requests from Telegram"""
+                    if self.path == "/":
+                        # Get the request body
+                        content_length = int(self.headers.get("Content-Length", 0))
+                        body = self.rfile.read(content_length)
+
+                        # Create a mock update object for PTB to process
+                        from telegram import Update
+
+                        update = Update.de_json(json.loads(body), application.bot)
+
+                        # Process the update
+                        application.process_update(update)
+
+                        # Send success response
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"ok": True}).encode())
+                    else:
+                        self.send_response(404)
+                        self.end_headers()
+
+                def log_message(self, format, *args):
+                    return
+
+            # Start custom server with health check support
+            server = HTTPServer(("0.0.0.0", port), HealthCheckWebhookHandler)
+            logger.info(f"✅ Health check and webhook server started on port {port}")
+
+            # Set webhook URL
+            application.bot.set_webhook(url=full_webhook_url)
+            logger.info(f"🌐 Webhook set to: {full_webhook_url}")
+
+            # Start the server
+            server.serve_forever()
         else:
             application.run_polling(drop_pending_updates=False)
             logger.info("📡 Polling started")
