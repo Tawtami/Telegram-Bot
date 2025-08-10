@@ -3,28 +3,26 @@
 Minimal Railway startup script for Telegram Bot (PTB-based)
 Delegates lifecycle to PTB; avoids nested event loops.
 Updated: Fixed port conflicts and PTB warnings
-Last update: 2025-08-10 07:25 - Suppress PTB warnings for proper deployment
+Last update: 2025-08-10 07:35 - Simplified startup for Railway deployment
 """
 
 import os
 import sys
 import logging
-import threading
 import warnings
-from http.server import HTTPServer, BaseHTTPRequestHandler
 
 # Suppress specific PTB warnings that don't affect functionality
 warnings.filterwarnings(
-    "ignore", 
+    "ignore",
     message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
     category=UserWarning,
-    module="handlers.registration"
+    module="handlers.registration",
 )
 warnings.filterwarnings(
-    "ignore", 
+    "ignore",
     message="If 'per_message=False', 'CallbackQueryHandler' will not be tracked for every message",
     category=UserWarning,
-    module="handlers.books"
+    module="handlers.books",
 )
 
 logging.basicConfig(
@@ -50,39 +48,10 @@ def main() -> None:
 
         _prepare_webhook_env()
 
-        # Import and run the bot's async main once
+        # Import and run the bot's main function
         from bot import main as bot_main
-
-        # Use PORT+1 for health server to avoid conflict with webhook
-        port = int(os.getenv("PORT", "0") or 0)
-        webhook_url = os.getenv("WEBHOOK_URL")
-
-        if port > 0:
-            health_port = port + 1
-
-            class HealthHandler(BaseHTTPRequestHandler):
-                def do_GET(self):
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/plain; charset=utf-8")
-                    self.end_headers()
-                    self.wfile.write(b"OK")
-
-                def log_message(self, format, *args):
-                    return
-
-            def run_health():
-                try:
-                    httpd = HTTPServer(("0.0.0.0", health_port), HealthHandler)
-                    httpd.serve_forever()
-                except Exception:
-                    pass
-
-            t = threading.Thread(target=run_health, daemon=True)
-            t.start()
-            logger.info(f"✅ Health server started on port {health_port}")
-
-        # Call synchronous bot.main() to let PTB own the event loop
         bot_main()
+        
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
     except Exception as e:
