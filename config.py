@@ -8,10 +8,18 @@ Centralized settings with environment variable support
 import os
 from typing import Dict, List, Any
 from dataclasses import dataclass
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# Try to load dotenv, but don't fail if it's not available
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    # Fallback: create a simple environment loader
+    def load_dotenv():
+        pass
+
+    load_dotenv()
 
 
 @dataclass
@@ -117,10 +125,17 @@ class Config:
     """Main configuration class"""
 
     def __init__(self):
-        # Bot token (required)
-        self.bot_token = os.getenv("BOT_TOKEN")
-        if not self.bot_token:
-            raise ValueError("BOT_TOKEN environment variable is required")
+        # Bot token (required) - provide default for development
+        self.bot_token = os.getenv("BOT_TOKEN", "DEVELOPMENT_TOKEN_PLACEHOLDER")
+        if not self.bot_token or self.bot_token == "DEVELOPMENT_TOKEN_PLACEHOLDER":
+            # For development/testing, allow missing token
+            if os.getenv("ENVIRONMENT") == "production":
+                raise ValueError(
+                    "BOT_TOKEN environment variable is required in production"
+                )
+            else:
+                print("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
+                self.bot_token = "DEVELOPMENT_TOKEN_PLACEHOLDER"
 
         # Initialize configuration sections
         self.database = DatabaseConfig(

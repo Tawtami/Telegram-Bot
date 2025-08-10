@@ -27,33 +27,138 @@ warnings.filterwarnings(
     module="handlers.books",
 )
 
-from telegram import Update
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ConversationHandler,
-    filters,
-)
+# Try to import telegram modules with fallback
+try:
+    from telegram import Update
+    from telegram.ext import (
+        Application,
+        CommandHandler,
+        MessageHandler,
+        CallbackQueryHandler,
+        ConversationHandler,
+        filters,
+    )
+
+    TELEGRAM_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: python-telegram-bot not installed. Bot functionality disabled.")
+    TELEGRAM_AVAILABLE = False
+
+    # Create dummy classes for development
+    class Update:
+        pass
+
+    class Application:
+        pass
+
 
 from config import config
-from handlers.registration import build_registration_conversation
-from handlers.books import build_book_purchase_conversation
-from handlers.menu import (
-    send_main_menu,
-    handle_menu_selection,
-    handle_back_to_menu,
-)
-from handlers.courses import (
-    handle_free_courses,
-    handle_paid_courses,
-    handle_purchased_courses,
-    handle_course_registration,
-)
-from handlers.payments import handle_payment_receipt
-from handlers.social import handle_social_media
-from handlers.contact import handle_contact_us
+
+# Import handlers with fallback
+try:
+    from handlers.registration import build_registration_conversation
+    from handlers.menu import build_menu_handlers
+    from handlers.courses import build_course_handlers
+    from handlers.books import build_book_purchase_conversation
+    from handlers.payments import build_payment_handlers
+    from handlers.contact import build_contact_handlers
+    from handlers.social import build_social_handlers
+
+    # Also import the specific handler functions
+    from handlers.menu import (
+        send_main_menu,
+        handle_menu_selection,
+        handle_back_to_menu,
+    )
+    from handlers.courses import (
+        handle_free_courses,
+        handle_paid_courses,
+        handle_purchased_courses,
+        handle_course_registration,
+    )
+    from handlers.payments import handle_payment_receipt
+    from handlers.social import handle_social_media
+    from handlers.contact import handle_contact_us
+
+    HANDLERS_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️ Warning: Some handlers not available: {e}")
+    HANDLERS_AVAILABLE = False
+
+    # Create dummy functions for development
+    def build_registration_conversation():
+        return None
+
+    def build_menu_handlers():
+        return []
+
+    def build_course_handlers():
+        return []
+
+    def build_book_purchase_conversation():
+        return None
+
+    def build_payment_handlers():
+        return []
+
+    def build_contact_handlers():
+        return []
+
+    def build_social_handlers():
+        return []
+
+    # Create dummy handler functions
+    async def send_main_menu(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_menu_selection(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_back_to_menu(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_free_courses(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_paid_courses(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_purchased_courses(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_course_registration(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_payment_receipt(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_social_media(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+    async def handle_contact_us(update, context):
+        await update.message.reply_text(
+            "⚠️ Bot is in development mode - handlers not available"
+        )
+
+
 from utils.storage import StudentStorage
 from utils.error_handler import ptb_error_handler
 from utils.rate_limiter import rate_limiter
@@ -260,6 +365,13 @@ def main() -> None:
     so we avoid wrapping it in asyncio.run to prevent loop close errors.
     """
     try:
+        # Check if telegram modules are available
+        if not TELEGRAM_AVAILABLE:
+            print("❌ Cannot start bot: python-telegram-bot not installed")
+            print("💡 To install: pip install python-telegram-bot[webhooks]")
+            print("💡 Or run: pip install -r requirements.txt")
+            return
+
         application = Application.builder().token(config.bot_token).build()
 
         # Initialize storage

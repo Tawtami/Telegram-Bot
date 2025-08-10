@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Keyboard layouts for Telegram Bot (PTB-based)
+Keyboard layouts for Ostad Hatami Bot
 """
 
-from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+# Try to import telegram modules with fallback
+try:
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+    TELEGRAM_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: telegram modules not available in UI keyboards")
+    TELEGRAM_AVAILABLE = False
+
+    # Create dummy classes for development
+    class InlineKeyboardMarkup:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class InlineKeyboardButton:
+        def __init__(self, *args, **kwargs):
+            pass
+
+
 from typing import List
 
 

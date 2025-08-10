@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Data Manager for Ostad Hatami Bot
-مدیریت داده برای ربات استاد حاتمی
+Database manager for Ostad Hatami Bot
+Manages JSON-based data storage with error handling and validation
 """
 
 import json
 import os
+import logging
 import uuid
 import asyncio
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from pathlib import Path
 from datetime import datetime
 
@@ -24,6 +25,9 @@ from .models import (
     PurchaseStatus,
     NotificationType,
 )
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 class DataManager:
@@ -102,7 +106,7 @@ class DataManager:
                 else:
                     json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Error saving {file_path}: {e}")
+            logger.error(f"Error saving {file_path}: {e}")
 
     # ============================================================================
     # USER MANAGEMENT
@@ -133,7 +137,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error saving user data: {e}")
+            logger.error(f"Error saving user data: {e}")
             return False
 
     async def load_user_data(self, user_id: int) -> Optional[UserData]:
@@ -149,7 +153,7 @@ class DataManager:
             return None
 
         except Exception as e:
-            print(f"Error loading user data: {e}")
+            logger.error(f"Error loading user data: {e}")
             return None
 
     def user_exists(self, user_id: int) -> bool:
@@ -166,7 +170,7 @@ class DataManager:
             users_data = self._load_json(self.users_file)
             return [UserData.from_dict(user) for user in users_data]
         except Exception as e:
-            print(f"Error loading all users: {e}")
+            logger.error(f"Error loading all users: {e}")
             return []
 
     async def update_user_courses(
@@ -187,7 +191,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error updating user courses: {e}")
+            logger.error(f"Error updating user courses: {e}")
             return False
 
     # ============================================================================
@@ -215,7 +219,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error saving course: {e}")
+            logger.error(f"Error saving course: {e}")
             return False
 
     async def get_course(self, course_id: str) -> Optional[CourseData]:
@@ -231,7 +235,7 @@ class DataManager:
             return None
 
         except Exception as e:
-            print(f"Error loading course: {e}")
+            logger.error(f"Error loading course: {e}")
             return None
 
     async def get_all_courses(
@@ -248,7 +252,7 @@ class DataManager:
             return courses
 
         except Exception as e:
-            print(f"Error loading courses: {e}")
+            logger.error(f"Error loading courses: {e}")
             return []
 
     async def update_course_students(self, course_id: str, change: int = 1):
@@ -263,7 +267,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error updating course students: {e}")
+            logger.error(f"Error updating course students: {e}")
             return False
 
     # ============================================================================
@@ -278,7 +282,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error saving purchase: {e}")
+            logger.error(f"Error saving purchase: {e}")
             return False
 
     async def get_purchase(self, purchase_id: str) -> Optional[PurchaseData]:
@@ -294,7 +298,7 @@ class DataManager:
             return None
 
         except Exception as e:
-            print(f"Error loading purchase: {e}")
+            logger.error(f"Error loading purchase: {e}")
             return None
 
     async def get_user_purchases(
@@ -315,7 +319,7 @@ class DataManager:
             return purchases
 
         except Exception as e:
-            print(f"Error loading user purchases: {e}")
+            logger.error(f"Error loading user purchases: {e}")
             return []
 
     async def update_purchase_status(
@@ -349,7 +353,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error updating purchase status: {e}")
+            logger.error(f"Error updating purchase status: {e}")
             return False
 
     # ============================================================================
@@ -364,7 +368,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error saving notification: {e}")
+            logger.error(f"Error saving notification: {e}")
             return False
 
     async def get_unread_notifications(self) -> List[NotificationData]:
@@ -375,7 +379,7 @@ class DataManager:
             return [NotificationData.from_dict(n) for n in unread]
 
         except Exception as e:
-            print(f"Error loading notifications: {e}")
+            logger.error(f"Error loading notifications: {e}")
             return []
 
     async def mark_notification_read(self, notification_id: str):
@@ -390,7 +394,7 @@ class DataManager:
             self._save_json(self.notifications_file, notifications_data)
 
         except Exception as e:
-            print(f"Error marking notification read: {e}")
+            logger.error(f"Error marking notification read: {e}")
 
     # ============================================================================
     # BOOK MANAGEMENT
@@ -413,7 +417,7 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error saving book: {e}")
+            logger.error(f"Error saving book: {e}")
             return False
 
     async def get_book(self, book_id: str) -> Optional[BookData]:
@@ -429,7 +433,7 @@ class DataManager:
             return None
 
         except Exception as e:
-            print(f"Error loading book: {e}")
+            logger.error(f"Error loading book: {e}")
             return None
 
     async def get_all_books(self) -> List[BookData]:
@@ -439,7 +443,7 @@ class DataManager:
             return [BookData.from_dict(b) for b in books_data]
 
         except Exception as e:
-            print(f"Error loading books: {e}")
+            logger.error(f"Error loading books: {e}")
             return []
 
     # ============================================================================
@@ -473,7 +477,7 @@ class DataManager:
             }
 
         except Exception as e:
-            print(f"Error getting database stats: {e}")
+            logger.error(f"Error getting database stats: {e}")
             return {}
 
     def generate_id(self) -> str:
@@ -506,5 +510,5 @@ class DataManager:
             return True
 
         except Exception as e:
-            print(f"Error creating backup: {e}")
+            logger.error(f"Error creating backup: {e}")
             return False

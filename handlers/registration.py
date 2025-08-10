@@ -1,23 +1,56 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Registration handlers for Ostad Hatami Bot
-Implements 6-step registration process with validation
+Registration handler for Ostad Hatami Bot
+Handles user registration flow
 """
 
+import logging
 import re
 from enum import Enum
 from typing import Dict, Any
 
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    ContextTypes,
-    ConversationHandler,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    filters,
-)
+# Try to import telegram modules with fallback
+try:
+    from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+    from telegram.ext import (
+        ConversationHandler,
+        CommandHandler,
+        MessageHandler,
+        CallbackQueryHandler,
+        filters,
+    )
+
+    TELEGRAM_AVAILABLE = True
+except ImportError:
+    print("⚠️ Warning: telegram modules not available in registration handler")
+    TELEGRAM_AVAILABLE = False
+
+    # Create dummy classes for development
+    class Update:
+        pass
+
+    class InlineKeyboardMarkup:
+        pass
+
+    class InlineKeyboardButton:
+        pass
+
+    class ConversationHandler:
+        pass
+
+    class CommandHandler:
+        pass
+
+    class MessageHandler:
+        pass
+
+    class CallbackQueryHandler:
+        pass
+
+    class filters:
+        pass
+
 
 from config import config
 from utils.validators import Validator
@@ -69,57 +102,79 @@ def _is_iranian_phone(phone: str) -> bool:
 
 
 @rate_limit_handler("default")
-async def start_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def start_registration(update: Update, context: Any) -> int:
     """Start registration process"""
     context.user_data.clear()  # Clear any previous registration data
     context.user_data["registration"] = {}  # Initialize with minimal structure
-    await update.callback_query.answer()
-    await update.callback_query.edit_message_text(
-        "👋 به فرآیند ثبت‌نام خوش آمدید!\n\n" "لطفاً نام خود را به فارسی وارد کنید:",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_reg")]]
-        ),
-    )
+    if TELEGRAM_AVAILABLE:
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(
+            "👋 به فرآیند ثبت‌نام خوش آمدید!\n\n" "لطفاً نام خود را به فارسی وارد کنید:",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_reg")]]
+            ),
+        )
+    else:
+        await update.message.reply_text(
+            "👋 به فرآیند ثبت‌نام خوش آمدید!\n\n" "لطفاً نام خود را به فارسی وارد کنید:"
+        )
     return RegistrationStates.FIRST_NAME
 
 
 @rate_limit_handler("default")
-async def first_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def first_name(update: Update, context: Any) -> int:
     """Handle first name input"""
     name = update.message.text.strip()
     is_valid, result = Validator.validate_name(name, "نام")
     if not is_valid:
-        await update.message.reply_text(result)
+        if TELEGRAM_AVAILABLE:
+            await update.message.reply_text(result)
+        else:
+            await update.message.reply_text(result)
         return RegistrationStates.FIRST_NAME
 
     context.user_data["first_name"] = result
-    await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
+    if TELEGRAM_AVAILABLE:
+        await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
+    else:
+        await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
     return RegistrationStates.LAST_NAME
 
 
 @rate_limit_handler("default")
-async def last_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def last_name(update: Update, context: Any) -> int:
     """Handle last name input"""
     name = update.message.text.strip()
     is_valid, result = Validator.validate_name(name, "نام خانوادگی")
     if not is_valid:
-        await update.message.reply_text(result)
+        if TELEGRAM_AVAILABLE:
+            await update.message.reply_text(result)
+        else:
+            await update.message.reply_text(result)
         return RegistrationStates.LAST_NAME
 
     context.user_data["last_name"] = result
-    await update.message.reply_text(
-        "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
-    )
+    if TELEGRAM_AVAILABLE:
+        await update.message.reply_text(
+            "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
+        )
+    else:
+        await update.message.reply_text(
+            "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
+        )
     return RegistrationStates.PHONE_NUMBER
 
 
 @rate_limit_handler("default")
-async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def phone_number(update: Update, context: Any) -> int:
     """Handle phone number input"""
     phone = update.message.text.strip()
     is_valid, result = Validator.validate_phone(phone)
     if not is_valid:
-        await update.message.reply_text(result)
+        if TELEGRAM_AVAILABLE:
+            await update.message.reply_text(result)
+        else:
+            await update.message.reply_text(result)
         return RegistrationStates.PHONE_NUMBER
 
     # Convert normalized +98... to 09... format for display consistency
@@ -128,92 +183,133 @@ async def phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
         normalized = "0" + normalized[3:]
 
     context.user_data["phone_number"] = normalized
-    await update.message.reply_text(
-        "لطفاً استان خود را انتخاب کنید:",
-        reply_markup=build_provinces_keyboard(config.provinces),
-    )
+    if TELEGRAM_AVAILABLE:
+        await update.message.reply_text(
+            "لطفاً استان خود را انتخاب کنید:",
+            reply_markup=build_provinces_keyboard(config.provinces),
+        )
+    else:
+        await update.message.reply_text(
+            "لطفاً استان خود را انتخاب کنید:",
+            reply_markup=build_provinces_keyboard(config.provinces),
+        )
     return RegistrationStates.PROVINCE
 
 
 @rate_limit_handler("default")
-async def province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def province(update: Update, context: Any) -> int:
     """Handle province selection"""
     query = update.callback_query
-    await query.answer()
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
 
     province = query.data.replace("province:", "")
     if province not in config.provinces:
-        await query.edit_message_text(
-            "❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:",
-            reply_markup=build_provinces_keyboard(config.provinces),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:",
+                reply_markup=build_provinces_keyboard(config.provinces),
+            )
+        else:
+            await query.edit_message_text(
+                "❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:"
+            )
         return RegistrationStates.PROVINCE
 
     context.user_data["province"] = province
-    await query.edit_message_text(
-        f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
-        reply_markup=build_cities_keyboard(config.cities_by_province[province]),
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.edit_message_text(
+            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
+            reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+        )
+    else:
+        await query.edit_message_text(
+            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:"
+        )
     return RegistrationStates.CITY
 
 
 @rate_limit_handler("default")
-async def city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def city(update: Update, context: Any) -> int:
     """Handle city selection"""
     query = update.callback_query
-    await query.answer()
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
 
     city = query.data.replace("city:", "")
     province = context.user_data.get("province", "")
     if not province or city not in config.cities_by_province[province]:
-        await query.edit_message_text(
-            "❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:",
-            reply_markup=build_cities_keyboard(config.cities_by_province[province]),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:",
+                reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+            )
+        else:
+            await query.edit_message_text(
+                "❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:"
+            )
         return RegistrationStates.CITY
 
     context.user_data["city"] = city
-    await query.edit_message_text(
-        "لطفاً پایه تحصیلی خود را انتخاب کنید:",
-        reply_markup=build_grades_keyboard(config.grades),
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.edit_message_text(
+            "لطفاً پایه تحصیلی خود را انتخاب کنید:",
+            reply_markup=build_grades_keyboard(config.grades),
+        )
+    else:
+        await query.edit_message_text("لطفاً پایه تحصیلی خود را انتخاب کنید:")
     return RegistrationStates.GRADE
 
 
 @rate_limit_handler("default")
-async def grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def grade(update: Update, context: Any) -> int:
     """Handle grade selection"""
     query = update.callback_query
-    await query.answer()
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
 
     grade = query.data.replace("grade:", "")
     if grade not in config.grades:
-        await query.edit_message_text(
-            "❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:",
-            reply_markup=build_grades_keyboard(config.grades),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:",
+                reply_markup=build_grades_keyboard(config.grades),
+            )
+        else:
+            await query.edit_message_text(
+                "❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:"
+            )
         return RegistrationStates.GRADE
 
     context.user_data["grade"] = grade
-    await query.edit_message_text(
-        "لطفاً رشته تحصیلی خود را انتخاب کنید:",
-        reply_markup=build_majors_keyboard(config.majors),
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.edit_message_text(
+            "لطفاً رشته تحصیلی خود را انتخاب کنید:",
+            reply_markup=build_majors_keyboard(config.majors),
+        )
+    else:
+        await query.edit_message_text("لطفاً رشته تحصیلی خود را انتخاب کنید:")
     return RegistrationStates.FIELD
 
 
 @rate_limit_handler("default")
-async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def field(update: Update, context: Any) -> int:
     """Handle field of study selection"""
     query = update.callback_query
-    await query.answer()
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
 
     field = query.data.replace("major:", "")
     if field not in config.majors:
-        await query.edit_message_text(
-            "❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:",
-            reply_markup=build_majors_keyboard(config.majors),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:",
+                reply_markup=build_majors_keyboard(config.majors),
+            )
+        else:
+            await query.edit_message_text(
+                "❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:"
+            )
         return RegistrationStates.FIELD
 
     context.user_data["field"] = field
@@ -232,23 +328,29 @@ async def field(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         "آیا اطلاعات فوق صحیح است؟"
     )
 
-    await query.edit_message_text(
-        confirmation_text,
-        reply_markup=build_confirmation_keyboard(),
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.edit_message_text(
+            confirmation_text,
+            reply_markup=build_confirmation_keyboard(),
+        )
+    else:
+        await query.edit_message_text(confirmation_text)
     return RegistrationStates.CONFIRM
 
 
 @rate_limit_handler("default")
-async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def back_to_province(update: Update, context: Any) -> int:
     """Navigate back to province selection"""
     query = update.callback_query
-    if query:
-        await query.answer()
-        await query.edit_message_text(
-            "لطفاً استان خود را انتخاب کنید:",
-            reply_markup=build_provinces_keyboard(config.provinces),
-        )
+    if TELEGRAM_AVAILABLE:
+        if query:
+            await query.answer()
+            await query.edit_message_text(
+                "لطفاً استان خود را انتخاب کنید:",
+                reply_markup=build_provinces_keyboard(config.provinces),
+            )
+    else:
+        await update.message.reply_text("لطفاً استان خود را انتخاب کنید:")
     # Clear dependent fields
     context.user_data.pop("city", None)
     context.user_data.pop("grade", None)
@@ -257,18 +359,27 @@ async def back_to_province(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 @rate_limit_handler("default")
-async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def back_to_city(update: Update, context: Any) -> int:
     """Navigate back to city selection for the chosen province"""
     query = update.callback_query
-    if query:
-        await query.answer()
+    if TELEGRAM_AVAILABLE:
+        if query:
+            await query.answer()
+            province = context.user_data.get("province")
+            if not province:
+                # If province missing, go back to province step
+                return await back_to_province(update, context)
+            await query.edit_message_text(
+                f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
+                reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+            )
+    else:
         province = context.user_data.get("province")
         if not province:
             # If province missing, go back to province step
             return await back_to_province(update, context)
-        await query.edit_message_text(
-            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:",
-            reply_markup=build_cities_keyboard(config.cities_by_province[province]),
+        await update.message.reply_text(
+            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:"
         )
     # Clear dependent fields
     context.user_data.pop("grade", None)
@@ -277,31 +388,40 @@ async def back_to_city(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 @rate_limit_handler("default")
-async def back_to_grade(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def back_to_grade(update: Update, context: Any) -> int:
     """Navigate back to grade selection"""
     query = update.callback_query
-    if query:
-        await query.answer()
-        await query.edit_message_text(
-            "لطفاً پایه تحصیلی خود را انتخاب کنید:",
-            reply_markup=build_grades_keyboard(config.grades),
-        )
+    if TELEGRAM_AVAILABLE:
+        if query:
+            await query.answer()
+            await query.edit_message_text(
+                "لطفاً پایه تحصیلی خود را انتخاب کنید:",
+                reply_markup=build_grades_keyboard(config.grades),
+            )
+    else:
+        await update.message.reply_text("لطفاً پایه تحصیلی خود را انتخاب کنید:")
     # Clear dependent field
     context.user_data.pop("field", None)
     return RegistrationStates.GRADE
 
 
 @rate_limit_handler("default")
-async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def confirm(update: Update, context: Any) -> int:
     """Handle registration confirmation"""
     query = update.callback_query
-    await query.answer()
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
 
     if query.data == "cancel_reg":
-        await query.edit_message_text(
-            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
-            reply_markup=build_register_keyboard(),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+                reply_markup=build_register_keyboard(),
+            )
+        else:
+            await update.message.reply_text(
+                "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:"
+            )
         return ConversationHandler.END
 
     # Save user data
@@ -318,16 +438,27 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     }
 
     if not storage.save_student(user_data):
-        await query.edit_message_text(
-            "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:",
-            reply_markup=build_register_keyboard(),
-        )
+        if TELEGRAM_AVAILABLE:
+            await query.edit_message_text(
+                "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:",
+                reply_markup=build_register_keyboard(),
+            )
+        else:
+            await update.message.reply_text(
+                "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:"
+            )
         return ConversationHandler.END
 
-    await query.edit_message_text(
-        "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
-        "اکنون می‌توانید از امکانات ربات استفاده کنید.",
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.edit_message_text(
+            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
+            "اکنون می‌توانید از امکانات ربات استفاده کنید.",
+        )
+    else:
+        await update.message.reply_text(
+            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
+            "اکنون می‌توانید از امکانات ربات استفاده کنید."
+        )
 
     # Show main menu
     from handlers.menu import send_main_menu
@@ -338,24 +469,34 @@ async def confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 @rate_limit_handler("default")
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def cancel(update: Update, context: Any) -> int:
     """Cancel registration"""
-    await update.message.reply_text(
-        "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
-        reply_markup=build_register_keyboard(),
-    )
+    if TELEGRAM_AVAILABLE:
+        await update.message.reply_text(
+            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+            reply_markup=build_register_keyboard(),
+        )
+    else:
+        await update.message.reply_text(
+            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:"
+        )
     return ConversationHandler.END
 
 
 @rate_limit_handler("default")
-async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def cancel_callback(update: Update, context: Any) -> int:
     """Cancel registration from callback query"""
     query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(
-        "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
-        reply_markup=build_register_keyboard(),
-    )
+    if TELEGRAM_AVAILABLE:
+        await query.answer()
+        await query.edit_message_text(
+            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+            reply_markup=build_register_keyboard(),
+        )
+    else:
+        await update.message.reply_text(
+            "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:"
+        )
     return ConversationHandler.END
 
 

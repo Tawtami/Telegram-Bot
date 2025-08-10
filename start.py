@@ -50,6 +50,7 @@ def main() -> None:
 
         # Import and run the bot's main function
         from bot import main as bot_main
+
         bot_main()
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")

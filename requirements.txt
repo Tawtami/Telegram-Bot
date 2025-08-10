@@ -1,9 +1,28 @@
-# Core dependencies
-# Pin to PTB v20.x and include webhooks extra for Application.run_webhook support
+# Core Telegram Bot Framework
 python-telegram-bot[webhooks]>=20.3,<21.0
+
+# Environment and Configuration
 python-dotenv>=1.0.0
 
-# Utility packages
+# HTTP and Async Support
 aiohttp>=3.8.0
-python-json-logger>=2.0.0
-pytz  # For timezone handling
+aiofiles>=23.0.0
+
+# Time and Date Handling
+pytz>=2023.3
+
+# Data Validation
+validators>=0.22.0
+
+# Performance and Monitoring
+psutil>=5.9.0
+
+# Development and Testing (optional)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+black>=23.0.0
+flake8>=6.0.0
+
+# Production Deployment
+gunicorn>=21.0.0
+uvicorn>=0.23.0
