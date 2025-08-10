@@ -84,6 +84,8 @@ logger = logging.getLogger(__name__)
 async def start_command(update: Update, context: Any) -> None:
     """Handle /start command"""
     try:
+        user_id = update.effective_user.id if update and update.effective_user else 0
+        logger.info(f"/start received from user_id={user_id}")
         await send_main_menu(update, context)
     except Exception as e:
         logger.error(f"Error in start_command: {e}")
@@ -732,6 +734,8 @@ async def run_webhook_mode(application: Application) -> None:
                 return web.Response(status=405)
 
             try:
+                # Basic trace for incoming webhook
+                logger.info("Incoming Telegram webhook POST")
                 # Validate Telegram secret token header if configured
                 expected_token = (config.webhook.secret_token or "").strip()
                 if expected_token:
@@ -757,6 +761,17 @@ async def run_webhook_mode(application: Application) -> None:
 
                 # Process update
                 update = Update.de_json(data, application.bot)
+                try:
+                    if update.message and update.message.text:
+                        logger.info(
+                            f"Update message from user_id={getattr(update.effective_user,'id',0)} text={update.message.text!r}"
+                        )
+                    elif update.callback_query and update.callback_query.data:
+                        logger.info(
+                            f"Update callback from user_id={getattr(update.effective_user,'id',0)} data={update.callback_query.data!r}"
+                        )
+                except Exception:
+                    pass
                 await application.process_update(update)
                 return web.json_response({"ok": True})
             except json.JSONDecodeError as e:
