@@ -38,6 +38,10 @@ jobs:
           python -c "import handlers.courses; print('✅ Courses handler imported')"
           python -c "import handlers.payments; print('✅ Payments handler imported')"
 
+      - name: Run pytest
+        run: |
+          pytest -q
+
       - name: Check file structure
         run: |
           echo "📁 Checking required files..."

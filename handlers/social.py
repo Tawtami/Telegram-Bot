@@ -8,6 +8,7 @@ from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ContextTypes
 
 from ui.keyboards import build_main_menu_keyboard
+from utils.rate_limiter import rate_limit_handler
 
 # Social media links
 SOCIAL_LINKS = {
@@ -18,6 +19,7 @@ SOCIAL_LINKS = {
 }
 
 
+@rate_limit_handler("default")
 async def handle_social_media(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:

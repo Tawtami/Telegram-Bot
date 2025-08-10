@@ -9,8 +9,10 @@ from telegram.ext import ContextTypes
 
 from config import config
 from ui.keyboards import build_main_menu_keyboard
+from utils.rate_limiter import rate_limit_handler
 
 
+@rate_limit_handler("default")
 async def handle_contact_us(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle contact us menu"""
     query = update.callback_query
