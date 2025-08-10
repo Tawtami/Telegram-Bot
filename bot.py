@@ -112,56 +112,17 @@ except ImportError as e:
     def build_social_handlers():
         return []
 
-    # Create dummy handler functions
-    async def send_main_menu(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_menu_selection(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_back_to_menu(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_free_courses(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_paid_courses(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_purchased_courses(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_course_registration(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_payment_receipt(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_social_media(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
-
-    async def handle_contact_us(update, context):
-        await update.message.reply_text(
-            "⚠️ Bot is in development mode - handlers not available"
-        )
+    # Import real handler functions
+    from handlers.menu import send_main_menu, handle_menu_selection, handle_back_to_menu
+    from handlers.courses import (
+        handle_free_courses,
+        handle_paid_courses,
+        handle_purchased_courses,
+        handle_course_registration,
+    )
+    from handlers.payments import handle_payment_receipt
+    from handlers.social import handle_social_media
+    from handlers.contact import handle_contact_us
 
 
 from utils.storage import StudentStorage
