@@ -178,7 +178,7 @@ async def handle_payment_receipt(
     kb = admin_approval_keyboard(token)
 
     # Send to ALL admins: forward photo + details with buttons
-    for admin_id in (config.bot.admin_user_ids or []):
+    for admin_id in config.bot.admin_user_ids or []:
         try:
             await context.bot.forward_message(
                 chat_id=admin_id,
