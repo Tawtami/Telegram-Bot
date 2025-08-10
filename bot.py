@@ -490,7 +490,7 @@ async def about_command(update: Update, context: Any) -> None:
             "ریاضی را آسان و لذت‌بخش یاد بگیرید!"
         )
 
-        await update.message.reply_text(about_text, parse_mode="Markdown")
+        await update.message.reply_text(about_text)
 
     except Exception as e:
         logger.error(f"Error in about_command: {e}")
