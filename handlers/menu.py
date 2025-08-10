@@ -12,6 +12,7 @@ from telegram.constants import ParseMode
 
 from config import config
 from utils.storage import StudentStorage
+from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard, build_register_keyboard
 
 # Cache keyboard markups
@@ -19,6 +20,7 @@ _REGISTER_KEYBOARD = build_register_keyboard()
 _MAIN_MENU_KEYBOARD = build_main_menu_keyboard()
 
 
+@rate_limit_handler("default")
 async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send main menu message with appropriate keyboard"""
     # Get effective chat and user
@@ -52,6 +54,7 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     )
 
 
+@rate_limit_handler("default")
 async def handle_menu_selection(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:
@@ -116,6 +119,7 @@ async def handle_menu_selection(
     # The callback patterns are matched in bot.py
 
 
+@rate_limit_handler("default")
 async def handle_back_to_menu(
     update: Update, context: ContextTypes.DEFAULT_TYPE
 ) -> None:

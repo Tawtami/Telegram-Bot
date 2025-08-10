@@ -32,11 +32,14 @@ try:
     from telegram import Update
     from telegram.ext import (
         Application,
+        ApplicationBuilder,
         CommandHandler,
         MessageHandler,
         CallbackQueryHandler,
         ConversationHandler,
         filters,
+        AIORateLimiter,
+        ApplicationHandlerStop,
     )
 
     TELEGRAM_AVAILABLE = True
@@ -161,7 +164,7 @@ except ImportError as e:
 
 from utils.storage import StudentStorage
 from utils.error_handler import ptb_error_handler
-from utils.rate_limiter import rate_limiter
+from utils.rate_limiter import rate_limiter, multi_rate_limiter
 from utils.performance_monitor import monitor
 from ui.keyboards import build_register_keyboard
 
@@ -204,6 +207,73 @@ async def students_command(update: Update, context: Any) -> None:
         document=open("data/students.json", "rb"),
         caption=f"📊 اطلاعات {len(students)} دانش‌آموز",
     )
+
+
+def _is_admin(user_id: int) -> bool:
+    return user_id in set(config.bot.admin_user_ids)
+
+
+async def _ensure_admin(update: Update) -> bool:
+    user_id = update.effective_user.id if update and update.effective_user else 0
+    if not _is_admin(user_id):
+        if update and update.effective_message:
+            await update.effective_message.reply_text("⛔️ این دستور فقط برای ادمین‌هاست.")
+        return False
+    return True
+
+
+async def broadcast_command(update: Update, context: Any) -> None:
+    if not await _ensure_admin(update):
+        return
+    storage: StudentStorage = context.bot_data["storage"]
+    students = storage.get_all_students()
+    if not students:
+        await update.effective_message.reply_text("هیچ کاربری برای ارسال وجود ندارد.")
+        return
+    text = " ".join(context.args) if context.args else ""
+    if not text:
+        await update.effective_message.reply_text("لطفاً متن پیام را پس از دستور وارد کنید.")
+        return
+    sent = 0
+    for s in students:
+        try:
+            if storage.is_user_banned(s.get("user_id")):
+                continue
+            await context.bot.send_message(chat_id=s.get("user_id"), text=text)
+            sent += 1
+        except Exception:
+            continue
+    await update.effective_message.reply_text(f"✅ پیام برای {sent} کاربر ارسال شد.")
+
+
+async def ban_command(update: Update, context: Any) -> None:
+    if not await _ensure_admin(update):
+        return
+    storage: StudentStorage = context.bot_data["storage"]
+    try:
+        uid = int(context.args[0])
+    except Exception:
+        await update.effective_message.reply_text("فرمت درست: /ban 123456789")
+        return
+    if storage.ban_user(uid):
+        await update.effective_message.reply_text(f"کاربر {uid} مسدود شد.")
+    else:
+        await update.effective_message.reply_text("خطا در مسدودسازی کاربر.")
+
+
+async def unban_command(update: Update, context: Any) -> None:
+    if not await _ensure_admin(update):
+        return
+    storage: StudentStorage = context.bot_data["storage"]
+    try:
+        uid = int(context.args[0])
+    except Exception:
+        await update.effective_message.reply_text("فرمت درست: /unban 123456789")
+        return
+    if storage.unban_user(uid):
+        await update.effective_message.reply_text(f"کاربر {uid} آزاد شد.")
+    else:
+        await update.effective_message.reply_text("خطا در آزادسازی کاربر.")
 
 
 async def confirm_payment_command(update: Update, context: Any) -> None:
@@ -372,16 +442,36 @@ def main() -> None:
             print("💡 Or run: pip install -r requirements.txt")
             return
 
-        application = Application.builder().token(config.bot_token).build()
+        application = (
+            ApplicationBuilder()
+            .token(config.bot_token)
+            .rate_limiter(AIORateLimiter())
+            .build()
+        )
 
         # Initialize storage
         storage = StudentStorage()
         application.bot_data["storage"] = storage
         application.bot_data["config"] = config
 
+        # Add pre-check handlers for banned users
+        async def block_banned_messages(update: Update, context: Any) -> None:
+            storage: StudentStorage = context.bot_data["storage"]
+            user_id = update.effective_user.id if update and update.effective_user else 0
+            if storage.is_user_banned(user_id):
+                if update.effective_message:
+                    await update.effective_message.reply_text("⛔️ دسترسی شما محدود شده است.")
+                return
+
+        application.add_handler(MessageHandler(filters.ALL, block_banned_messages), group=0)
+        application.add_handler(CallbackQueryHandler(block_banned_messages), group=0)
+
         # Add handlers
         application.add_handler(CommandHandler("start", start_command))
         application.add_handler(CommandHandler("students", students_command))
+        application.add_handler(CommandHandler("broadcast", broadcast_command))
+        application.add_handler(CommandHandler("ban", ban_command))
+        application.add_handler(CommandHandler("unban", unban_command))
         application.add_handler(CommandHandler("profile", profile_command))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("courses", courses_command))
@@ -440,67 +530,55 @@ def main() -> None:
         force_polling = os.environ.get("FORCE_POLLING", "false").lower() == "true"
 
         if not force_polling and port > 0 and webhook_url_root:
-            # Serve webhook on root path for Railway compatibility
-            full_webhook_url = webhook_url_root.rstrip("/")
-
-            logger.info(
-                f"🔧 Starting webhook on port {port} with URL: {full_webhook_url}"
-            )
-            logger.info(f"🔧 Webhook path: /")
-
-            # Create custom webhook server that handles both health checks and webhooks
-            from http.server import HTTPServer, BaseHTTPRequestHandler
+            # Use aiohttp to serve both healthcheck and webhook
+            import asyncio
+            from aiohttp import web
             import json
 
-            class HealthCheckWebhookHandler(BaseHTTPRequestHandler):
-                def do_GET(self):
-                    """Handle health check requests from Railway"""
-                    if self.path == "/":
-                        self.send_response(200)
-                        self.send_header("Content-Type", "text/plain; charset=utf-8")
-                        self.end_headers()
-                        self.wfile.write(b"OK")
-                    else:
-                        self.send_response(404)
-                        self.end_headers()
+            async def health(request):
+                return web.Response(text="OK", content_type="text/plain")
 
-                def do_POST(self):
-                    """Handle webhook requests from Telegram"""
-                    if self.path == "/":
-                        # Get the request body
-                        content_length = int(self.headers.get("Content-Length", 0))
-                        body = self.rfile.read(content_length)
+            # Derive a non-guessable webhook path (avoid exposing token)
+            token_hash = hashlib.sha256(config.bot_token.encode()).hexdigest()[:24]
+            path = f"/webhook/{token_hash}"
+            full_webhook_url = webhook_url_root.rstrip("/") + path
 
-                        # Create a mock update object for PTB to process
-                        from telegram import Update
+            async def telegram_webhook(request):
+                if request.method != "POST":
+                    return web.Response(status=405)
+                try:
+                    data = await request.json()
+                except Exception:
+                    return web.Response(status=400)
+                update = Update.de_json(data, application.bot)
+                await application.process_update(update)
+                return web.json_response({"ok": True})
 
-                        update = Update.de_json(json.loads(body), application.bot)
+            app = web.Application()
+            app.router.add_get("/", health)
+            app.router.add_post(path, telegram_webhook)
 
-                        # Process the update
-                        application.process_update(update)
+            async def runner():
+                await application.initialize()
+                await application.start()
+                await application.bot.set_webhook(url=full_webhook_url, drop_pending_updates=True)
+                runner = web.AppRunner(app)
+                await runner.setup()
+                site = web.TCPSite(runner, "0.0.0.0", port)
+                logger.info(f"🌐 Webhook set to: {full_webhook_url}")
+                logger.info(f"✅ Health check at: http://0.0.0.0:{port}/")
+                await site.start()
+                try:
+                    while True:
+                        await asyncio.sleep(3600)
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    await application.bot.delete_webhook()
+                    await application.stop()
+                    await application.shutdown()
 
-                        # Send success response
-                        self.send_response(200)
-                        self.send_header("Content-Type", "application/json")
-                        self.end_headers()
-                        self.wfile.write(json.dumps({"ok": True}).encode())
-                    else:
-                        self.send_response(404)
-                        self.end_headers()
-
-                def log_message(self, format, *args):
-                    return
-
-            # Start custom server with health check support
-            server = HTTPServer(("0.0.0.0", port), HealthCheckWebhookHandler)
-            logger.info(f"✅ Health check and webhook server started on port {port}")
-
-            # Set webhook URL
-            application.bot.set_webhook(url=full_webhook_url)
-            logger.info(f"🌐 Webhook set to: {full_webhook_url}")
-
-            # Start the server
-            server.serve_forever()
+            asyncio.run(runner())
         else:
             application.run_polling(drop_pending_updates=False)
             logger.info("📡 Polling started")

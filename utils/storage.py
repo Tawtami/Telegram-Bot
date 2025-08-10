@@ -25,6 +25,7 @@ class StudentStorage:
         self.students_file = self.data_dir / "students.json"
         self.courses_file = self.data_dir / "courses.json"
         self.purchases_file = self.data_dir / "purchases.json"
+        self.banned_file = self.data_dir / "banned.json"
         # Use a thread lock to guard file writes (PTB handlers run concurrently)
         self.lock = threading.Lock()
         self._cache = {}
@@ -45,6 +46,10 @@ class StudentStorage:
         # Initialize purchases.json
         if not self.purchases_file.exists():
             self._save_json(self.purchases_file, {"purchases": []})
+
+        # Initialize banned.json
+        if not self.banned_file.exists():
+            self._save_json(self.banned_file, {"banned_user_ids": []})
 
     def _load_json(self, file_path: Path) -> Dict[str, Any]:
         """Load JSON file safely with caching"""
@@ -221,6 +226,48 @@ class StudentStorage:
             return self.save_student(student)
         except Exception as e:
             logger.error(f"Error adding pending payment: {e}")
+            return False
+
+    # -----------------------------
+    # Ban management
+    # -----------------------------
+    def _load_banned(self) -> Dict[str, Any]:
+        try:
+            return self._load_json(self.banned_file) or {"banned_user_ids": []}
+        except Exception:
+            return {"banned_user_ids": []}
+
+    def is_user_banned(self, user_id: int) -> bool:
+        try:
+            data = self._load_banned()
+            return int(user_id) in set(data.get("banned_user_ids", []))
+        except Exception:
+            return False
+
+    def ban_user(self, user_id: int) -> bool:
+        try:
+            data = self._load_banned()
+            banned: list = list({int(x) for x in data.get("banned_user_ids", [])})
+            if int(user_id) not in banned:
+                banned.append(int(user_id))
+            data["banned_user_ids"] = banned
+            self._save_json(self.banned_file, data)
+            return True
+        except Exception as e:
+            logger.error(f"Error banning user {user_id}: {e}")
+            return False
+
+    def unban_user(self, user_id: int) -> bool:
+        try:
+            data = self._load_banned()
+            banned_set = {int(x) for x in data.get("banned_user_ids", [])}
+            if int(user_id) in banned_set:
+                banned_set.remove(int(user_id))
+            data["banned_user_ids"] = list(banned_set)
+            self._save_json(self.banned_file, data)
+            return True
+        except Exception as e:
+            logger.error(f"Error unbanning user {user_id}: {e}")
             return False
 
     def get_user_courses(self, user_id: int) -> Dict[str, list]:

@@ -52,11 +52,33 @@ cp env.txt .env
 # Edit .env with your BOT_TOKEN
 ```
 
-### 3. Run Bot
+### 3. Environment Variables
 
-```bash
-python bot.py
+Create `.env` (or set via Railway variables):
+
 ```
+BOT_TOKEN=123456:ABC...
+ADMIN_USER_IDS=12345678,87654321
+PAYMENT_CARD_NUMBER=6037-9977-1234-5678
+PAYMENT_PAYEE_NAME=استاد حاتمی
+# For Railway webhook deployment
+RAILWAY_PUBLIC_DOMAIN=your-app.up.railway.app
+WEBHOOK_URL=https://your-app.up.railway.app
+PORT=8080
+```
+
+### 4. Run (local)
+
+```
+python start.py
+```
+
+### 5. Deploy to Railway (webhook mode)
+
+- `Procfile` uses `python start.py`
+- Healthcheck at `/` returns `OK`
+- Webhook is set to `https://<RAILWAY_PUBLIC_DOMAIN>/webhook/<hash>` automatically
+- No long polling in production
 
 ## 📁 Project Structure
 
@@ -139,6 +161,7 @@ User data is stored in JSON format:
 - **Comprehensive error handling** with system error IDs
 - **Data sanitization** and normalization
 - **Rate limiting** to prevent abuse
+- **Admin controls**: `/broadcast`, `/ban`, `/unban`, `/students`, `/confirm_payment`
 
 ### Performance Monitoring
 
