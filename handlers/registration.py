@@ -347,6 +347,18 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return ConversationHandler.END
 
 
+@rate_limit_handler("default")
+async def cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Cancel registration from callback query"""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "❌ ثبت‌نام لغو شد. می‌توانید با کلیک روی دکمه زیر دوباره شروع کنید:",
+        reply_markup=build_register_keyboard(),
+    )
+    return ConversationHandler.END
+
+
 def build_registration_conversation() -> ConversationHandler:
     """Build the registration conversation handler"""
     return ConversationHandler(
@@ -365,7 +377,7 @@ def build_registration_conversation() -> ConversationHandler:
             ],
             RegistrationStates.PROVINCE: [
                 CallbackQueryHandler(province, pattern="^province:"),
-                CallbackQueryHandler(cancel, pattern="^cancel_reg$"),
+                CallbackQueryHandler(cancel_callback, pattern="^cancel_reg$"),
             ],
             RegistrationStates.CITY: [
                 CallbackQueryHandler(city, pattern="^city:"),
@@ -385,9 +397,9 @@ def build_registration_conversation() -> ConversationHandler:
         },
         fallbacks=[
             CommandHandler("cancel", cancel),
-            CallbackQueryHandler(cancel, pattern="^cancel_reg$"),
+            CallbackQueryHandler(cancel_callback, pattern="^cancel_reg$"),
         ],
         name="registration",
         persistent=False,
-        per_message=True,
+        per_chat=True,
     )
