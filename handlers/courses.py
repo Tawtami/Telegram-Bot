@@ -199,7 +199,7 @@ async def handle_purchased_courses(
 
     if not user_courses["purchased_courses"] and not user_courses["free_courses"]:
         await query.edit_message_text(
-            "🛒 **سبد خرید من:**\n\n"
+            "🛒 سبد خرید من:\n\n"
             "شما هنوز در هیچ دوره‌ای ثبت‌نام نکرده‌اید.\n\n"
             "🎓 برای ثبت‌نام در دوره‌های رایگان:\n"
             "📚 دوره‌های رایگان جمعه\n\n"
@@ -208,7 +208,6 @@ async def handle_purchased_courses(
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
             ),
-            parse_mode=ParseMode.MARKDOWN,
         )
         return
 
@@ -223,12 +222,12 @@ async def handle_purchased_courses(
         course_details = {}
 
     # Build courses list
-    message_text = "🛒 **سبد خرید من:**\n\n"
+    message_text = "🛒 سبد خرید من:\n\n"
     keyboard = []
 
     # Show free courses
     if user_courses["free_courses"]:
-        message_text += "🎓 **دوره‌های رایگان:**\n"
+        message_text += "🎓 دوره‌های رایگان:\n"
         for course_id in user_courses["free_courses"]:
             if course_id in course_details:
                 course = course_details[course_id]
@@ -241,7 +240,7 @@ async def handle_purchased_courses(
 
     # Show purchased courses
     if user_courses["purchased_courses"]:
-        message_text += "💼 **دوره‌های تخصصی:**\n"
+        message_text += "💼 دوره‌های تخصصی:\n"
         for course_id in user_courses["purchased_courses"]:
             if course_id in course_details:
                 course = course_details[course_id]
