@@ -92,6 +92,19 @@ async def start_registration(update: Update, context: Any) -> int:
 
 
 @rate_limit_handler("default")
+async def start_registration_cmd(update: Update, context: Any) -> int:
+    """Start registration via /register command"""
+    context.user_data.clear()
+    context.user_data["registration"] = {}
+    await update.message.reply_text(
+        "👋 به فرآیند ثبت‌نام خوش آمدید!\n\nلطفاً نام خود را به فارسی وارد کنید:",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_reg")]]
+        ),
+    )
+    return RegistrationStates.FIRST_NAME
+
+@rate_limit_handler("default")
 async def first_name(update: Update, context: Any) -> int:
     """Handle first name input"""
     name = update.message.text.strip()
@@ -474,7 +487,8 @@ def build_registration_conversation() -> ConversationHandler:
     """Build the registration conversation handler"""
     return ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(start_registration, pattern="^start_registration$")
+            CallbackQueryHandler(start_registration, pattern="^start_registration$"),
+            CommandHandler("register", start_registration_cmd),
         ],
         states={
             RegistrationStates.FIRST_NAME: [
