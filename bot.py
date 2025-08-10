@@ -574,10 +574,14 @@ async def payments_audit_command(update: Update, context: Any) -> None:
         lines = ["🧾 گزارش پرداخت‌ها:"]
         # Sort by created_at desc
         entries = sorted(
-            notifications.items(), key=lambda kv: kv[1].get("created_at", 0), reverse=True
+            notifications.items(),
+            key=lambda kv: kv[1].get("created_at", 0),
+            reverse=True,
         )
         for token, meta in entries[:20]:
-            created = datetime.fromtimestamp(meta.get("created_at", 0)).strftime("%Y-%m-%d %H:%M")
+            created = datetime.fromtimestamp(meta.get("created_at", 0)).strftime(
+                "%Y-%m-%d %H:%M"
+            )
             decided_at = (
                 datetime.fromtimestamp(meta["decided_at"]).strftime("%Y-%m-%d %H:%M")
                 if meta.get("decided_at")
@@ -642,7 +646,9 @@ async def setup_handlers(application: Application) -> None:
             CommandHandler("confirm_payment", confirm_payment_command), group=1
         )
         application.add_handler(CommandHandler("status", status_command), group=1)
-        application.add_handler(CommandHandler("payments_audit", payments_audit_command), group=1)
+        application.add_handler(
+            CommandHandler("payments_audit", payments_audit_command), group=1
+        )
 
         # Add conversation handlers
         registration_conv = build_registration_conversation()
