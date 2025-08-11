@@ -384,15 +384,25 @@ async def handle_payment_decision(
             if decision == "approve"
             else "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
         )
-        # Notify admins with concise status update
+        # Notify admins with concise status update and push updated participants if approval for course
         try:
-            from utils.admin_notify import notify_admins
-
+            from utils.admin_notify import notify_admins, send_paginated_list
             await notify_admins(
                 context,
                 context.bot_data.get("config").bot.admin_user_ids,
                 f"📊 وضعیت پرداخت {item_type} «{item_title}» برای کاربر {student_id}: {('تایید' if decision=='approve' else 'رد')}",
             )
+            if decision == "approve" and item_type == "course":
+                from database.service import get_course_participants_by_slug
+                with session_scope() as session:
+                    uids = get_course_participants_by_slug(session, item_id, status="approved")
+                lines = [str(uid) for uid in uids]
+                await send_paginated_list(
+                    context,
+                    context.bot_data.get("config").bot.admin_user_ids,
+                    f"🎓 بروزرسانی شرکت‌کنندگان دوره {item_title}",
+                    lines,
+                )
         except Exception:
             pass
 

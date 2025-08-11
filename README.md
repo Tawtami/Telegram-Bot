@@ -114,6 +114,28 @@ python -m database.migrate
 
 - Plaintext -> encrypted: handled by insertion via `database/service.encrypt_text`.
 
+Full migration steps (example):
+
+1) Initialize DB tables
+
+```bash
+python -m database.migrate
+```
+
+2) Dry-run JSON import
+
+```bash
+python scripts/json_to_db.py --dry-run
+```
+
+3) Execute import
+
+```bash
+python scripts/json_to_db.py
+```
+
+4) Verify counts via a simple SQL query or by adding a temporary `/status` report.
+
 ## 🔐 Security & Env
 
 Required in production:

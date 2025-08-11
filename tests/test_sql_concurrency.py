@@ -3,6 +3,7 @@ import pytest
 
 def _seed_purchase(session, crypto_manager):
     from database.models_sql import User, Purchase
+
     u = User(
         telegram_user_id=999,
         first_name_enc=crypto_manager.encrypt_text("X"),
@@ -11,7 +12,9 @@ def _seed_purchase(session, crypto_manager):
     )
     session.add(u)
     session.flush()
-    p = Purchase(user_id=u.id, product_type="course", product_id="slug-1", status="pending")
+    p = Purchase(
+        user_id=u.id, product_type="course", product_id="slug-1", status="pending"
+    )
     session.add(p)
     session.flush()
     return u, p
@@ -33,5 +36,3 @@ def test_atomic_approve(tmp_path):
     # Exactly one should succeed
     ok_count = int(r1 is not None) + int(r2 is not None)
     assert ok_count == 1
-
-

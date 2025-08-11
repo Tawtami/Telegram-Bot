@@ -14,6 +14,10 @@ from config import config
 from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
+from database.db import session_scope
+from database.service import get_or_create_user, create_purchase
+from utils.admin_notify import send_paginated_list
+from database.service import get_course_participants_by_slug
 
 logger = logging.getLogger(__name__)
 
@@ -306,20 +310,40 @@ async def handle_course_registration(
         course = None
 
     if course_type == "free":
-        # Register for free course - NO PAYMENT REQUIRED
-        if storage.save_course_registration(
-            query.from_user.id, course_id, is_paid=False
-        ):
+        # Register free course in SQL as approved purchase
+        try:
+            with session_scope() as session:
+                u = get_or_create_user(session, query.from_user.id)
+                create_purchase(
+                    session,
+                    user_id=u.id,
+                    product_type="course",
+                    product_id=course_id,
+                    status="approved",
+                )
             course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
                 f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد!\n\n"
                 f"📅 زمان: {course.get('schedule', 'به زودی اعلام می‌شود')}\n"
                 f"📍 پلتفرم: {course.get('platform', 'اسکای‌روم')}\n\n"
-                "🎓 این دوره کاملاً رایگان است و نیازی به پرداخت ندارد.\n"
-                "جزئیات بیشتر به زودی برای شما ارسال خواهد شد.",
+                "🎓 این دوره کاملاً رایگان است و نیازی به پرداخت ندارد.",
                 reply_markup=build_main_menu_keyboard(),
             )
-        else:
+            # Push updated participant list to admins
+            try:
+                from config import config as app_config
+                with session_scope() as session:
+                    uids = get_course_participants_by_slug(session, course_id, status="approved")
+                lines = [str(uid) for uid in uids]
+                await send_paginated_list(
+                    context,
+                    app_config.bot.admin_user_ids,
+                    f"🎓 فهرست شرکت‌کنندگان دوره رایگان {course_title}",
+                    lines,
+                )
+            except Exception:
+                pass
+        except Exception:
             await query.edit_message_text(
                 "❌ خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.",
                 reply_markup=build_main_menu_keyboard(),

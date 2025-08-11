@@ -112,11 +112,17 @@ async def handle_menu_selection(
 
         kb = InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton("✏️ ویرایش پروفایل", callback_data="menu_profile_edit")],
+                [
+                    InlineKeyboardButton(
+                        "✏️ ویرایش پروفایل", callback_data="menu_profile_edit"
+                    )
+                ],
                 [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
             ]
         )
-        await query.edit_message_text(profile_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
+        await query.edit_message_text(
+            profile_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN
+        )
         return
 
     # Other menu options are handled by their respective handlers
@@ -209,6 +215,7 @@ def build_menu_handlers():
             CommandHandler("list_special", list_special_cmd),
         ]
     )
+
     # Profile edit and history handlers (callbacks and commands)
     async def profile_edit_callback(update, context):
         query = update.callback_query
@@ -225,7 +232,9 @@ def build_menu_handlers():
         if update.effective_user.id not in config.bot.admin_user_ids:
             return
         if not context.args:
-            await update.effective_message.reply_text("فرمت: /profile_history <telegram_user_id>")
+            await update.effective_message.reply_text(
+                "فرمت: /profile_history <telegram_user_id>"
+            )
             return
         try:
             target = int(context.args[0])
@@ -233,8 +242,11 @@ def build_menu_handlers():
             await update.effective_message.reply_text("شناسه نامعتبر است.")
             return
         from database.models_sql import User as DBUser, ProfileChange
+
         with session_scope() as session:
-            db_user = session.execute(select(DBUser).where(DBUser.telegram_user_id == target)).scalar_one_or_none()
+            db_user = session.execute(
+                select(DBUser).where(DBUser.telegram_user_id == target)
+            ).scalar_one_or_none()
             if not db_user:
                 await update.effective_message.reply_text("کاربر یافت نشد.")
                 return
@@ -246,7 +258,12 @@ def build_menu_handlers():
                 .all()
             )
         lines = [f"{r.timestamp:%Y-%m-%d %H:%M} | {r.field_name}" for r in rows]
-        await send_paginated_list(context, [update.effective_user.id], f"🕒 تاریخچه ویرایش پروفایل {target}", lines)
+        await send_paginated_list(
+            context,
+            [update.effective_user.id],
+            f"🕒 تاریخچه ویرایش پروفایل {target}",
+            lines,
+        )
 
     handlers.extend(
         [
