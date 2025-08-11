@@ -76,6 +76,40 @@ python start.py
 ```
 
 ### 5. Deploy to Railway (webhook mode)
+## 🗄️ Database (Production-ready)
+
+- Preferred: PostgreSQL via `DATABASE_URL` (e.g., `postgresql+psycopg://user:pass@host/db`)
+- Dev fallback: SQLite at `data/app.db`
+
+Schema is defined in `database/models_sql.py`. Bootstrap locally:
+
+```bash
+python -m database.migrate
+```
+
+Migration path to Alembic is recommended for production. Ensure indexes:
+- `users.telegram_user_id` (unique)
+- `courses.slug` (unique)
+- `purchases.status`
+- `receipts.file_unique_id` (unique)
+
+PII is encrypted at rest in `_enc` columns using AES-GCM with `ENCRYPTION_KEY`.
+
+## 🔐 Security & Env
+
+Required in production:
+- `BOT_TOKEN`, `ADMIN_USER_IDS`, `ENCRYPTION_KEY`, `DATABASE_URL`, `WEBHOOK_URL`
+
+## 🧪 Tests
+
+Run all tests:
+
+```bash
+pytest -q
+```
+
+Includes: validators (Persian-only), encryption at rest, payment decisions, logging redaction.
+
 
 - `Procfile` uses `python start.py`
 - Healthcheck at `/` returns `OK`

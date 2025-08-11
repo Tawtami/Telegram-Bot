@@ -25,7 +25,8 @@ TELEGRAM_AVAILABLE = True
 from config import config
 from utils.validators import Validator
 from utils.rate_limiter import rate_limit_handler
-from utils.storage import StudentStorage
+from database.db import session_scope
+from database.service import get_or_create_user
 from ui.keyboards import (
     build_register_keyboard,
     build_grades_keyboard,
@@ -409,19 +410,20 @@ async def confirm(update: Update, context: Any) -> int:
         return ConversationHandler.END
 
     # Save user data
-    storage: StudentStorage = context.bot_data["storage"]
-    user_data = {
-        "user_id": update.effective_user.id,
-        "first_name": context.user_data.get("first_name", ""),
-        "last_name": context.user_data.get("last_name", ""),
-        "phone_number": context.user_data.get("phone_number", ""),
-        "province": context.user_data.get("province", ""),
-        "city": context.user_data.get("city", ""),
-        "grade": context.user_data.get("grade", ""),
-        "field": context.user_data.get("field", ""),
-    }
-
-    if not storage.save_student(user_data):
+    try:
+        with session_scope() as session:
+            get_or_create_user(
+                session,
+                telegram_user_id=update.effective_user.id,
+                first_name=context.user_data.get("first_name", ""),
+                last_name=context.user_data.get("last_name", ""),
+                phone=context.user_data.get("phone_number", ""),
+                province=context.user_data.get("province", ""),
+                city=context.user_data.get("city", ""),
+                grade=context.user_data.get("grade", ""),
+                field_of_study=context.user_data.get("field", ""),
+            )
+    except Exception:
         if TELEGRAM_AVAILABLE:
             await query.edit_message_text(
                 "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:",

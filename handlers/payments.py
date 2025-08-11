@@ -15,6 +15,13 @@ from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 import hashlib
 import time
 import asyncio
+from database.db import session_scope
+from database.service import (
+    get_or_create_user,
+    create_purchase,
+    add_receipt,
+    approve_or_reject_purchase,
+)
 
 
 @rate_limit_handler("default")
@@ -76,13 +83,16 @@ async def handle_payment_receipt(
     # Course payment
     if context.user_data.get("pending_course"):
         course_id = context.user_data["pending_course"]
-
-        if not storage.add_pending_payment(update.effective_user.id, course_id):
-            await update.message.reply_text(
-                "❌ خطا در ثبت پرداخت. لطفاً دوباره تلاش کنید.",
-                reply_markup=build_main_menu_keyboard(),
+        # Create DB purchase pending
+        with session_scope() as session:
+            u = get_or_create_user(session, update.effective_user.id)
+            purchase = create_purchase(
+                session,
+                user_id=u.id,
+                product_type="course",
+                product_id=course_id,
+                status="pending",
             )
-            return
 
         # Load course title from JSON
         import json
@@ -121,13 +131,16 @@ async def handle_payment_receipt(
     # Book payment
     elif context.user_data.get("book_purchase"):
         book_data = context.user_data["book_purchase"]
-
-        if not storage.save_book_purchase(update.effective_user.id, book_data):
-            await update.message.reply_text(
-                "❌ خطا در ثبت سفارش کتاب. لطفاً دوباره تلاش کنید.",
-                reply_markup=build_main_menu_keyboard(),
+        # Create DB purchase pending (book)
+        with session_scope() as session:
+            u = get_or_create_user(session, update.effective_user.id)
+            purchase = create_purchase(
+                session,
+                user_id=u.id,
+                product_type="book",
+                product_id=book_data.get("title", "book"),
+                status="pending",
             )
-            return
 
         caption = (
             f"🧾 رسید پرداخت کتاب\n\n"
@@ -294,49 +307,41 @@ async def handle_payment_decision(
         item_id = meta["item_id"]
         item_title = meta.get("item_title") or item_id
 
-        if decision == "approve":
-            if item_type == "course":
-                # Move pending course to purchased
-                student = storage.get_student(student_id)
-                if student and item_id:
-                    # Remove from pending and add to purchased
-                    pend = student.get("pending_payments", [])
-                    if item_id in pend:
-                        pend.remove(item_id)
-                    purchased = student.get("purchased_courses", [])
-                    if item_id not in purchased:
-                        purchased.append(item_id)
-                    student["pending_payments"] = pend
-                    student["purchased_courses"] = purchased
-                    storage.save_student(student)
-            elif item_type == "book":
-                # Mark matching book purchase as approved (flag)
-                student = storage.get_student(student_id)
-                if student:
-                    purchases = student.get("book_purchases", [])
-                    for p in reversed(purchases):
-                        if p.get("title") == item_title:
-                            p["approved"] = True
-                            break
-                    storage.save_student(student)
-            # Notify student
-            await context.bot.send_message(
-                chat_id=student_id,
-                text=(
-                    f"✅ پرداخت شما برای «{item_title}» تایید شد."
-                    if item_type == "book"
-                    else f"✅ پرداخت شما برای دوره «{item_title}» تایید شد."
-                ),
+        # Atomic decision in DB
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser, Purchase as DBPurchase
+        with session_scope() as session:
+            db_user = (
+                session.execute(select(DBUser).where(DBUser.telegram_user_id == student_id))
+                .scalar_one_or_none()
             )
-            result_text = "✅ پرداخت تایید شد و به کاربر اطلاع داده شد."
-        elif decision == "reject":
-            await context.bot.send_message(
-                chat_id=student_id,
-                text=(
-                    f"❌ پرداخت شما برای «{item_title}» ناموفق بود. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
-                ),
+            db_purchase = (
+                session.execute(
+                    select(DBPurchase).where(
+                        DBPurchase.user_id == (db_user.id if db_user else -1),
+                        DBPurchase.product_type == ("book" if item_type == "book" else "course"),
+                        DBPurchase.product_id == item_id,
+                        DBPurchase.status == "pending",
+                    ).order_by(DBPurchase.created_at.desc())
+                ).scalar_one_or_none()
             )
-            result_text = "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
+            if db_purchase:
+                approve_or_reject_purchase(session, db_purchase.id, user_id, decision)
+
+        # Notify student
+        await context.bot.send_message(
+            chat_id=student_id,
+            text=(
+                f"✅ پرداخت شما برای «{item_title}» تایید شد."
+                if decision == "approve"
+                else f"❌ پرداخت شما برای «{item_title}» ناموفق بود. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
+            ),
+        )
+        result_text = (
+            "✅ پرداخت تایید شد و به کاربر اطلاع داده شد."
+            if decision == "approve"
+            else "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
+        )
 
         # Mark processed and disable buttons for all admin messages
         meta["processed"] = True
