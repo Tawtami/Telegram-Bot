@@ -1348,6 +1348,12 @@ async def run_webhook_mode(application: Application) -> None:
                     if not csrf_value or len(csrf_value) < 16:
                         csrf_value = secrets.token_urlsafe(32)
 
+                    flash_msg = request.cookies.get("flash", "")
+                    flash_type = request.cookies.get("flash_type", "success")
+                    flash_html = (
+                        f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else ""
+                    )
+
                     html_rows = "".join(
                         f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
@@ -1375,7 +1381,7 @@ async def run_webhook_mode(application: Application) -> None:
                     <head>
                       <meta charset='utf-8'>
                       <title>مدیریت سفارش‌ها</title>
-                      <style>
+                       <style>
                         body {{ font-family: Vazirmatn, tahoma, sans-serif; margin: 24px; background:#f8fafc; color:#0f172a; }}
                         h3 {{ margin-top:0; }}
                         .panel {{ background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,0.04); }}
@@ -1395,10 +1401,14 @@ async def run_webhook_mode(application: Application) -> None:
                         .badge.approved {{ background:#16a34a; }}
                         .badge.rejected {{ background:#dc2626; }}
                         .meta {{ color:#475569; font-size:13px; }}
+                         .flash {{ padding:10px 12px; border-radius:6px; margin-bottom:12px; }}
+                         .flash.success {{ background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; }}
+                         .flash.error {{ background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }}
                       </style>
                     </head>
                     <body>
                       <div class='panel'>
+                        {flash_html}
                         <h3>سفارش‌ها ({status})</h3>
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
@@ -1451,7 +1461,9 @@ async def run_webhook_mode(application: Application) -> None:
                       </div>
                     </body></html>
                     """
-                    resp = web.Response(text=body, content_type="text/html; charset=utf-8")
+                    resp = web.Response(
+                        text=body, content_type="text/html; charset=utf-8"
+                    )
                     try:
                         resp.set_cookie(
                             "csrf",
@@ -1517,6 +1529,8 @@ async def run_webhook_mode(application: Application) -> None:
 
                 # Try to notify student and admins asynchronously (fire-and-forget)
                 try:
+                    admin_ip = request.headers.get("X-Forwarded-For", request.remote)
+                    logger.info(f"Admin action via GET: id={pid} action={action} ip={admin_ip}")
                     student_id = (
                         db_purchase.user_id
                     )  # DB user numeric id; need telegram id lookup if necessary
@@ -1572,13 +1586,18 @@ async def run_webhook_mode(application: Application) -> None:
                     return web.Response(status=400, text="bad request")
 
                 admin_id = (config.bot.admin_user_ids or [0])[0]
+                admin_ip = request.headers.get("X-Forwarded-For", request.remote)
                 with session_scope() as session:
                     db_purchase = session.execute(
                         select(Purchase).where(Purchase.id == pid)
                     ).scalar_one_or_none()
                     if not db_purchase or db_purchase.status != "pending":
-                        return web.Response(status=404, text="not found or already decided")
-                    result = approve_or_reject_purchase(session, db_purchase.id, admin_id, action)
+                        return web.Response(
+                            status=404, text="not found or already decided"
+                        )
+                    result = approve_or_reject_purchase(
+                        session, db_purchase.id, admin_id, action
+                    )
                     if not result:
                         return web.Response(status=409, text="conflict")
 
@@ -1594,17 +1613,75 @@ async def run_webhook_mode(application: Application) -> None:
                             if action == "approve"
                             else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
                         )
-                        asyncio.create_task(application.bot.send_message(chat_id=u.telegram_user_id, text=text))
+                        asyncio.create_task(
+                            application.bot.send_message(
+                                chat_id=u.telegram_user_id, text=text
+                            )
+                        )
+                    try:
+                        logger.info(f"Admin action via POST: id={pid} action={action} ip={admin_ip}")
+                    except Exception:
+                        pass
                 except Exception:
                     pass
 
                 if redirect_to:
-                    raise web.HTTPSeeOther(location=redirect_to)
+                    # Set flash message for one redirect
+                    msg = "با موفقیت تایید شد." if action == "approve" else "با موفقیت رد شد."
+                    resp = web.HTTPSeeOther(location=redirect_to)
+                    try:
+                        resp.set_cookie(
+                            "flash",
+                            msg,
+                            max_age=10,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Strict",
+                        )
+                        resp.set_cookie(
+                            "flash_type",
+                            "success",
+                            max_age=10,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Strict",
+                        )
+                    except Exception:
+                        pass
+                    raise resp
                 return web.json_response({"ok": True, "id": pid, "action": action})
             except web.HTTPException:
                 raise
             except Exception as e:
                 logger.error(f"admin_act_post error: {e}")
+                # Attempt to redirect back with error flash if redirect provided
+                try:
+                    data = await request.post()
+                    redirect_to = data.get("redirect") or ""
+                    if redirect_to:
+                        resp = web.HTTPSeeOther(location=redirect_to)
+                        try:
+                            resp.set_cookie(
+                                "flash",
+                                "خطا در انجام عملیات",
+                                max_age=10,
+                                path="/",
+                                secure=str(config.webhook.url).startswith("https://"),
+                                samesite="Strict",
+                            )
+                            resp.set_cookie(
+                                "flash_type",
+                                "error",
+                                max_age=10,
+                                path="/",
+                                secure=str(config.webhook.url).startswith("https://"),
+                                samesite="Strict",
+                            )
+                        except Exception:
+                            pass
+                        raise resp
+                except Exception:
+                    pass
                 return web.Response(status=500, text="server error")
 
         # Add routes
