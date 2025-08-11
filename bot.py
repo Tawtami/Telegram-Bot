@@ -1269,8 +1269,21 @@ async def run_webhook_mode(application: Application) -> None:
                     )
                 stmt = stmt.order_by(Purchase.created_at.desc())
 
-                with session_scope() as session:
-                    items = list(session.execute(stmt).scalars())
+                # Execute query with one-time auto-init retry if schema is missing
+                try:
+                    with session_scope() as session:
+                        items = list(session.execute(stmt).scalars())
+                except Exception as e:
+                    try:
+                        logger.warning(f"admin_list query failed, attempting DB init: {e}")
+                        from database.migrate import init_db
+
+                        init_db()
+                        with session_scope() as session:
+                            items = list(session.execute(stmt).scalars())
+                    except Exception as e2:
+                        logger.error(f"admin_list fatal DB error after init retry: {e2}")
+                        return web.Response(status=500, text="server error")
 
                 total = len(items)
                 start = page * page_size
@@ -1515,10 +1528,24 @@ async def run_webhook_mode(application: Application) -> None:
                 # For audit purposes, attribute to first admin id
                 admin_id = (config.bot.admin_user_ids or [0])[0]
 
-                with session_scope() as session:
-                    db_purchase = session.execute(
-                        select(Purchase).where(Purchase.id == pid)
-                    ).scalar_one_or_none()
+                try:
+                    with session_scope() as session:
+                        db_purchase = session.execute(
+                            select(Purchase).where(Purchase.id == pid)
+                        ).scalar_one_or_none()
+                except Exception as e:
+                    try:
+                        logger.warning(f"admin_act query failed, attempting DB init: {e}")
+                        from database.migrate import init_db
+
+                        init_db()
+                        with session_scope() as session:
+                            db_purchase = session.execute(
+                                select(Purchase).where(Purchase.id == pid)
+                            ).scalar_one_or_none()
+                    except Exception as e2:
+                        logger.error(f"admin_act fatal DB error after init retry: {e2}")
+                        return web.Response(status=500, text="server error")
                     if not db_purchase or db_purchase.status != "pending":
                         return web.Response(
                             status=404, text="not found or already decided"
@@ -1591,10 +1618,24 @@ async def run_webhook_mode(application: Application) -> None:
 
                 admin_id = (config.bot.admin_user_ids or [0])[0]
                 admin_ip = request.headers.get("X-Forwarded-For", request.remote)
-                with session_scope() as session:
-                    db_purchase = session.execute(
-                        select(Purchase).where(Purchase.id == pid)
-                    ).scalar_one_or_none()
+                try:
+                    with session_scope() as session:
+                        db_purchase = session.execute(
+                            select(Purchase).where(Purchase.id == pid)
+                        ).scalar_one_or_none()
+                except Exception as e:
+                    try:
+                        logger.warning(f"admin_act_post query failed, attempting DB init: {e}")
+                        from database.migrate import init_db
+
+                        init_db()
+                        with session_scope() as session:
+                            db_purchase = session.execute(
+                                select(Purchase).where(Purchase.id == pid)
+                            ).scalar_one_or_none()
+                    except Exception as e2:
+                        logger.error(f"admin_act_post fatal DB error after init retry: {e2}")
+                        return web.Response(status=500, text="server error")
                     if not db_purchase or db_purchase.status != "pending":
                         return web.Response(
                             status=404, text="not found or already decided"
