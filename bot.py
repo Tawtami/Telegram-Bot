@@ -1195,6 +1195,12 @@ async def run_webhook_mode(application: Application) -> None:
         # Admin dashboard (token-protected) - minimal HTML/JSON
         async def _require_token(request):
             token = request.query.get("token", "").strip()
+            if not token and request.method.upper() == "POST":
+                try:
+                    data = await request.post()
+                    token = (data.get("token") or "").strip()
+                except Exception:
+                    token = ""
             expected = (config.bot.admin_dashboard_token or "").strip()
             if not expected or token != expected:
                 return None
@@ -1209,6 +1215,7 @@ async def run_webhook_mode(application: Application) -> None:
                 from database.db import session_scope
                 from database.models_sql import Purchase, User as DBUser
                 from datetime import datetime, timedelta
+                import secrets
 
                 status = request.query.get("status", "pending").lower()
                 ptype = request.query.get("type", "").lower()
@@ -1236,7 +1243,11 @@ async def run_webhook_mode(application: Application) -> None:
                             if len(to_str) > 10
                             else datetime.fromisoformat(to_str + "T00:00:00")
                         )
-                        dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
+                        dt_to = base + (
+                            timedelta(days=1)
+                            if len(to_str) <= 10
+                            else timedelta(seconds=0)
+                        )
                 except Exception:
                     dt_from = None
                     dt_to = None
@@ -1253,7 +1264,9 @@ async def run_webhook_mode(application: Application) -> None:
                 if dt_to is not None:
                     stmt = stmt.where(Purchase.created_at < dt_to)
                 if uid is not None:
-                    stmt = stmt.join(DBUser, DBUser.id == Purchase.user_id).where(DBUser.telegram_user_id == uid)
+                    stmt = stmt.join(DBUser, DBUser.id == Purchase.user_id).where(
+                        DBUser.telegram_user_id == uid
+                    )
                 stmt = stmt.order_by(Purchase.created_at.desc())
 
                 with session_scope() as session:
@@ -1282,27 +1295,39 @@ async def run_webhook_mode(application: Application) -> None:
                 wants_csv = fmt == "csv" or ("text/csv" in accept)
                 if wants_csv:
                     import csv, io
+
                     buf = io.StringIO()
                     writer = csv.writer(buf)
-                    writer.writerow(["id", "user_id", "type", "product", "status", "created_at"])
+                    writer.writerow(
+                        ["id", "user_id", "type", "product", "status", "created_at"]
+                    )
                     for p in items:
-                        writer.writerow([
-                            p.id,
-                            p.user_id,
-                            p.product_type,
-                            p.product_id,
-                            p.status,
-                            p.created_at.isoformat() if getattr(p, "created_at", None) else "",
-                        ])
+                        writer.writerow(
+                            [
+                                p.id,
+                                p.user_id,
+                                p.product_type,
+                                p.product_id,
+                                p.status,
+                                (
+                                    p.created_at.isoformat()
+                                    if getattr(p, "created_at", None)
+                                    else ""
+                                ),
+                            ]
+                        )
                     csv_bytes = buf.getvalue().encode("utf-8")
                     return web.Response(
                         body=csv_bytes,
                         content_type="text/csv; charset=utf-8",
-                        headers={"Content-Disposition": f"attachment; filename=orders_{status or 'all'}.csv"},
+                        headers={
+                            "Content-Disposition": f"attachment; filename=orders_{status or 'all'}.csv"
+                        },
                     )
 
                 if "text/html" in accept or not accept:
                     qbase = f"/admin?token={config.bot.admin_dashboard_token}"
+
                     def _qs(**kw):
                         params = {
                             "status": status,
@@ -1314,13 +1339,35 @@ async def run_webhook_mode(application: Application) -> None:
                             "size": str(page_size),
                             "page": str(kw.get("page", page)),
                         }
-                        parts = [f"{k}={v}" for k, v in params.items() if v not in (None, "")]
+                        parts = [
+                            f"{k}={v}" for k, v in params.items() if v not in (None, "")
+                        ]
                         return qbase + "&" + "&".join(parts)
+
+                    csrf_value = request.cookies.get("csrf")
+                    if not csrf_value or len(csrf_value) < 16:
+                        csrf_value = secrets.token_urlsafe(32)
 
                     html_rows = "".join(
                         f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
-                        f"<td><a class='btn approve' href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=approve'>تایید</a> "
-                        f"<a class='btn reject' href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=reject'>رد</a></td></tr>"
+                        f"<td>"
+                        f"<form method='POST' action='/admin/act' style='display:inline'>"
+                        f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
+                        f"<input type='hidden' name='id' value='{r['id']}'/>"
+                        f"<input type='hidden' name='action' value='approve'/>"
+                        f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
+                        f"<input type='hidden' name='redirect' value='{_qs(page=page)}'/>"
+                        f"<button class='btn approve' type='submit'>تایید</button>"
+                        f"</form> "
+                        f"<form method='POST' action='/admin/act' style='display:inline'>"
+                        f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
+                        f"<input type='hidden' name='id' value='{r['id']}'/>"
+                        f"<input type='hidden' name='action' value='reject'/>"
+                        f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
+                        f"<input type='hidden' name='redirect' value='{_qs(page=page)}'/>"
+                        f"<button class='btn reject' type='submit'>رد</button>"
+                        f"</form>"
+                        f"</td></tr>"
                         for r in rows
                     )
                     body = f"""
@@ -1337,7 +1384,7 @@ async def run_webhook_mode(application: Application) -> None:
                         th {{ background:#f1f5f9; font-weight:600; }}
                         .controls {{ display:flex; gap:8px; margin:10px 0; align-items:center; flex-wrap:wrap; }}
                         input, select {{ padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; }}
-                        .btn {{ padding:6px 10px; border-radius:6px; text-decoration:none; color:#fff; margin-right:6px; }}
+                        .btn {{ padding:6px 10px; border-radius:6px; text-decoration:none; color:#fff; margin-right:6px; border:none; cursor:pointer; }}
                         .approve {{ background:#16a34a; }}
                         .reject {{ background:#dc2626; }}
                         .filter {{ background:#2563eb; }}
@@ -1404,20 +1451,34 @@ async def run_webhook_mode(application: Application) -> None:
                       </div>
                     </body></html>
                     """
-                    return web.Response(text=body, content_type="text/html; charset=utf-8")
+                    resp = web.Response(text=body, content_type="text/html; charset=utf-8")
+                    try:
+                        resp.set_cookie(
+                            "csrf",
+                            csrf_value,
+                            max_age=3600,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Strict",
+                        )
+                    except Exception:
+                        pass
+                    return resp
 
-                return web.json_response({
-                    "status": status,
-                    "type": ptype,
-                    "uid": uid,
-                    "product": product_q,
-                    "from": from_str,
-                    "to": to_str,
-                    "page": page,
-                    "page_size": page_size,
-                    "total": total,
-                    "items": rows,
-                })
+                return web.json_response(
+                    {
+                        "status": status,
+                        "type": ptype,
+                        "uid": uid,
+                        "product": product_q,
+                        "from": from_str,
+                        "to": to_str,
+                        "page": page,
+                        "page_size": page_size,
+                        "total": total,
+                        "items": rows,
+                    }
+                )
             except Exception as e:
                 logger.error(f"admin_list error: {e}")
                 return web.Response(status=500, text="server error")
@@ -1485,10 +1546,72 @@ async def run_webhook_mode(application: Application) -> None:
                 logger.error(f"admin_act error: {e}")
                 return web.Response(status=500, text="server error")
 
+        async def admin_act_post(request):
+            try:
+                token_ok = await _require_token(request)
+                if token_ok is None:
+                    return web.Response(status=401, text="unauthorized")
+                data = await request.post()
+                csrf_cookie = request.cookies.get("csrf", "")
+                csrf_form = (data.get("csrf") or "").strip()
+                if not csrf_cookie or not csrf_form or csrf_cookie != csrf_form:
+                    return web.Response(status=403, text="forbidden")
+
+                from sqlalchemy import select
+                from database.db import session_scope
+                from database.models_sql import Purchase, User as DBUser
+                from database.service import approve_or_reject_purchase
+
+                try:
+                    pid = int((data.get("id") or "0"))
+                except ValueError:
+                    return web.Response(status=400, text="bad request")
+                action = (data.get("action") or "").lower()
+                redirect_to = data.get("redirect") or ""
+                if action not in ("approve", "reject") or pid <= 0:
+                    return web.Response(status=400, text="bad request")
+
+                admin_id = (config.bot.admin_user_ids or [0])[0]
+                with session_scope() as session:
+                    db_purchase = session.execute(
+                        select(Purchase).where(Purchase.id == pid)
+                    ).scalar_one_or_none()
+                    if not db_purchase or db_purchase.status != "pending":
+                        return web.Response(status=404, text="not found or already decided")
+                    result = approve_or_reject_purchase(session, db_purchase.id, admin_id, action)
+                    if not result:
+                        return web.Response(status=409, text="conflict")
+
+                # Notify student fire-and-forget
+                try:
+                    with session_scope() as session:
+                        u = session.execute(
+                            select(DBUser).where(DBUser.id == db_purchase.user_id)
+                        ).scalar_one_or_none()
+                    if u:
+                        text = (
+                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد."
+                            if action == "approve"
+                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
+                        )
+                        asyncio.create_task(application.bot.send_message(chat_id=u.telegram_user_id, text=text))
+                except Exception:
+                    pass
+
+                if redirect_to:
+                    raise web.HTTPSeeOther(location=redirect_to)
+                return web.json_response({"ok": True, "id": pid, "action": action})
+            except web.HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"admin_act_post error: {e}")
+                return web.Response(status=500, text="server error")
+
         # Add routes
         app.router.add_get("/", health_check)
         app.router.add_get("/admin", admin_list)
         app.router.add_get("/admin/act", admin_act)
+        app.router.add_post("/admin/act", admin_act_post)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
         # Setup webhook with proper error handling
