@@ -339,6 +339,7 @@ async def handle_course_registration(
                     )
                 lines = [str(uid) for uid in uids]
                 from utils.performance_monitor import monitor
+
                 try:
                     monitor.increment_hourly("participant_pushes")
                 except Exception:

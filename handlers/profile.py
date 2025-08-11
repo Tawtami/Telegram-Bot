@@ -122,6 +122,17 @@ async def set_city(update: Update, context: Any) -> None:
             .filter(DBUser.telegram_user_id == user_id)
             .one_or_none()
         )
+        province = db_user.province if db_user else None
+        valid_cities = config.cities_by_province.get(province or "", [])
+        if city not in valid_cities:
+            # Show valid list again
+            rows = [[InlineKeyboardButton(c, callback_data=f"set_city:{c}")] for c in valid_cities]
+            rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
+            await query.edit_message_text(
+                "❌ شهر نامعتبر است برای استان انتخاب‌شده. لطفاً از لیست انتخاب کنید:",
+                reply_markup=_kb(rows),
+            )
+            return
         if db_user:
             audit_profile_change(
                 session,

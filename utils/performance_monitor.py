@@ -135,7 +135,9 @@ class PerformanceMonitor:
         self.user_activity: Dict[int, Dict[str, Any]] = defaultdict(dict)
         self.system_metrics: Dict[str, Any] = {}
         self.counters: Dict[str, int] = defaultdict(int)
-        self.hourly_counters: Dict[str, Dict[int, int]] = defaultdict(lambda: defaultdict(int))
+        self.hourly_counters: Dict[str, Dict[int, int]] = defaultdict(
+            lambda: defaultdict(int)
+        )
         self.alerts: List[Dict[str, Any]] = []
         self.alert_handlers: List[Callable] = []
         self._lock = asyncio.Lock()

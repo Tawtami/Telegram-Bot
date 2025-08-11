@@ -436,7 +436,27 @@ async def orders_command(update: Update, context: Any) -> None:
             lines.append(
                 f"• کاربر {meta.get('student_id')} | {meta.get('item_type')} «{meta.get('item_title','')}» | توکن: {token}"
             )
-        await update.effective_message.reply_text("\n".join(lines))
+        text = "\n".join(lines)
+        if context.args and context.args[0].lower() == "csv":
+            import csv, io
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["counter", "value"]) 
+            for k, v in counters.items():
+                writer.writerow([k, v])
+            hourly = stats.get("hourly", {})
+            writer.writerow([])
+            writer.writerow(["hourly_counter", "last_hour_value"]) 
+            for k, v in hourly.items():
+                writer.writerow([k, v])
+            buf.seek(0)
+            await update.effective_message.reply_document(
+                document=io.BytesIO(buf.getvalue().encode("utf-8")),
+                filename="metrics_counters.csv",
+                caption="📈 صادرشده به CSV",
+            )
+        else:
+            await update.effective_message.reply_text(text)
     except Exception as e:
         logger.error(f"Error in orders_command: {e}")
         await update.effective_message.reply_text("❌ خطا در نمایش سفارش‌ها.")
