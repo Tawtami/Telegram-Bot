@@ -126,8 +126,13 @@ async def set_city(update: Update, context: Any) -> None:
         valid_cities = config.cities_by_province.get(province or "", [])
         if city not in valid_cities:
             # Show valid list again
-            rows = [[InlineKeyboardButton(c, callback_data=f"set_city:{c}")] for c in valid_cities]
-            rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
+            rows = [
+                [InlineKeyboardButton(c, callback_data=f"set_city:{c}")]
+                for c in valid_cities
+            ]
+            rows.append(
+                [InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]
+            )
             await query.edit_message_text(
                 "❌ شهر نامعتبر است برای استان انتخاب‌شده. لطفاً از لیست انتخاب کنید:",
                 reply_markup=_kb(rows),

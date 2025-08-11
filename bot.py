@@ -439,14 +439,15 @@ async def orders_command(update: Update, context: Any) -> None:
         text = "\n".join(lines)
         if context.args and context.args[0].lower() == "csv":
             import csv, io
+
             buf = io.StringIO()
             writer = csv.writer(buf)
-            writer.writerow(["counter", "value"]) 
+            writer.writerow(["counter", "value"])
             for k, v in counters.items():
                 writer.writerow([k, v])
             hourly = stats.get("hourly", {})
             writer.writerow([])
-            writer.writerow(["hourly_counter", "last_hour_value"]) 
+            writer.writerow(["hourly_counter", "last_hour_value"])
             for k, v in hourly.items():
                 writer.writerow([k, v])
             buf.seek(0)
