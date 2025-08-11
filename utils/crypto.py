@@ -44,7 +44,23 @@ class CryptoManager:
             except Exception:
                 pass
 
-        # Development fallback (derive from BOT_TOKEN) - DO NOT use in production
+        # If we're in production/webhook mode, do NOT fallback – require ENCRYPTION_KEY
+        try:
+            from config import config as app_config
+
+            if (
+                app_config.webhook.enabled
+                or os.getenv("ENVIRONMENT", "").lower() == "production"
+            ):
+                raise ValueError(
+                    "ENCRYPTION_KEY is required in production/webhook mode (no fallback allowed)"
+                )
+        except Exception:
+            # If config import fails, best-effort: honor ENVIRONMENT var
+            if os.getenv("ENVIRONMENT", "").lower() == "production":
+                raise
+
+        # Development fallback (derive from BOT_TOKEN) - ONLY for local/dev
         from config import config
 
         token = (config.bot_token or "dev").encode("utf-8")

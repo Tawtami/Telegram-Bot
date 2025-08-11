@@ -371,6 +371,28 @@ async def handle_payment_decision(
             if db_purchase:
                 approve_or_reject_purchase(session, db_purchase.id, user_id, decision)
 
+        # Reflect decision in JSON storage for UX (cart/my courses)
+        try:
+            if decision == "approve":
+                if item_type == "course":
+                    storage.save_course_registration(student_id, item_id, is_paid=True)
+                elif item_type == "book":
+                    # Mark or add approved book purchase in storage
+                    s = storage.get_student(student_id)
+                    if s is not None:
+                        purchases = list(s.get("book_purchases", []))
+                        updated = False
+                        for p in purchases:
+                            if p.get("title") == item_id:
+                                p["approved"] = True
+                                updated = True
+                        if not updated:
+                            purchases.append({"title": item_id, "approved": True})
+                        s["book_purchases"] = purchases
+                        storage.save_student(s)
+        except Exception:
+            pass
+
         # Notify student
         await context.bot.send_message(
             chat_id=student_id,

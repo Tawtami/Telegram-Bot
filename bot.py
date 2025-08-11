@@ -437,24 +437,34 @@ async def orders_command(update: Update, context: Any) -> None:
                 f"• کاربر {meta.get('student_id')} | {meta.get('item_type')} «{meta.get('item_title','')}» | توکن: {token}"
             )
         text = "\n".join(lines)
-        if context.args and context.args[0].lower() == "csv":
+        # Optional CSV export
+        if context.args and any(a.lower() == "csv" for a in context.args):
             import csv, io
 
             buf = io.StringIO()
             writer = csv.writer(buf)
-            writer.writerow(["counter", "value"])
-            for k, v in counters.items():
-                writer.writerow([k, v])
-            hourly = stats.get("hourly", {})
-            writer.writerow([])
-            writer.writerow(["hourly_counter", "last_hour_value"])
-            for k, v in hourly.items():
-                writer.writerow([k, v])
+            writer.writerow(
+                ["token", "student_id", "item_type", "item_title", "status"]
+            )
+            for token, meta in entries:
+                writer.writerow(
+                    [
+                        token,
+                        meta.get("student_id"),
+                        meta.get("item_type"),
+                        (meta.get("item_title") or ""),
+                        (
+                            "pending"
+                            if not meta.get("processed")
+                            else meta.get("decision")
+                        ),
+                    ]
+                )
             buf.seek(0)
             await update.effective_message.reply_document(
                 document=io.BytesIO(buf.getvalue().encode("utf-8")),
-                filename="metrics_counters.csv",
-                caption="📈 صادرشده به CSV",
+                filename="orders.csv",
+                caption="🧾 سفارش‌ها (CSV)",
             )
         else:
             await update.effective_message.reply_text(text)
@@ -883,7 +893,36 @@ async def metrics_command(update: Update, context: Any) -> None:
             lines.append(
                 f"• {name}: {data.get('total_requests',0)} req | err {data.get('error_count',0)} | avg {data.get('avg_duration',0)}s"
             )
-        await update.effective_message.reply_text("\n".join(lines))
+        # CSV export if requested
+        if context.args and any(a.lower() == "csv" for a in context.args):
+            import csv, io
+
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["metric", "value"])
+            for k, v in counters.items():
+                writer.writerow([k, v])
+            writer.writerow([])
+            writer.writerow(
+                ["handler", "total_requests", "error_count", "avg_duration"]
+            )
+            for name, data in handlers.items():
+                writer.writerow(
+                    [
+                        name,
+                        data.get("total_requests", 0),
+                        data.get("error_count", 0),
+                        data.get("avg_duration", 0),
+                    ]
+                )
+            buf.seek(0)
+            await update.effective_message.reply_document(
+                document=io.BytesIO(buf.getvalue().encode("utf-8")),
+                filename="metrics.csv",
+                caption="📈 آمار (CSV)",
+            )
+        else:
+            await update.effective_message.reply_text("\n".join(lines))
     except Exception as e:
         logger.error(f"Error in metrics_command: {e}")
         await update.effective_message.reply_text("❌ خطا در خواندن آمار.")
