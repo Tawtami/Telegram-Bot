@@ -14,6 +14,7 @@ from typing import Dict, Any
 import hashlib
 import time
 import json
+import re
 
 # Suppress specific PTB warnings that don't affect functionality
 warnings.filterwarnings(
@@ -79,6 +80,32 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+# Reduce noisy third-party HTTP logs and redact Telegram bot token if it appears in URLs
+try:
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("telegram.vendor.ptb_urllib3.urllib3.connectionpool").setLevel(
+        logging.WARNING
+    )
+
+    class _RedactFilter(logging.Filter):
+        _pat = re.compile(r"(https://api\.telegram\.org/bot)[A-Za-z0-9:_-]+")
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            try:
+                msg = record.getMessage()
+                red = self._pat.sub(r"\1***", msg)
+                if red != msg:
+                    record.msg = red
+                    record.args = ()
+            except Exception:
+                pass
+            return True
+
+    for lname in ("httpx", "bot", "aiohttp.access"):
+        logging.getLogger(lname).addFilter(_RedactFilter())
+except Exception:
+    pass
 
 
 # Command handlers
