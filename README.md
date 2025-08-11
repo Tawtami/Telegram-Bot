@@ -96,22 +96,22 @@ Migration path to Alembic is recommended for production. Ensure indexes:
 - `receipts.file_unique_id` (unique)
 
 PII is encrypted at rest in `_enc` columns using AES-GCM with `ENCRYPTION_KEY`.
- 
+
 ### Migration scripts
- 
+
 - Initialize tables:
- 
+
 ```bash
 python -m database.migrate
 ```
- 
+
 - JSON -> DB (outline): implement a script that reads `data/students.json` and inserts into `users` with encrypted `_enc` fields. Run with `--dry-run` to preview. Example skeleton:
- 
+
 ```python
 # scripts/json_to_db.py (skeleton)
 # 1) load json, 2) for each record call get_or_create_user(session, ...)
 ```
- 
+
 - Plaintext -> encrypted: handled by insertion via `database/service.encrypt_text`.
 
 ## 🔐 Security & Env

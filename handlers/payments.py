@@ -96,6 +96,7 @@ async def handle_payment_receipt(
         # Notify admins of new pending course purchase
         try:
             from utils.admin_notify import notify_admins
+
             await notify_admins(
                 context,
                 context.bot_data.get("config").bot.admin_user_ids,
@@ -154,6 +155,7 @@ async def handle_payment_receipt(
         # Notify admins of new pending book purchase
         try:
             from utils.admin_notify import notify_admins
+
             await notify_admins(
                 context,
                 context.bot_data.get("config").bot.admin_user_ids,
@@ -366,6 +368,7 @@ async def handle_payment_decision(
         # Notify admins with concise status update
         try:
             from utils.admin_notify import notify_admins
+
             await notify_admins(
                 context,
                 context.bot_data.get("config").bot.admin_user_ids,

@@ -229,3 +229,34 @@ def get_pending_purchases(session: Session, limit: int = 100) -> List[Dict]:
         }
         for r in q
     ]
+
+
+def get_course_participants_by_slug(
+    session: Session, course_slug: str, status: str = "approved"
+) -> List[int]:
+    q = session.execute(
+        select(Purchase.user_id)
+        .where(
+            Purchase.product_type == "course",
+            Purchase.product_id == course_slug,
+            Purchase.status == status,
+        )
+        .order_by(Purchase.created_at.desc())
+    )
+    return [r.user_id for r in q]
+
+
+def get_free_course_participants_by_grade(
+    session: Session, grade: str, status: str = "approved"
+) -> List[int]:
+    # Without joining courses table, assume product_id encodes slug with grade or ignore
+    # Here we list all approved course purchases for users with the given grade
+    from sqlalchemy import distinct
+
+    q = session.execute(
+        select(distinct(Purchase.user_id))
+        .join(User, User.id == Purchase.user_id)
+        .where(Purchase.product_type == "course", Purchase.status == status, User.grade == grade)
+        .order_by(Purchase.created_at.desc())
+    )
+    return [r[0] for r in q]

@@ -17,6 +17,7 @@ from ui.keyboards import build_main_menu_keyboard, build_register_keyboard
 from database.db import session_scope
 from database.models_sql import User
 from sqlalchemy import select
+from utils.admin_notify import send_paginated_list
 
 # Cache keyboard markups
 _REGISTER_KEYBOARD = build_register_keyboard()
@@ -135,10 +136,54 @@ async def handle_back_to_menu(
 
 def build_menu_handlers():
     """Build and return menu handlers for registration in bot.py"""
-    from telegram.ext import MessageHandler, CallbackQueryHandler, filters
+    from telegram.ext import MessageHandler, CallbackQueryHandler, filters, CommandHandler
 
-    return [
+    handlers = [
         MessageHandler(filters.Regex(r"^🏠 منوی اصلی$"), send_main_menu),
         CallbackQueryHandler(handle_menu_selection, pattern=r"^menu_"),
         CallbackQueryHandler(handle_back_to_menu, pattern=r"^back_to_menu$"),
     ]
+    # Admin list commands (SQL-based)
+    async def list_books_cmd(update, context):
+        if update.effective_user.id not in config.bot.admin_user_ids:
+            return
+        from database.service import get_approved_book_buyers
+        with session_scope() as session:
+            buyers = get_approved_book_buyers(session, limit=1000)
+        lines = [f"{b['user_id']} | {b['product_id']} | {b['created_at'].date()}" for b in buyers]
+        await send_paginated_list(context, [update.effective_user.id], "📚 خریداران کتاب (تاییدشده)", lines)
+
+    async def list_free_cmd(update, context):
+        if update.effective_user.id not in config.bot.admin_user_ids:
+            return
+        if not context.args:
+            await update.effective_message.reply_text("فرمت: /list_free <پایه>")
+            return
+        grade = context.args[0]
+        from database.service import get_free_course_participants_by_grade
+        with session_scope() as session:
+            uids = get_free_course_participants_by_grade(session, grade)
+        lines = [str(uid) for uid in uids]
+        await send_paginated_list(context, [update.effective_user.id], f"🎓 شرکت‌کنندگان رایگان پایه {grade}", lines)
+
+    async def list_special_cmd(update, context):
+        if update.effective_user.id not in config.bot.admin_user_ids:
+            return
+        if not context.args:
+            await update.effective_message.reply_text("فرمت: /list_special <slug>")
+            return
+        slug = context.args[0]
+        from database.service import get_course_participants_by_slug
+        with session_scope() as session:
+            uids = get_course_participants_by_slug(session, slug)
+        lines = [str(uid) for uid in uids]
+        await send_paginated_list(context, [update.effective_user.id], f"💼 شرکت‌کنندگان دوره {slug}", lines)
+
+    handlers.extend(
+        [
+            CommandHandler("list_books", list_books_cmd),
+            CommandHandler("list_free", list_free_cmd),
+            CommandHandler("list_special", list_special_cmd),
+        ]
+    )
+    return handlers
