@@ -14,9 +14,8 @@ class Validator:
     """Enhanced data validation utilities with security features"""
 
     # Compile regex patterns once for better performance
-    _name_pattern = re.compile(
-        r"^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z\s]+$"
-    )
+    # Persian-only names (with space and hyphen), 2-50 chars
+    _name_pattern = re.compile(r"^[آ-یٔ\s\-]{2,50}$")
     _phone_patterns = [
         re.compile(r"^\+98[0-9]{10}$"),
         re.compile(r"^09[0-9]{9}$"),
