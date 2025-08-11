@@ -1253,6 +1253,15 @@ def main() -> None:
             logger.error(f"❌ Configuration validation failed: {e}")
             return
 
+        # Initialize database schema (idempotent)
+        try:
+            from database.migrate import init_db
+
+            init_db()
+            logger.info("🗄️ Database initialized (create_all)")
+        except Exception as e:
+            logger.warning(f"DB init skipped/failed: {e}")
+
         # Create application with proper configuration
         application = (
             ApplicationBuilder()
