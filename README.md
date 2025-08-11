@@ -76,6 +76,7 @@ python start.py
 ```
 
 ### 5. Deploy to Railway (webhook mode)
+
 ## 🗄️ Database (Production-ready)
 
 - Preferred: PostgreSQL via `DATABASE_URL` (e.g., `postgresql+psycopg://user:pass@host/db`)
@@ -88,16 +89,35 @@ python -m database.migrate
 ```
 
 Migration path to Alembic is recommended for production. Ensure indexes:
+
 - `users.telegram_user_id` (unique)
 - `courses.slug` (unique)
 - `purchases.status`
 - `receipts.file_unique_id` (unique)
 
 PII is encrypted at rest in `_enc` columns using AES-GCM with `ENCRYPTION_KEY`.
+ 
+### Migration scripts
+ 
+- Initialize tables:
+ 
+```bash
+python -m database.migrate
+```
+ 
+- JSON -> DB (outline): implement a script that reads `data/students.json` and inserts into `users` with encrypted `_enc` fields. Run with `--dry-run` to preview. Example skeleton:
+ 
+```python
+# scripts/json_to_db.py (skeleton)
+# 1) load json, 2) for each record call get_or_create_user(session, ...)
+```
+ 
+- Plaintext -> encrypted: handled by insertion via `database/service.encrypt_text`.
 
 ## 🔐 Security & Env
 
 Required in production:
+
 - `BOT_TOKEN`, `ADMIN_USER_IDS`, `ENCRYPTION_KEY`, `DATABASE_URL`, `WEBHOOK_URL`
 
 ## 🧪 Tests
@@ -109,7 +129,6 @@ pytest -q
 ```
 
 Includes: validators (Persian-only), encryption at rest, payment decisions, logging redaction.
-
 
 - `Procfile` uses `python start.py`
 - Healthcheck at `/` returns `OK`

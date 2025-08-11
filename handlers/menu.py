@@ -14,6 +14,9 @@ from config import config
 from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard, build_register_keyboard
+from database.db import session_scope
+from database.models_sql import User
+from sqlalchemy import select
 
 # Cache keyboard markups
 _REGISTER_KEYBOARD = build_register_keyboard()
@@ -31,8 +34,9 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return
 
     # Check if user is registered
-    storage: StudentStorage = context.bot_data["storage"]
-    student = storage.get_student(user.id)
+    # SQL presence check
+    with session_scope() as session:
+        student = session.execute(select(User).where(User.telegram_user_id == user.id)).scalar_one_or_none()
 
     if not student and user.id not in config.bot.admin_user_ids:
         # User needs to register first
@@ -93,19 +97,16 @@ async def handle_menu_selection(
                 reply_markup=_REGISTER_KEYBOARD,
             )
             return
-
         profile_text = (
             "👤 **پروفایل شما** (فقط نمایش):\n\n"
-            f"📝 **نام:** {student['first_name']}\n"
-            f"📝 **نام خانوادگی:** {student['last_name']}\n"
-            f"📱 **شماره تماس:** {student.get('phone_number', 'ثبت نشده')}\n"
-            f"📍 **استان:** {student['province']}\n"
-            f"🏙 **شهر:** {student['city']}\n"
-            f"📚 **پایه تحصیلی:** {student['grade']}\n"
-            f"🎓 **رشته تحصیلی:** {student['field']}\n\n"
-            f"📅 **تاریخ ثبت‌نام:** {student['registration_date'][:10]}\n\n"
-            "ℹ️ **نکته:** این بخش فقط برای نمایش اطلاعات است و قابل ویرایش نیست.\n"
-            "برای تغییر اطلاعات، لطفاً دوباره ثبت‌نام کنید."
+            f"📝 **نام:** ———\n"
+            f"📝 **نام خانوادگی:** ———\n"
+            f"📱 **شماره تماس:** ———\n"
+            f"📍 **استان:** {student.province or '—'}\n"
+            f"🏙 **شهر:** {student.city or '—'}\n"
+            f"📚 **پایه تحصیلی:** {student.grade or '—'}\n"
+            f"🎓 **رشته تحصیلی:** {student.field_of_study or '—'}\n\n"
+            "ℹ️ **نکته:** برای حفظ حریم خصوصی، اطلاعات شخصی رمزگذاری شده و در این نما نمایش داده نمی‌شود."
         )
 
         await query.edit_message_text(

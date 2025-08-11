@@ -19,6 +19,7 @@ from utils.crypto import crypto_manager
 # User Management
 # ---------------------
 
+
 def encrypt_text(value: Optional[str]) -> str:
     if not value:
         return ""
@@ -155,17 +156,25 @@ def approve_or_reject_purchase(
     result = session.execute(
         update(Purchase)
         .where(Purchase.id == purchase_id, Purchase.status == "pending")
-        .values(status=("approved" if decision == "approve" else "rejected"), admin_action_by=admin_id, admin_action_at=now)
-        .returning(Purchase.id, Purchase.user_id, Purchase.product_type, Purchase.product_id, Purchase.status)
+        .values(
+            status=("approved" if decision == "approve" else "rejected"),
+            admin_action_by=admin_id,
+            admin_action_at=now,
+        )
+        .returning(
+            Purchase.id,
+            Purchase.user_id,
+            Purchase.product_type,
+            Purchase.product_id,
+            Purchase.status,
+        )
     ).first()
     if not result:
         return None
 
     # Write audit record
     session.add(
-        PurchaseAudit(
-            purchase_id=purchase_id, admin_id=admin_id, action=decision
-        )
+        PurchaseAudit(purchase_id=purchase_id, admin_id=admin_id, action=decision)
     )
     session.flush()
     # Build lightweight object
@@ -199,7 +208,13 @@ def get_approved_book_buyers(session: Session, limit: int = 100) -> List[Dict]:
 
 def get_pending_purchases(session: Session, limit: int = 100) -> List[Dict]:
     q = session.execute(
-        select(Purchase.id, Purchase.user_id, Purchase.product_type, Purchase.product_id, Purchase.created_at)
+        select(
+            Purchase.id,
+            Purchase.user_id,
+            Purchase.product_type,
+            Purchase.product_id,
+            Purchase.created_at,
+        )
         .where(Purchase.status == "pending")
         .order_by(Purchase.created_at.desc())
         .limit(limit)
@@ -214,5 +229,3 @@ def get_pending_purchases(session: Session, limit: int = 100) -> List[Dict]:
         }
         for r in q
     ]
-
-

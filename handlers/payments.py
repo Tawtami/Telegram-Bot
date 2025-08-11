@@ -93,6 +93,16 @@ async def handle_payment_receipt(
                 product_id=course_id,
                 status="pending",
             )
+        # Notify admins of new pending course purchase
+        try:
+            from utils.admin_notify import notify_admins
+            await notify_admins(
+                context,
+                context.bot_data.get("config").bot.admin_user_ids,
+                f"🧾 پرداخت دوره در انتظار | کاربر {update.effective_user.id} | دوره: {course_id}",
+            )
+        except Exception:
+            pass
 
         # Load course title from JSON
         import json
@@ -141,6 +151,16 @@ async def handle_payment_receipt(
                 product_id=book_data.get("title", "book"),
                 status="pending",
             )
+        # Notify admins of new pending book purchase
+        try:
+            from utils.admin_notify import notify_admins
+            await notify_admins(
+                context,
+                context.bot_data.get("config").bot.admin_user_ids,
+                f"🧾 پرداخت کتاب در انتظار | کاربر {update.effective_user.id} | محصول: {book_data.get('title','book')}",
+            )
+        except Exception:
+            pass
 
         caption = (
             f"🧾 رسید پرداخت کتاب\n\n"
@@ -310,21 +330,22 @@ async def handle_payment_decision(
         # Atomic decision in DB
         from sqlalchemy import select
         from database.models_sql import User as DBUser, Purchase as DBPurchase
+
         with session_scope() as session:
-            db_user = (
-                session.execute(select(DBUser).where(DBUser.telegram_user_id == student_id))
-                .scalar_one_or_none()
-            )
-            db_purchase = (
-                session.execute(
-                    select(DBPurchase).where(
-                        DBPurchase.user_id == (db_user.id if db_user else -1),
-                        DBPurchase.product_type == ("book" if item_type == "book" else "course"),
-                        DBPurchase.product_id == item_id,
-                        DBPurchase.status == "pending",
-                    ).order_by(DBPurchase.created_at.desc())
-                ).scalar_one_or_none()
-            )
+            db_user = session.execute(
+                select(DBUser).where(DBUser.telegram_user_id == student_id)
+            ).scalar_one_or_none()
+            db_purchase = session.execute(
+                select(DBPurchase)
+                .where(
+                    DBPurchase.user_id == (db_user.id if db_user else -1),
+                    DBPurchase.product_type
+                    == ("book" if item_type == "book" else "course"),
+                    DBPurchase.product_id == item_id,
+                    DBPurchase.status == "pending",
+                )
+                .order_by(DBPurchase.created_at.desc())
+            ).scalar_one_or_none()
             if db_purchase:
                 approve_or_reject_purchase(session, db_purchase.id, user_id, decision)
 
@@ -342,6 +363,16 @@ async def handle_payment_decision(
             if decision == "approve"
             else "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
         )
+        # Notify admins with concise status update
+        try:
+            from utils.admin_notify import notify_admins
+            await notify_admins(
+                context,
+                context.bot_data.get("config").bot.admin_user_ids,
+                f"📊 وضعیت پرداخت {item_type} «{item_title}» برای کاربر {student_id}: {('تایید' if decision=='approve' else 'رد')}",
+            )
+        except Exception:
+            pass
 
         # Mark processed and disable buttons for all admin messages
         meta["processed"] = True

@@ -423,6 +423,17 @@ async def confirm(update: Update, context: Any) -> int:
                 grade=context.user_data.get("grade", ""),
                 field_of_study=context.user_data.get("field", ""),
             )
+        # Optional: notify admins of new registration
+        try:
+            from utils.admin_notify import notify_admins
+            from config import config as app_config
+            await notify_admins(
+                context,
+                app_config.bot.admin_user_ids,
+                f"👤 ثبت‌نام جدید | کاربر {update.effective_user.id}",
+            )
+        except Exception:
+            pass
     except Exception:
         if TELEGRAM_AVAILABLE:
             await query.edit_message_text(
