@@ -424,8 +424,11 @@ async def confirm(update: Update, context: Any) -> int:
             # If editing existing, write profile audits (no old value exposure)
             from sqlalchemy import select
             from database.models_sql import User as DBUser
+
             db_user = session.execute(
-                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
+                select(DBUser).where(
+                    DBUser.telegram_user_id == update.effective_user.id
+                )
             ).scalar_one_or_none()
             if db_user:
                 for field_name, key in (
@@ -465,8 +468,13 @@ async def confirm(update: Update, context: Any) -> int:
         try:
             from utils.admin_notify import notify_admins
             from config import config as app_config
+
             # Send participant list (registration doesn't imply course purchase; send concise notice)
-            await notify_admins(context, app_config.bot.admin_user_ids, f"👤 ثبت‌نام جدید | کاربر {update.effective_user.id}")
+            await notify_admins(
+                context,
+                app_config.bot.admin_user_ids,
+                f"👤 ثبت‌نام جدید | کاربر {update.effective_user.id}",
+            )
         except Exception:
             pass
     except Exception:

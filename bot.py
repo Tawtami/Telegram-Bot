@@ -62,6 +62,7 @@ from handlers.courses import (
     handle_purchased_courses,
     handle_course_registration,
 )
+from handlers.profile import build_profile_edit_handlers
 from handlers.books import build_book_purchase_conversation, handle_book_info
 from handlers.payments import build_payment_handlers, handle_payment_receipt
 from handlers.contact import build_contact_handlers, handle_contact_us
@@ -833,6 +834,37 @@ async def payments_audit_command(update: Update, context: Any) -> None:
         await update.effective_message.reply_text("❌ خطا در گزارش پرداخت‌ها.")
 
 
+@rate_limit_handler("admin")
+async def metrics_command(update: Update, context: Any) -> None:
+    try:
+        if not await _ensure_admin(update):
+            return
+        from utils.performance_monitor import monitor
+        stats = await monitor.get_stats()
+        sys = stats.get("system", {})
+        counters = stats.get("counters", {})
+        handlers = stats.get("handlers", {})
+        lines = [
+            "📈 آمار سیستم:",
+            f"• آپ‌تایم (ساعت): {sys.get('uptime_hours', 0)}",
+            f"• کل درخواست‌ها: {sys.get('total_requests', 0)}",
+            f"• خطاها: {sys.get('total_errors', 0)}",
+            f"• میانگین زمان پاسخ: {sys.get('avg_response_time', 0)}s",
+            "",
+            "🔢 شمارنده‌ها:",
+        ]
+        for k, v in counters.items():
+            lines.append(f"• {k}: {v}")
+        lines.append("")
+        lines.append("🧩 هندلرها:")
+        for name, data in handlers.items():
+            lines.append(f"• {name}: {data.get('total_requests',0)} req | err {data.get('error_count',0)} | avg {data.get('avg_duration',0)}s")
+        await update.effective_message.reply_text("\n".join(lines))
+    except Exception as e:
+        logger.error(f"Error in metrics_command: {e}")
+        await update.effective_message.reply_text("❌ خطا در خواندن آمار.")
+
+
 async def setup_handlers(application: Application) -> None:
     """Setup all bot handlers"""
     try:
@@ -879,6 +911,7 @@ async def setup_handlers(application: Application) -> None:
             CommandHandler("confirm_payment", confirm_payment_command), group=1
         )
         application.add_handler(CommandHandler("status", status_command), group=1)
+        application.add_handler(CommandHandler("metrics", metrics_command), group=1)
         application.add_handler(
             CommandHandler("payments_audit", payments_audit_command), group=1
         )
@@ -911,6 +944,10 @@ async def setup_handlers(application: Application) -> None:
         # Add payment handlers
         payment_handlers = build_payment_handlers()
         for handler in payment_handlers:
+            application.add_handler(handler, group=1)
+
+        # Add profile edit handlers
+        for handler in build_profile_edit_handlers():
             application.add_handler(handler, group=1)
 
         # Add contact handlers
