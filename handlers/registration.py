@@ -427,11 +427,8 @@ async def confirm(update: Update, context: Any) -> int:
         try:
             from utils.admin_notify import notify_admins
             from config import config as app_config
-            await notify_admins(
-                context,
-                app_config.bot.admin_user_ids,
-                f"👤 ثبت‌نام جدید | کاربر {update.effective_user.id}",
-            )
+            # Send participant list (registration doesn't imply course purchase; send concise notice)
+            await notify_admins(context, app_config.bot.admin_user_ids, f"👤 ثبت‌نام جدید | کاربر {update.effective_user.id}")
         except Exception:
             pass
     except Exception:

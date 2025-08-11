@@ -28,5 +28,3 @@ async def test_get_approved_book_buyers(tmp_path):
     with session_scope() as session:
         buyers = get_approved_book_buyers(session, limit=10)
         assert any(b["product_id"] == "BookX" for b in buyers)
-
-

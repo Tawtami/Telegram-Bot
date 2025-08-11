@@ -256,7 +256,11 @@ def get_free_course_participants_by_grade(
     q = session.execute(
         select(distinct(Purchase.user_id))
         .join(User, User.id == Purchase.user_id)
-        .where(Purchase.product_type == "course", Purchase.status == status, User.grade == grade)
+        .where(
+            Purchase.product_type == "course",
+            Purchase.status == status,
+            User.grade == grade,
+        )
         .order_by(Purchase.created_at.desc())
     )
     return [r[0] for r in q]

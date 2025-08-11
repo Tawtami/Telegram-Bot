@@ -93,6 +93,16 @@ async def handle_payment_receipt(
                 product_id=course_id,
                 status="pending",
             )
+            # Save receipt row for dedupe
+            try:
+                add_receipt(
+                    session,
+                    purchase_id=purchase.id,
+                    telegram_file_id=getattr(largest_photo, "file_id", ""),
+                    file_unique_id=getattr(largest_photo, "file_unique_id", ""),
+                )
+            except Exception:
+                pass
         # Notify admins of new pending course purchase
         try:
             from utils.admin_notify import notify_admins
@@ -152,6 +162,15 @@ async def handle_payment_receipt(
                 product_id=book_data.get("title", "book"),
                 status="pending",
             )
+            try:
+                add_receipt(
+                    session,
+                    purchase_id=purchase.id,
+                    telegram_file_id=getattr(largest_photo, "file_id", ""),
+                    file_unique_id=getattr(largest_photo, "file_unique_id", ""),
+                )
+            except Exception:
+                pass
         # Notify admins of new pending book purchase
         try:
             from utils.admin_notify import notify_admins
