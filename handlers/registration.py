@@ -501,6 +501,7 @@ async def confirm(update: Update, context: Any) -> int:
 
     # Send main menu (use fresh call to avoid lingering state)
     from handlers.menu import send_main_menu
+
     await send_main_menu(update, context)
 
     return ConversationHandler.END
