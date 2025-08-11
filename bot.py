@@ -1207,18 +1207,59 @@ async def run_webhook_mode(application: Application) -> None:
                     return web.Response(status=401, text="unauthorized")
                 from sqlalchemy import select
                 from database.db import session_scope
-                from database.models_sql import Purchase
+                from database.models_sql import Purchase, User as DBUser
+                from datetime import datetime, timedelta
 
-                status = (request.query.get("status", "pending").lower())
+                status = request.query.get("status", "pending").lower()
+                ptype = request.query.get("type", "").lower()
+                uid_str = request.query.get("uid", "").strip()
+                product_q = request.query.get("product", "").strip()
+                from_str = request.query.get("from", "").strip()
+                to_str = request.query.get("to", "").strip()
+                fmt = request.query.get("format", "").lower()
                 page = max(0, int(request.query.get("page", "0") or 0))
-                page_size = max(1, min(50, int(request.query.get("size", "20") or 20)))
+                page_size = max(1, min(100, int(request.query.get("size", "20") or 20)))
+
+                uid = int(uid_str) if uid_str.isdigit() else None
+                dt_from = None
+                dt_to = None
+                try:
+                    if from_str:
+                        dt_from = (
+                            datetime.fromisoformat(from_str)
+                            if len(from_str) > 10
+                            else datetime.fromisoformat(from_str + "T00:00:00")
+                        )
+                    if to_str:
+                        base = (
+                            datetime.fromisoformat(to_str)
+                            if len(to_str) > 10
+                            else datetime.fromisoformat(to_str + "T00:00:00")
+                        )
+                        dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
+                except Exception:
+                    dt_from = None
+                    dt_to = None
+
+                stmt = select(Purchase)
+                if status:
+                    stmt = stmt.where(Purchase.status == status)
+                if ptype in ("book", "course"):
+                    stmt = stmt.where(Purchase.product_type == ptype)
+                if product_q:
+                    stmt = stmt.where(Purchase.product_id.like(f"%{product_q}%"))
+                if dt_from is not None:
+                    stmt = stmt.where(Purchase.created_at >= dt_from)
+                if dt_to is not None:
+                    stmt = stmt.where(Purchase.created_at < dt_to)
+                if uid is not None:
+                    stmt = stmt.join(DBUser, DBUser.id == Purchase.user_id).where(DBUser.telegram_user_id == uid)
+                stmt = stmt.order_by(Purchase.created_at.desc())
 
                 with session_scope() as session:
-                    q = session.execute(
-                        select(Purchase).where(Purchase.status == status).order_by(Purchase.created_at.desc())
-                    ).scalars()
-                    items = list(q)
+                    items = list(session.execute(stmt).scalars())
 
+                total = len(items)
                 start = page * page_size
                 slice_items = items[start : start + page_size]
                 rows = [
@@ -1228,35 +1269,155 @@ async def run_webhook_mode(application: Application) -> None:
                         "type": p.product_type,
                         "product": p.product_id,
                         "status": p.status,
-                        "created_at": getattr(p, "created_at", None).isoformat() if getattr(p, "created_at", None) else None,
+                        "created_at": (
+                            getattr(p, "created_at", None).isoformat()
+                            if getattr(p, "created_at", None)
+                            else None
+                        ),
                     }
                     for p in slice_items
                 ]
-                # Simple HTML if Accept text/html, otherwise JSON
+
                 accept = request.headers.get("Accept", "")
-                if "text/html" in accept:
+                wants_csv = fmt == "csv" or ("text/csv" in accept)
+                if wants_csv:
+                    import csv, io
+                    buf = io.StringIO()
+                    writer = csv.writer(buf)
+                    writer.writerow(["id", "user_id", "type", "product", "status", "created_at"])
+                    for p in items:
+                        writer.writerow([
+                            p.id,
+                            p.user_id,
+                            p.product_type,
+                            p.product_id,
+                            p.status,
+                            p.created_at.isoformat() if getattr(p, "created_at", None) else "",
+                        ])
+                    csv_bytes = buf.getvalue().encode("utf-8")
+                    return web.Response(
+                        body=csv_bytes,
+                        content_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f"attachment; filename=orders_{status or 'all'}.csv"},
+                    )
+
+                if "text/html" in accept or not accept:
+                    qbase = f"/admin?token={config.bot.admin_dashboard_token}"
+                    def _qs(**kw):
+                        params = {
+                            "status": status,
+                            "type": ptype,
+                            "uid": uid_str,
+                            "product": product_q,
+                            "from": from_str,
+                            "to": to_str,
+                            "size": str(page_size),
+                            "page": str(kw.get("page", page)),
+                        }
+                        parts = [f"{k}={v}" for k, v in params.items() if v not in (None, "")]
+                        return qbase + "&" + "&".join(parts)
+
                     html_rows = "".join(
-                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r['status']}</td>"
-                        f"<td><a href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=approve'>Approve</a> | "
-                        f"<a href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=reject'>Reject</a></td></tr>"
+                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
+                        f"<td><a class='btn approve' href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=approve'>تایید</a> "
+                        f"<a class='btn reject' href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=reject'>رد</a></td></tr>"
                         for r in rows
                     )
                     body = f"""
-                    <html><head><meta charset='utf-8'><title>Admin Orders</title></head>
+                    <html>
+                    <head>
+                      <meta charset='utf-8'>
+                      <title>مدیریت سفارش‌ها</title>
+                      <style>
+                        body {{ font-family: Vazirmatn, tahoma, sans-serif; margin: 24px; background:#f8fafc; color:#0f172a; }}
+                        h3 {{ margin-top:0; }}
+                        .panel {{ background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px; box-shadow:0 1px 2px rgba(0,0,0,0.04); }}
+                        table {{ width:100%; border-collapse:collapse; margin-top:12px; }}
+                        th, td {{ border-bottom:1px solid #e2e8f0; padding:8px 10px; text-align:left; }}
+                        th {{ background:#f1f5f9; font-weight:600; }}
+                        .controls {{ display:flex; gap:8px; margin:10px 0; align-items:center; flex-wrap:wrap; }}
+                        input, select {{ padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; }}
+                        .btn {{ padding:6px 10px; border-radius:6px; text-decoration:none; color:#fff; margin-right:6px; }}
+                        .approve {{ background:#16a34a; }}
+                        .reject {{ background:#dc2626; }}
+                        .filter {{ background:#2563eb; }}
+                        .csv {{ background:#0f766e; }}
+                        .pager a {{ margin:0 6px; text-decoration:none; color:#2563eb; }}
+                        .badge {{ padding:2px 8px; border-radius:999px; font-size:12px; color:#fff; }}
+                        .badge.pending {{ background:#ea580c; }}
+                        .badge.approved {{ background:#16a34a; }}
+                        .badge.rejected {{ background:#dc2626; }}
+                        .meta {{ color:#475569; font-size:13px; }}
+                      </style>
+                    </head>
                     <body>
-                      <h3>Orders ({status})</h3>
-                      <table border='1' cellpadding='6'><thead>
-                        <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Status</th><th>Action</th></tr>
-                      </thead><tbody>{html_rows or '<tr><td colspan=6>No items</td></tr>'}</tbody></table>
-                      <p>
-                        <a href='/admin?token={config.bot.admin_dashboard_token}&status={status}&page={max(0,page-1)}'>&laquo; Prev</a>
-                        |
-                        <a href='/admin?token={config.bot.admin_dashboard_token}&status={status}&page={page+1}'>Next &raquo;</a>
-                      </p>
+                      <div class='panel'>
+                        <h3>سفارش‌ها ({status})</h3>
+                        <form method='GET' action='/admin' class='controls'>
+                          <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
+                          <label>وضعیت:
+                            <select name='status'>
+                              <option value='pending' {'selected' if status=='pending' else ''}>pending</option>
+                              <option value='approved' {'selected' if status=='approved' else ''}>approved</option>
+                              <option value='rejected' {'selected' if status=='rejected' else ''}>rejected</option>
+                            </select>
+                          </label>
+                          <label>نوع:
+                            <select name='type'>
+                              <option value='' {'selected' if not ptype else ''}>همه</option>
+                              <option value='course' {'selected' if ptype=='course' else ''}>course</option>
+                              <option value='book' {'selected' if ptype=='book' else ''}>book</option>
+                            </select>
+                          </label>
+                          <label>UID:
+                            <input name='uid' value='{uid_str}' placeholder='telegram id' />
+                          </label>
+                          <label>محصول:
+                            <input name='product' value='{product_q}' placeholder='عنوان/شناسه' />
+                          </label>
+                          <label>از:
+                            <input type='date' name='from' value='{from_str}' />
+                          </label>
+                          <label>تا:
+                            <input type='date' name='to' value='{to_str}' />
+                          </label>
+                          <label>سایز صفحه:
+                            <input type='number' min='1' max='100' name='size' value='{page_size}' />
+                          </label>
+                          <button class='btn filter' type='submit'>فیلتر</button>
+                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
+                        </form>
+                        <div class='meta'>
+                          مجموع نتایج: {total} | صفحه: {page+1}
+                        </div>
+                        <table>
+                          <thead>
+                            <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Status</th><th>Action</th></tr>
+                          </thead>
+                          <tbody>{html_rows or '<tr><td colspan=6>موردی یافت نشد</td></tr>'}</tbody>
+                        </table>
+                        <div class='pager'>
+                          <a href='{_qs(page=max(0, page-1))}'>&laquo; قبلی</a>
+                          |
+                          <a href='{_qs(page=page+1)}'>بعدی &raquo;</a>
+                        </div>
+                      </div>
                     </body></html>
                     """
                     return web.Response(text=body, content_type="text/html; charset=utf-8")
-                return web.json_response({"status": status, "page": page, "items": rows})
+
+                return web.json_response({
+                    "status": status,
+                    "type": ptype,
+                    "uid": uid,
+                    "product": product_q,
+                    "from": from_str,
+                    "to": to_str,
+                    "page": page,
+                    "page_size": page_size,
+                    "total": total,
+                    "items": rows,
+                })
             except Exception as e:
                 logger.error(f"admin_list error: {e}")
                 return web.Response(status=500, text="server error")
@@ -1272,7 +1433,7 @@ async def run_webhook_mode(application: Application) -> None:
                 from database.service import approve_or_reject_purchase
 
                 pid = int(request.query.get("id", "0") or 0)
-                action = (request.query.get("action", "").lower())
+                action = request.query.get("action", "").lower()
                 if action not in ("approve", "reject") or pid <= 0:
                     return web.Response(status=400, text="bad request")
 
@@ -1284,25 +1445,38 @@ async def run_webhook_mode(application: Application) -> None:
                         select(Purchase).where(Purchase.id == pid)
                     ).scalar_one_or_none()
                     if not db_purchase or db_purchase.status != "pending":
-                        return web.Response(status=404, text="not found or already decided")
-                    result = approve_or_reject_purchase(session, db_purchase.id, admin_id, action)
+                        return web.Response(
+                            status=404, text="not found or already decided"
+                        )
+                    result = approve_or_reject_purchase(
+                        session, db_purchase.id, admin_id, action
+                    )
                     if not result:
                         return web.Response(status=409, text="conflict")
 
                 # Try to notify student and admins asynchronously (fire-and-forget)
                 try:
-                    student_id = db_purchase.user_id  # DB user numeric id; need telegram id lookup if necessary
+                    student_id = (
+                        db_purchase.user_id
+                    )  # DB user numeric id; need telegram id lookup if necessary
                     # In this codebase, Purchase.user_id refers to internal users.id; we need telegram id for messaging.
                     from database.models_sql import User as DBUser
+
                     with session_scope() as session:
-                        u = session.execute(select(DBUser).where(DBUser.id == db_purchase.user_id)).scalar_one_or_none()
+                        u = session.execute(
+                            select(DBUser).where(DBUser.id == db_purchase.user_id)
+                        ).scalar_one_or_none()
                     if u:
                         text = (
                             f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد."
                             if action == "approve"
                             else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
                         )
-                        asyncio.create_task(application.bot.send_message(chat_id=u.telegram_user_id, text=text))
+                        asyncio.create_task(
+                            application.bot.send_message(
+                                chat_id=u.telegram_user_id, text=text
+                            )
+                        )
                 except Exception:
                     pass
 
