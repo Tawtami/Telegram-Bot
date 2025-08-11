@@ -22,6 +22,7 @@ from database.service import (
     add_receipt,
     approve_or_reject_purchase,
 )
+from utils.performance_monitor import monitor
 
 
 @rate_limit_handler("default")
@@ -384,6 +385,13 @@ async def handle_payment_decision(
             if decision == "approve"
             else "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
         )
+        try:
+            if decision == "approve":
+                monitor.increment_counter("approvals")
+            else:
+                monitor.increment_counter("rejections")
+        except Exception:
+            pass
         # Notify admins with concise status update and push updated participants if approval for course
         try:
             from utils.admin_notify import notify_admins, send_paginated_list

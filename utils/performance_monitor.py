@@ -134,6 +134,7 @@ class PerformanceMonitor:
         )
         self.user_activity: Dict[int, Dict[str, Any]] = defaultdict(dict)
         self.system_metrics: Dict[str, Any] = {}
+        self.counters: Dict[str, int] = defaultdict(int)
         self.alerts: List[Dict[str, Any]] = []
         self.alert_handlers: List[Callable] = []
         self._lock = asyncio.Lock()
@@ -267,6 +268,7 @@ class PerformanceMonitor:
                     "active_users": active_users,
                     "total_users": len(self.user_activity),
                 },
+                "counters": dict(self.counters),
                 "handlers": {
                     name: metrics.to_dict() for name, metrics in self.metrics.items()
                 },
@@ -359,6 +361,9 @@ class PerformanceMonitor:
             self.user_activity.clear()
             self.alerts.clear()
             self._start_time = time.time()
+
+    def increment_counter(self, name: str, increment: int = 1):
+        self.counters[name] += increment
 
 
 # Global performance monitor instance

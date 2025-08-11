@@ -171,6 +171,7 @@ def build_menu_handlers():
         ]
         if len(lines) > 400:
             import csv, io
+
             buf = io.StringIO()
             writer = csv.writer(buf)
             writer.writerow(["user_id", "product_id", "created_at"])
@@ -184,7 +185,10 @@ def build_menu_handlers():
             )
         else:
             await send_paginated_list(
-                context, [update.effective_user.id], "📚 خریداران کتاب (تاییدشده)", lines
+                context,
+                [update.effective_user.id],
+                "📚 خریداران کتاب (تاییدشده)",
+                lines,
             )
 
     async def list_free_cmd(update, context):
@@ -201,9 +205,10 @@ def build_menu_handlers():
         lines = [str(uid) for uid in uids]
         if len(lines) > 400:
             import csv, io
+
             buf = io.StringIO()
             writer = csv.writer(buf)
-            writer.writerow(["user_id"]) 
+            writer.writerow(["user_id"])
             for uid in uids:
                 writer.writerow([uid])
             buf.seek(0)
@@ -234,9 +239,10 @@ def build_menu_handlers():
         lines = [str(uid) for uid in uids]
         if len(lines) > 400:
             import csv, io
+
             buf = io.StringIO()
             writer = csv.writer(buf)
-            writer.writerow(["user_id"]) 
+            writer.writerow(["user_id"])
             for uid in uids:
                 writer.writerow([uid])
             buf.seek(0)
@@ -247,7 +253,10 @@ def build_menu_handlers():
             )
         else:
             await send_paginated_list(
-                context, [update.effective_user.id], f"💼 شرکت‌کنندگان دوره {slug}", lines
+                context,
+                [update.effective_user.id],
+                f"💼 شرکت‌کنندگان دوره {slug}",
+                lines,
             )
 
     handlers.extend(

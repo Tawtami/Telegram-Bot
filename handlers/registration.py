@@ -26,7 +26,8 @@ from config import config
 from utils.validators import Validator
 from utils.rate_limiter import rate_limit_handler
 from database.db import session_scope
-from database.service import get_or_create_user
+from database.service import get_or_create_user, audit_profile_change
+from utils.performance_monitor import monitor
 from ui.keyboards import (
     build_register_keyboard,
     build_grades_keyboard,
@@ -119,6 +120,10 @@ async def first_name(update: Update, context: Any) -> int:
         return RegistrationStates.FIRST_NAME
 
     context.user_data["first_name"] = result
+    try:
+        monitor.increment_counter("reg_field_first_name")
+    except Exception:
+        pass
     if TELEGRAM_AVAILABLE:
         await update.message.reply_text("لطفاً نام خانوادگی خود را به فارسی وارد کنید:")
     else:
@@ -139,6 +144,10 @@ async def last_name(update: Update, context: Any) -> int:
         return RegistrationStates.LAST_NAME
 
     context.user_data["last_name"] = result
+    try:
+        monitor.increment_counter("reg_field_last_name")
+    except Exception:
+        pass
     if TELEGRAM_AVAILABLE:
         await update.message.reply_text(
             "لطفاً شماره تماس خود را وارد کنید:\n" "مثال: 09123456789 یا 9123456789"
@@ -412,6 +421,31 @@ async def confirm(update: Update, context: Any) -> int:
     # Save user data
     try:
         with session_scope() as session:
+            # If editing existing, write profile audits (no old value exposure)
+            from sqlalchemy import select
+            from database.models_sql import User as DBUser
+            db_user = session.execute(
+                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
+            ).scalar_one_or_none()
+            if db_user:
+                for field_name, key in (
+                    ("province", "province"),
+                    ("city", "city"),
+                    ("grade", "grade"),
+                    ("field", "field"),
+                ):
+                    try:
+                        audit_profile_change(
+                            session,
+                            user_id=db_user.id,
+                            field_name=field_name,
+                            old_value=None,
+                            new_value=context.user_data.get(key, ""),
+                            changed_by=update.effective_user.id,
+                        )
+                    except Exception:
+                        pass
+
             get_or_create_user(
                 session,
                 telegram_user_id=update.effective_user.id,
@@ -423,6 +457,10 @@ async def confirm(update: Update, context: Any) -> int:
                 grade=context.user_data.get("grade", ""),
                 field_of_study=context.user_data.get("field", ""),
             )
+        try:
+            monitor.increment_counter("registrations")
+        except Exception:
+            pass
         # Optional: notify admins of new registration
         try:
             from utils.admin_notify import notify_admins
