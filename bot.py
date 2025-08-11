@@ -1351,7 +1351,9 @@ async def run_webhook_mode(application: Application) -> None:
                     flash_msg = request.cookies.get("flash", "")
                     flash_type = request.cookies.get("flash_type", "success")
                     flash_html = (
-                        f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else ""
+                        f"<div class='flash {flash_type}'>{flash_msg}</div>"
+                        if flash_msg
+                        else ""
                     )
 
                     html_rows = "".join(
@@ -1530,7 +1532,9 @@ async def run_webhook_mode(application: Application) -> None:
                 # Try to notify student and admins asynchronously (fire-and-forget)
                 try:
                     admin_ip = request.headers.get("X-Forwarded-For", request.remote)
-                    logger.info(f"Admin action via GET: id={pid} action={action} ip={admin_ip}")
+                    logger.info(
+                        f"Admin action via GET: id={pid} action={action} ip={admin_ip}"
+                    )
                     student_id = (
                         db_purchase.user_id
                     )  # DB user numeric id; need telegram id lookup if necessary
@@ -1619,7 +1623,9 @@ async def run_webhook_mode(application: Application) -> None:
                             )
                         )
                     try:
-                        logger.info(f"Admin action via POST: id={pid} action={action} ip={admin_ip}")
+                        logger.info(
+                            f"Admin action via POST: id={pid} action={action} ip={admin_ip}"
+                        )
                     except Exception:
                         pass
                 except Exception:
@@ -1627,7 +1633,11 @@ async def run_webhook_mode(application: Application) -> None:
 
                 if redirect_to:
                     # Set flash message for one redirect
-                    msg = "با موفقیت تایید شد." if action == "approve" else "با موفقیت رد شد."
+                    msg = (
+                        "با موفقیت تایید شد."
+                        if action == "approve"
+                        else "با موفقیت رد شد."
+                    )
                     resp = web.HTTPSeeOther(location=redirect_to)
                     try:
                         resp.set_cookie(
