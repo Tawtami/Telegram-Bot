@@ -1,6 +1,6 @@
-# 🎓 Ostad Hatami Math Classes Bot
+## 🎓 Ostad Hatami Math Classes Bot
 
-**ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده**
+ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 
 ## 🎯 Overview
 
@@ -91,6 +91,16 @@ If you see 409 errors in Telegram webhook set, the app auto-deletes any existing
   - ❌ «رد پرداخت» — rejects it and informs the user to contact `@ostad_hatami` if needed.
 
 Both admins listed in `ADMIN_USER_IDS` have identical privileges and can use these buttons.
+
+### Security hardening
+
+- Sensitive fields (`first_name`, `last_name`, `phone_number`) are encrypted at rest with AES-GCM. Set `ENCRYPTION_KEY` to a 32-byte urlsafe-base64 string in production.
+- Webhook requests are validated using `X-Telegram-Bot-Api-Secret-Token`.
+- Input normalization converts Persian/Arabic-Indic digits to English; phone numbers are stored normalized as `+98...`.
+
+### Targeted broadcast
+
+- `/broadcast_grade <grade> <message>` sends to users in a specific grade (e.g., `دهم`, `یازدهم`, `دوازدهم`).
 
 ### Phone number normalization
 

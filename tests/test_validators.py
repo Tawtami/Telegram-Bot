@@ -19,3 +19,10 @@ def test_validate_phone_bad():
     ok, _ = Validator.validate_phone("123")
     assert not ok
 
+
+def test_persian_digit_normalization():
+    # Persian digits for 09123456789
+    persian = "۰۹۱۲۳۴۵۶۷۸۹"
+    ok, val = Validator.validate_phone(persian)
+    assert ok
+    assert val == "+989123456789"

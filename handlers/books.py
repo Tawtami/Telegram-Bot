@@ -27,6 +27,7 @@ from utils.storage import StudentStorage
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from handlers.payments import handle_payment_receipt as unified_payment_receipt
+from utils.validators import Validator
 
 
 # States for the book purchase conversation
@@ -164,7 +165,11 @@ async def start_book_purchase(
 @rate_limit_handler("default")
 async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle postal code input"""
-    postal_code = update.message.text.strip()
+    postal_code_raw = update.message.text.strip()
+    # Normalize Persian/Arabic digits to English
+    postal_code = Validator.convert_to_english_digits(postal_code_raw)
+    # Keep digits only
+    postal_code = "".join(ch for ch in postal_code if ch.isdigit())
 
     # Validate postal code (10 digits)
     if not postal_code.isdigit() or len(postal_code) != 10:
@@ -337,7 +342,6 @@ def build_book_purchase_conversation() -> ConversationHandler:
             ],
             BookPurchaseStates.NOTES: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, notes),
-                CommandHandler("skip", skip_notes),
                 CallbackQueryHandler(skip_notes, pattern="^book_skip_notes$"),
             ],
             BookPurchaseStates.PAYMENT: [

@@ -698,6 +698,9 @@ class Config:
                 assert (
                     self.webhook.port > 0
                 ), "Port must be positive when webhook is enabled"
+                assert str(self.webhook.url).startswith(
+                    "https://"
+                ), "Webhook URL must use HTTPS"
 
             return True
         except AssertionError as e:

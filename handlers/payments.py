@@ -14,6 +14,7 @@ from ui.keyboards import build_main_menu_keyboard
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 import hashlib
 import time
+import asyncio
 
 
 @rate_limit_handler("default")
@@ -158,12 +159,52 @@ async def handle_payment_receipt(
         )
         return
 
+    # Prevent duplicate receipts: block re-use of the same Telegram file_unique_id for 7 days
+    receipts_index = context.bot_data.setdefault("receipts_index", {})  # id -> ts
+    file_uid = getattr(largest_photo, "file_unique_id", None)
+    now_ts = time.time()
+    retention = 7 * 24 * 3600
+    # Purge old
+    try:
+        to_del = [k for k, ts in receipts_index.items() if now_ts - ts > retention]
+        for k in to_del:
+            del receipts_index[k]
+    except Exception:
+        pass
+    if file_uid and file_uid in receipts_index:
+        await update.message.reply_text(
+            "⚠️ این رسید قبلاً ارسال شده است و قابل استفاده مجدد نیست.",
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return
+
+    # Prevent duplicate receipts: accept only one active token per user+item for 2 minutes
+    notifications = context.bot_data.setdefault("payment_notifications", {})
+    recent_tokens = [
+        t
+        for t, meta in notifications.items()
+        if meta.get("student_id") == update.effective_user.id
+        and not meta.get("processed")
+    ]
+    # If there is a very recent open token for same type+id, reject to prevent spam/dupes
+    for t in recent_tokens:
+        meta = notifications.get(t) or {}
+        if (
+            meta.get("item_type") == payment_meta.get("item_type")
+            and meta.get("item_id") == payment_meta.get("item_id")
+            and time.time() - meta.get("created_at", 0) < 120
+        ):
+            await update.message.reply_text(
+                "⚠️ رسید شما قبلاً دریافت شده و در حال بررسی است.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+            return
+
     # Generate token to correlate notifications across admins
     token_source = f"{update.effective_user.id}:{payment_meta.get('item_type')}:{payment_meta.get('item_id')}:{time.time()}"
     token = hashlib.sha1(token_source.encode()).hexdigest()[:16]
 
     # Track admin messages for this token
-    notifications = context.bot_data.setdefault("payment_notifications", {})
     notifications[token] = {
         "student_id": update.effective_user.id,
         "item_type": payment_meta.get("item_type"),
@@ -175,6 +216,7 @@ async def handle_payment_receipt(
         "decided_by": None,
         "created_at": time.time(),
         "decided_at": None,
+        "file_unique_id": file_uid,
     }
 
     kb = admin_approval_keyboard(token)
@@ -193,6 +235,10 @@ async def handle_payment_receipt(
             notifications[token]["messages"].append((admin_id, sent.message_id))
         except Exception:
             continue
+
+    # Clear context markers and record receipt id
+    if file_uid:
+        receipts_index[file_uid] = now_ts
 
     # Clear context markers
     if context.user_data.get("pending_course"):
@@ -287,7 +333,7 @@ async def handle_payment_decision(
             await context.bot.send_message(
                 chat_id=student_id,
                 text=(
-                    "❌ پرداخت شما تایید نشد. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
+                    f"❌ پرداخت شما برای «{item_title}» ناموفق بود. اگر مطمئن هستید پرداخت انجام شده، لطفاً با @ostad_hatami تماس بگیرید."
                 ),
             )
             result_text = "❌ پرداخت رد شد و به کاربر اطلاع داده شد."
@@ -322,4 +368,88 @@ def build_payment_handlers():
             handle_payment_decision,
             pattern=r"^pay:[a-f0-9]{16}:(approve|reject)$",
         ),
+        # Pagination handler for orders_ui
+        CallbackQueryHandler(
+            lambda u, c: c.application.create_task(_orders_page(u, c)),
+            pattern=r"^orders_page:\d+(:book|:course|:all)?:(-|\d+)?$",
+        ),
     ]
+
+
+async def _orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    if (
+        update.effective_user.id
+        not in context.bot_data.get("config").bot.admin_user_ids
+    ):
+        await query.edit_message_text("⛔️ مجاز نیست.")
+        return
+    try:
+        parts = query.data.split(":")  # orders_page:page:type:user
+        page = max(0, int(parts[1]))
+        type_filter = (parts[2] if len(parts) > 2 else "all") or "all"
+        user_str = parts[3] if len(parts) > 3 else "-"
+        user_filter = int(user_str) if user_str.isdigit() else None
+    except Exception:
+        page, type_filter, user_filter = 0, "all", None
+
+    notifications = context.bot_data.get("payment_notifications", {})
+    pending = [(t, m) for t, m in notifications.items() if not m.get("processed")]
+    if type_filter in ("book", "course"):
+        pending = [(t, m) for t, m in pending if m.get("item_type") == type_filter]
+    if user_filter is not None:
+        pending = [
+            (t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter
+        ]
+    if not pending:
+        await query.edit_message_text("مورد در انتظاری وجود ندارد.")
+        return
+
+    page_size = 5
+    ordered = list(
+        sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True)
+    )
+    start = page * page_size
+    end = start + page_size
+    slice_items = ordered[start:end]
+
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+    lines = [f"🕒 پرداخت‌های در انتظار (صفحه {page+1})"]
+    rows = []
+    for token, meta in slice_items:
+        title = meta.get("item_title", "")
+        student_id = meta.get("student_id")
+        lines.append(
+            f"• {meta.get('item_type')} «{title}» | کاربر {student_id} | توکن: {token}"
+        )
+        rows.append(
+            [
+                InlineKeyboardButton("✅ تایید", callback_data=f"pay:{token}:approve"),
+                InlineKeyboardButton("❌ رد", callback_data=f"pay:{token}:reject"),
+            ]
+        )
+    nav = []
+    if start > 0:
+        nav.append(
+            InlineKeyboardButton(
+                "⬅️ قبلی",
+                callback_data=f"orders_page:{page-1}:{type_filter}:{user_filter if user_filter is not None else '-'}",
+            )
+        )
+    if end < len(ordered):
+        nav.append(
+            InlineKeyboardButton(
+                "بعدی ➡️",
+                callback_data=f"orders_page:{page+1}:{type_filter}:{user_filter if user_filter is not None else '-'}",
+            )
+        )
+    if nav:
+        rows.append(nav)
+
+    await query.edit_message_text(
+        "\n".join(lines), reply_markup=InlineKeyboardMarkup(rows) if rows else None
+    )

@@ -71,6 +71,7 @@ from utils.storage import StudentStorage
 from utils.error_handler import ptb_error_handler
 from ui.keyboards import build_register_keyboard
 from datetime import datetime
+from utils.background import BroadcastManager
 
 # Configure logging
 logging.basicConfig(
@@ -186,43 +187,67 @@ async def broadcast_command(update: Update, context: Any) -> None:
             )
             return
 
-        sent = 0
-        failed = 0
-        errors = []
-
-        for student in students:
-            try:
-                user_id = student.get("user_id")
-                if not user_id or storage.is_user_banned(user_id):
-                    continue
-
-                await context.bot.send_message(chat_id=user_id, text=text)
-                sent += 1
-
-                # Small delay to avoid hitting rate limits
-                await asyncio.sleep(0.1)
-
-            except Exception as e:
-                error_msg = f"Failed to send to user {user_id}: {e}"
-                logger.warning(error_msg)
-                errors.append(error_msg)
-                failed += 1
-                continue
-
-        # Send summary
-        summary = (
-            f"✅ پیام برای {sent} کاربر ارسال شد.\n❌ {failed} کاربر دریافت نکردند."
+        # Start background broadcast with progress
+        manager: BroadcastManager = context.bot_data["broadcast_manager"]
+        user_ids = [s.get("user_id") for s in students if s.get("user_id")]
+        await manager.start_broadcast(
+            context.application, update.effective_chat.id, user_ids, text
         )
-        if errors and len(errors) <= 3:
-            summary += f"\n\nخطاها:\n" + "\n".join(errors[:3])
-        elif errors:
-            summary += f"\n\n{len(errors)} خطا رخ داد (نمایش داده نشد)"
-
-        await update.effective_message.reply_text(summary)
 
     except Exception as e:
         logger.error(f"Error in broadcast_command: {e}")
         await update.effective_message.reply_text("❌ خطا در ارسال پیام همگانی.")
+
+
+@rate_limit_handler("admin")
+async def broadcast_grade_command(update: Update, context: Any) -> None:
+    """Handle /broadcast_grade <grade> <message...> - Admin only"""
+    try:
+        if not await _ensure_admin(update):
+            return
+
+        if not context.args or len(context.args) < 2:
+            await update.effective_message.reply_text(
+                "فرمت درست: /broadcast_grade دهم پیام شما"
+            )
+            return
+
+        target_grade = context.args[0]
+        text = " ".join(context.args[1:])
+        if target_grade not in config.grades:
+            await update.effective_message.reply_text("پایه تحصیلی نامعتبر است.")
+            return
+
+        storage: StudentStorage = context.bot_data["storage"]
+        students = [
+            s for s in storage.get_all_students() if s.get("grade") == target_grade
+        ]
+        if not students:
+            await update.effective_message.reply_text("کاربری با این پایه یافت نشد.")
+            return
+
+        sent = 0
+        failed = 0
+        for student in students:
+            try:
+                uid = student.get("user_id")
+                if not uid or storage.is_user_banned(uid):
+                    continue
+                await context.bot.send_message(chat_id=uid, text=text)
+                sent += 1
+                await asyncio.sleep(0.05)
+            except Exception:
+                failed += 1
+                continue
+
+        await update.effective_message.reply_text(
+            f"✅ ارسال شد: {sent} | ناموفق: {failed}"
+        )
+    except Exception as e:
+        logger.error(f"Error in broadcast_grade_command: {e}")
+        await update.effective_message.reply_text(
+            "❌ خطا در ارسال پیام گروهی بر اساس پایه."
+        )
 
 
 @rate_limit_handler("admin")
@@ -333,6 +358,174 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
     except Exception as e:
         logger.error(f"Error in confirm_payment_command: {e}")
         await update.message.reply_text("❌ خطا در تایید پرداخت.")
+
+
+@rate_limit_handler("admin")
+async def orders_command(update: Update, context: Any) -> None:
+    """Handle /orders [pending|approved|rejected] - Admin only"""
+    try:
+        if not await _ensure_admin(update):
+            return
+
+        status = (context.args[0] if context.args else "pending").lower()
+        valid = {"pending": "در انتظار", "approved": "تایید", "rejected": "رد"}
+        if status not in valid:
+            await update.effective_message.reply_text(
+                "فرمت: /orders [pending|approved|rejected]"
+            )
+            return
+
+        notifications = context.bot_data.get("payment_notifications", {})
+        entries = [
+            (t, m)
+            for t, m in notifications.items()
+            if (
+                (status == "pending" and not m.get("processed"))
+                or (
+                    status != "pending"
+                    and m.get("processed")
+                    and m.get("decision")
+                    == ("approve" if status == "approved" else "reject")
+                )
+            )
+        ]
+        if not entries:
+            await update.effective_message.reply_text("موردی یافت نشد.")
+            return
+
+        lines = [f"🧾 سفارش‌های {valid[status]}:"]
+        for token, meta in entries[:30]:
+            lines.append(
+                f"• کاربر {meta.get('student_id')} | {meta.get('item_type')} «{meta.get('item_title','')}» | توکن: {token}"
+            )
+        await update.effective_message.reply_text("\n".join(lines))
+    except Exception as e:
+        logger.error(f"Error in orders_command: {e}")
+        await update.effective_message.reply_text("❌ خطا در نمایش سفارش‌ها.")
+
+
+@rate_limit_handler("admin")
+async def user_search_command(update: Update, context: Any) -> None:
+    """Handle /user_search <query> - search by name or phone (admin only)"""
+    try:
+        if not await _ensure_admin(update):
+            return
+
+        q = " ".join(context.args) if context.args else ""
+        if not q:
+            await update.effective_message.reply_text("فرمت: /user_search واژه_جستجو")
+            return
+        q = q.strip().lower()
+
+        storage: StudentStorage = context.bot_data["storage"]
+        results = []
+        for s in storage.get_all_students():
+            if any(
+                (str(s.get(k, "")).lower().find(q) != -1)
+                for k in ("first_name", "last_name", "phone_number")
+            ):
+                results.append(s)
+
+        if not results:
+            await update.effective_message.reply_text("چیزی یافت نشد.")
+            return
+
+        lines = ["نتایج:"]
+        for s in results[:25]:
+            lines.append(
+                f"• {s.get('first_name','')} {s.get('last_name','')} | {s.get('phone_number','')} | id={s.get('user_id')}"
+            )
+        await update.effective_message.reply_text("\n".join(lines))
+    except Exception as e:
+        logger.error(f"Error in user_search_command: {e}")
+        await update.effective_message.reply_text("❌ خطا در جستجو.")
+
+
+@rate_limit_handler("admin")
+async def orders_ui_command(update: Update, context: Any) -> None:
+    """Admin inline UI to list pending orders with quick access.
+    Shows last 10 pending items and links to existing inline approve/reject buttons.
+    """
+    try:
+        if not await _ensure_admin(update):
+            return
+        notifications = context.bot_data.get("payment_notifications", {})
+        pending = [(t, m) for t, m in notifications.items() if not m.get("processed")]
+        if not pending:
+            await update.effective_message.reply_text("مورد در انتظاری وجود ندارد.")
+            return
+
+        # Filters: page [book|course] [user_id]
+        page = 0
+        type_filter = "all"
+        user_filter = None
+        for arg in context.args or []:
+            if arg.isdigit():
+                if page == 0:
+                    page = max(0, int(arg))
+                else:
+                    user_filter = int(arg)
+            elif arg.lower() in ("book", "course"):
+                type_filter = arg.lower()
+
+        # Apply filters
+        if type_filter in ("book", "course"):
+            pending = [(t, m) for t, m in pending if m.get("item_type") == type_filter]
+        if user_filter is not None:
+            pending = [
+                (t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter
+            ]
+
+        page_size = 5
+        ordered = list(
+            sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True)
+        )
+        start = page * page_size
+        end = start + page_size
+        slice_items = ordered[start:end]
+
+        from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+
+        lines = [f"🕒 پرداخت‌های در انتظار (صفحه {page+1})"]
+        rows = []
+        for token, meta in slice_items:
+            title = meta.get("item_title", "")
+            student_id = meta.get("student_id")
+            lines.append(
+                f"• {meta.get('item_type')} «{title}» | کاربر {student_id} | توکن: {token}"
+            )
+            rows.append(
+                [
+                    InlineKeyboardButton(
+                        "✅ تایید", callback_data=f"pay:{token}:approve"
+                    ),
+                    InlineKeyboardButton("❌ رد", callback_data=f"pay:{token}:reject"),
+                ]
+            )
+        nav = []
+        if start > 0:
+            nav.append(
+                InlineKeyboardButton(
+                    "⬅️ قبلی",
+                    callback_data=f"orders_page:{page-1}:{type_filter}:{user_filter if user_filter is not None else '-'}",
+                )
+            )
+        if end < len(ordered):
+            nav.append(
+                InlineKeyboardButton(
+                    "بعدی ➡️",
+                    callback_data=f"orders_page:{page+1}:{type_filter}:{user_filter if user_filter is not None else '-'}",
+                )
+            )
+        if nav:
+            rows.append(nav)
+
+        await update.effective_message.reply_text(
+            "\n".join(lines), reply_markup=InlineKeyboardMarkup(rows) if rows else None
+        )
+    except Exception as e:
+        logger.error(f"Error in orders_ui_command: {e}")
+        await update.effective_message.reply_text("❌ خطا در نمایش رابط سفارش‌ها.")
 
 
 @rate_limit_handler("default")
@@ -632,6 +825,9 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(CommandHandler("start", start_command), group=1)
         application.add_handler(CommandHandler("students", students_command), group=1)
         application.add_handler(CommandHandler("broadcast", broadcast_command), group=1)
+        application.add_handler(
+            CommandHandler("broadcast_grade", broadcast_grade_command), group=1
+        )
         application.add_handler(CommandHandler("ban", ban_command), group=1)
         application.add_handler(CommandHandler("unban", unban_command), group=1)
         application.add_handler(CommandHandler("profile", profile_command), group=1)
@@ -649,6 +845,11 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(
             CommandHandler("payments_audit", payments_audit_command), group=1
         )
+        application.add_handler(CommandHandler("orders", orders_command), group=1)
+        application.add_handler(
+            CommandHandler("user_search", user_search_command), group=1
+        )
+        application.add_handler(CommandHandler("orders_ui", orders_ui_command), group=1)
 
         # Add conversation handlers
         registration_conv = build_registration_conversation()
@@ -813,14 +1014,15 @@ async def run_webhook_mode(application: Application) -> None:
 
                 # Process update
                 update = Update.de_json(data, application.bot)
+                # Avoid logging raw user content to protect sensitive data
                 try:
-                    if update.message and update.message.text:
+                    if update.message:
                         logger.info(
-                            f"Update message from user_id={getattr(update.effective_user,'id',0)} text={update.message.text!r}"
+                            f"Update message from user_id={getattr(update.effective_user,'id',0)}"
                         )
-                    elif update.callback_query and update.callback_query.data:
+                    elif update.callback_query:
                         logger.info(
-                            f"Update callback from user_id={getattr(update.effective_user,'id',0)} data={update.callback_query.data!r}"
+                            f"Update callback from user_id={getattr(update.effective_user,'id',0)}"
                         )
                 except Exception:
                     pass
@@ -970,6 +1172,7 @@ def main() -> None:
         storage = StudentStorage()
         application.bot_data["storage"] = storage
         application.bot_data["config"] = config
+        application.bot_data["broadcast_manager"] = BroadcastManager()
 
         # Setup handlers and expose rate limiter for status diagnostics
         asyncio.run(setup_handlers(application))

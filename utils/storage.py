@@ -16,6 +16,11 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+try:
+    from utils.crypto import crypto_manager
+except Exception:
+    crypto_manager = None  # Fallback if crypto not available
+
 
 class StudentStorage:
     """Thread-safe JSON storage for student data with caching"""
@@ -129,6 +134,15 @@ class StudentStorage:
                     existing_index = i
                     break
 
+            # Encrypt sensitive fields before saving
+            sensitive_fields = ["first_name", "last_name", "phone_number"]
+            if crypto_manager is not None:
+                for field in sensitive_fields:
+                    if field in student_data and student_data[field]:
+                        student_data[field] = crypto_manager.encrypt_text(
+                            str(student_data[field])
+                        )
+
             # Add timestamp
             student_data["last_updated"] = datetime.now().isoformat()
             if existing_index is None:
@@ -152,6 +166,17 @@ class StudentStorage:
             data = self._load_json(self.students_file)
             for student in data.get("students", []):
                 if student["user_id"] == user_id:
+                    # Decrypt sensitive fields on read
+                    if crypto_manager is not None:
+                        for field in ("first_name", "last_name", "phone_number"):
+                            if field in student and student[field]:
+                                try:
+                                    student[field] = crypto_manager.decrypt_text(
+                                        student[field]
+                                    )
+                                except Exception:
+                                    # If not encrypted (legacy), leave as is
+                                    pass
                     return student
             return None
         except Exception as e:
@@ -162,7 +187,18 @@ class StudentStorage:
         """Get all students data"""
         try:
             data = self._load_json(self.students_file)
-            return data.get("students", [])
+            students = data.get("students", [])
+            # Decrypt sensitive fields for admin views/search
+            if crypto_manager is not None:
+                for s in students:
+                    for field in ("first_name", "last_name", "phone_number"):
+                        val = s.get(field)
+                        if val:
+                            try:
+                                s[field] = crypto_manager.decrypt_text(val)
+                            except Exception:
+                                pass
+            return students
         except Exception as e:
             logger.error(f"Error getting all students: {e}")
             return []
