@@ -1192,8 +1192,129 @@ async def run_webhook_mode(application: Application) -> None:
                 logger.error(f"Error processing webhook update: {e}")
                 return web.Response(status=500)
 
+        # Admin dashboard (token-protected) - minimal HTML/JSON
+        async def _require_token(request):
+            token = request.query.get("token", "").strip()
+            expected = (config.bot.admin_dashboard_token or "").strip()
+            if not expected or token != expected:
+                return None
+            return token
+
+        async def admin_list(request):
+            try:
+                token_ok = await _require_token(request)
+                if token_ok is None:
+                    return web.Response(status=401, text="unauthorized")
+                from sqlalchemy import select
+                from database.db import session_scope
+                from database.models_sql import Purchase
+
+                status = (request.query.get("status", "pending").lower())
+                page = max(0, int(request.query.get("page", "0") or 0))
+                page_size = max(1, min(50, int(request.query.get("size", "20") or 20)))
+
+                with session_scope() as session:
+                    q = session.execute(
+                        select(Purchase).where(Purchase.status == status).order_by(Purchase.created_at.desc())
+                    ).scalars()
+                    items = list(q)
+
+                start = page * page_size
+                slice_items = items[start : start + page_size]
+                rows = [
+                    {
+                        "id": p.id,
+                        "user_id": p.user_id,
+                        "type": p.product_type,
+                        "product": p.product_id,
+                        "status": p.status,
+                        "created_at": getattr(p, "created_at", None).isoformat() if getattr(p, "created_at", None) else None,
+                    }
+                    for p in slice_items
+                ]
+                # Simple HTML if Accept text/html, otherwise JSON
+                accept = request.headers.get("Accept", "")
+                if "text/html" in accept:
+                    html_rows = "".join(
+                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r['status']}</td>"
+                        f"<td><a href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=approve'>Approve</a> | "
+                        f"<a href='/admin/act?token={config.bot.admin_dashboard_token}&id={r['id']}&action=reject'>Reject</a></td></tr>"
+                        for r in rows
+                    )
+                    body = f"""
+                    <html><head><meta charset='utf-8'><title>Admin Orders</title></head>
+                    <body>
+                      <h3>Orders ({status})</h3>
+                      <table border='1' cellpadding='6'><thead>
+                        <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Status</th><th>Action</th></tr>
+                      </thead><tbody>{html_rows or '<tr><td colspan=6>No items</td></tr>'}</tbody></table>
+                      <p>
+                        <a href='/admin?token={config.bot.admin_dashboard_token}&status={status}&page={max(0,page-1)}'>&laquo; Prev</a>
+                        |
+                        <a href='/admin?token={config.bot.admin_dashboard_token}&status={status}&page={page+1}'>Next &raquo;</a>
+                      </p>
+                    </body></html>
+                    """
+                    return web.Response(text=body, content_type="text/html; charset=utf-8")
+                return web.json_response({"status": status, "page": page, "items": rows})
+            except Exception as e:
+                logger.error(f"admin_list error: {e}")
+                return web.Response(status=500, text="server error")
+
+        async def admin_act(request):
+            try:
+                token_ok = await _require_token(request)
+                if token_ok is None:
+                    return web.Response(status=401, text="unauthorized")
+                from sqlalchemy import select
+                from database.db import session_scope
+                from database.models_sql import Purchase
+                from database.service import approve_or_reject_purchase
+
+                pid = int(request.query.get("id", "0") or 0)
+                action = (request.query.get("action", "").lower())
+                if action not in ("approve", "reject") or pid <= 0:
+                    return web.Response(status=400, text="bad request")
+
+                # For audit purposes, attribute to first admin id
+                admin_id = (config.bot.admin_user_ids or [0])[0]
+
+                with session_scope() as session:
+                    db_purchase = session.execute(
+                        select(Purchase).where(Purchase.id == pid)
+                    ).scalar_one_or_none()
+                    if not db_purchase or db_purchase.status != "pending":
+                        return web.Response(status=404, text="not found or already decided")
+                    result = approve_or_reject_purchase(session, db_purchase.id, admin_id, action)
+                    if not result:
+                        return web.Response(status=409, text="conflict")
+
+                # Try to notify student and admins asynchronously (fire-and-forget)
+                try:
+                    student_id = db_purchase.user_id  # DB user numeric id; need telegram id lookup if necessary
+                    # In this codebase, Purchase.user_id refers to internal users.id; we need telegram id for messaging.
+                    from database.models_sql import User as DBUser
+                    with session_scope() as session:
+                        u = session.execute(select(DBUser).where(DBUser.id == db_purchase.user_id)).scalar_one_or_none()
+                    if u:
+                        text = (
+                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد."
+                            if action == "approve"
+                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
+                        )
+                        asyncio.create_task(application.bot.send_message(chat_id=u.telegram_user_id, text=text))
+                except Exception:
+                    pass
+
+                return web.json_response({"ok": True, "id": pid, "action": action})
+            except Exception as e:
+                logger.error(f"admin_act error: {e}")
+                return web.Response(status=500, text="server error")
+
         # Add routes
         app.router.add_get("/", health_check)
+        app.router.add_get("/admin", admin_list)
+        app.router.add_get("/admin/act", admin_act)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
         # Setup webhook with proper error handling

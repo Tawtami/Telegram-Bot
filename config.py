@@ -90,6 +90,7 @@ class BotConfig:
     name: str = "Ostad Hatami Math Classes Bot"
     version: str = "2.0.0"
     admin_user_ids: List[int] = None
+    admin_dashboard_token: str = ""
     maintenance_mode: bool = False
     welcome_message_template: str = None
     support_contact: str = "@Ostad_Hatami"
@@ -205,6 +206,7 @@ class Config:
 
         self.bot = BotConfig(
             admin_user_ids=admin_user_ids if admin_user_ids else None,
+            admin_dashboard_token=os.getenv("ADMIN_DASHBOARD_TOKEN", ""),
             maintenance_mode=os.getenv("MAINTENANCE_MODE", "false").lower() == "true",
             payment_card_number=os.getenv("PAYMENT_CARD_NUMBER", "6037-9974-1234-5678"),
             payment_payee_name=os.getenv("PAYMENT_PAYEE_NAME", "استاد حاتمی"),
