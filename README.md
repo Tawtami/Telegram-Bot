@@ -116,25 +116,25 @@ python -m database.migrate
 
 Full migration steps (example):
 
-1) Initialize DB tables
+1. Initialize DB tables
 
 ```bash
 python -m database.migrate
 ```
 
-2) Dry-run JSON import
+2. Dry-run JSON import
 
 ```bash
 python scripts/json_to_db.py --dry-run
 ```
 
-3) Execute import
+3. Execute import
 
 ```bash
 python scripts/json_to_db.py
 ```
 
-4) Verify counts via a simple SQL query or by adding a temporary `/status` report.
+4. Verify counts via a simple SQL query or by adding a temporary `/status` report.
 
 ## 🔐 Security & Env
 

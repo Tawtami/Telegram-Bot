@@ -15,6 +15,7 @@ import hashlib
 import time
 import json
 import re
+import sentry_sdk
 
 # Suppress specific PTB warnings that don't affect functionality
 warnings.filterwarnings(
@@ -106,6 +107,15 @@ try:
         logging.getLogger(lname).addFilter(_RedactFilter())
 except Exception:
     pass
+
+# Initialize Sentry if DSN is provided
+try:
+    dsn = os.getenv("SENTRY_DSN", "").strip()
+    if dsn:
+        sentry_sdk.init(dsn=dsn, traces_sample_rate=0.05)
+        logger.info("Sentry initialized")
+except Exception as _e:
+    logger.warning(f"Sentry init failed: {_e}")
 
 
 # Command handlers

@@ -387,6 +387,7 @@ async def handle_payment_decision(
         # Notify admins with concise status update and push updated participants if approval for course
         try:
             from utils.admin_notify import notify_admins, send_paginated_list
+
             await notify_admins(
                 context,
                 context.bot_data.get("config").bot.admin_user_ids,
@@ -394,8 +395,11 @@ async def handle_payment_decision(
             )
             if decision == "approve" and item_type == "course":
                 from database.service import get_course_participants_by_slug
+
                 with session_scope() as session:
-                    uids = get_course_participants_by_slug(session, item_id, status="approved")
+                    uids = get_course_participants_by_slug(
+                        session, item_id, status="approved"
+                    )
                 lines = [str(uid) for uid in uids]
                 await send_paginated_list(
                     context,

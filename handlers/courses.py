@@ -332,8 +332,11 @@ async def handle_course_registration(
             # Push updated participant list to admins
             try:
                 from config import config as app_config
+
                 with session_scope() as session:
-                    uids = get_course_participants_by_slug(session, course_id, status="approved")
+                    uids = get_course_participants_by_slug(
+                        session, course_id, status="approved"
+                    )
                 lines = [str(uid) for uid in uids]
                 await send_paginated_list(
                     context,

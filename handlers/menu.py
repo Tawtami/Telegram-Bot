@@ -169,9 +169,23 @@ def build_menu_handlers():
             f"{b['user_id']} | {b['product_id']} | {b['created_at'].date()}"
             for b in buyers
         ]
-        await send_paginated_list(
-            context, [update.effective_user.id], "📚 خریداران کتاب (تاییدشده)", lines
-        )
+        if len(lines) > 400:
+            import csv, io
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["user_id", "product_id", "created_at"])
+            for b in buyers:
+                writer.writerow([b["user_id"], b["product_id"], b["created_at"].date()])
+            buf.seek(0)
+            await update.effective_message.reply_document(
+                document=io.BytesIO(buf.getvalue().encode("utf-8")),
+                filename="book_buyers.csv",
+                caption="📚 خریداران کتاب (CSV)",
+            )
+        else:
+            await send_paginated_list(
+                context, [update.effective_user.id], "📚 خریداران کتاب (تاییدشده)", lines
+            )
 
     async def list_free_cmd(update, context):
         if update.effective_user.id not in config.bot.admin_user_ids:
@@ -185,12 +199,26 @@ def build_menu_handlers():
         with session_scope() as session:
             uids = get_free_course_participants_by_grade(session, grade)
         lines = [str(uid) for uid in uids]
-        await send_paginated_list(
-            context,
-            [update.effective_user.id],
-            f"🎓 شرکت‌کنندگان رایگان پایه {grade}",
-            lines,
-        )
+        if len(lines) > 400:
+            import csv, io
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["user_id"]) 
+            for uid in uids:
+                writer.writerow([uid])
+            buf.seek(0)
+            await update.effective_message.reply_document(
+                document=io.BytesIO(buf.getvalue().encode("utf-8")),
+                filename=f"free_grade_{grade}.csv",
+                caption=f"🎓 شرکت‌کنندگان رایگان پایه {grade} (CSV)",
+            )
+        else:
+            await send_paginated_list(
+                context,
+                [update.effective_user.id],
+                f"🎓 شرکت‌کنندگان رایگان پایه {grade}",
+                lines,
+            )
 
     async def list_special_cmd(update, context):
         if update.effective_user.id not in config.bot.admin_user_ids:
@@ -204,9 +232,23 @@ def build_menu_handlers():
         with session_scope() as session:
             uids = get_course_participants_by_slug(session, slug)
         lines = [str(uid) for uid in uids]
-        await send_paginated_list(
-            context, [update.effective_user.id], f"💼 شرکت‌کنندگان دوره {slug}", lines
-        )
+        if len(lines) > 400:
+            import csv, io
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["user_id"]) 
+            for uid in uids:
+                writer.writerow([uid])
+            buf.seek(0)
+            await update.effective_message.reply_document(
+                document=io.BytesIO(buf.getvalue().encode("utf-8")),
+                filename=f"course_{slug}.csv",
+                caption=f"💼 شرکت‌کنندگان دوره {slug} (CSV)",
+            )
+        else:
+            await send_paginated_list(
+                context, [update.effective_user.id], f"💼 شرکت‌کنندگان دوره {slug}", lines
+            )
 
     handlers.extend(
         [
