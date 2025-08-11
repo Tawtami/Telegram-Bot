@@ -489,20 +489,18 @@ async def confirm(update: Update, context: Any) -> int:
             )
         return ConversationHandler.END
 
+    # Immediately show success + main menu and reset conversation state
     if TELEGRAM_AVAILABLE:
         await query.edit_message_text(
-            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
-            "اکنون می‌توانید از امکانات ربات استفاده کنید.",
+            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\nاکنون می‌توانید از امکانات ربات استفاده کنید.",
         )
     else:
         await update.message.reply_text(
-            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\n"
-            "اکنون می‌توانید از امکانات ربات استفاده کنید."
+            "✅ ثبت‌نام شما با موفقیت انجام شد!\n\nاکنون می‌توانید از امکانات ربات استفاده کنید."
         )
 
-    # Show main menu
+    # Send main menu (use fresh call to avoid lingering state)
     from handlers.menu import send_main_menu
-
     await send_main_menu(update, context)
 
     return ConversationHandler.END

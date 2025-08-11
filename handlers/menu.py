@@ -35,8 +35,7 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not chat or not user:
         return
 
-    # Check if user is registered
-    # SQL presence check
+    # Check if user is registered in SQL DB
     with session_scope() as session:
         student = session.execute(
             select(User).where(User.telegram_user_id == user.id)

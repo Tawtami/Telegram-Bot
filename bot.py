@@ -601,27 +601,47 @@ async def orders_ui_command(update: Update, context: Any) -> None:
 async def profile_command(update: Update, context: Any) -> None:
     """Handle /profile command"""
     try:
-        storage: StudentStorage = context.bot_data["storage"]
-        user_id = update.effective_user.id
-        student = storage.get_student(user_id)
+        from database.db import session_scope
+        from database.models_sql import User as DBUser
+        from utils.crypto import crypto_manager
 
-        if not student:
+        user_id = update.effective_user.id
+        with session_scope() as session:
+            db_user = (
+                session.query(DBUser)
+                .filter(DBUser.telegram_user_id == user_id)
+                .one_or_none()
+            )
+
+        if not db_user:
             await update.message.reply_text(
-                "❌ شما هنوز ثبت‌نام نکرده‌اید.\n" "لطفاً ابتدا ثبت‌نام کنید.",
+                "❌ شما هنوز ثبت‌نام نکرده‌اید.\nلطفاً ابتدا ثبت‌نام کنید.",
                 reply_markup=build_register_keyboard(),
             )
             return
 
+        # Decrypt PII for display to the user only
+        try:
+            first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
+        except Exception:
+            first_name = ""
+        try:
+            last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
+        except Exception:
+            last_name = ""
+        try:
+            phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
+        except Exception:
+            phone = "ثبت نشده"
+
         profile_text = (
             "📋 **پروفایل شما:**\n\n"
-            f"👤 **نام:** {student['first_name']}\n"
-            f"👤 **نام خانوادگی:** {student['last_name']}\n"
-            f"📱 **شماره تماس:** {student.get('phone_number', 'ثبت نشده')}\n"
-            f"📍 **استان:** {student['province']}\n"
-            f"🏙 **شهر:** {student['city']}\n"
-            f"📚 **پایه تحصیلی:** {student['grade']}\n"
-            f"🎓 **رشته تحصیلی:** {student['field']}\n\n"
-            "برای ویرایش اطلاعات، لطفاً دوباره ثبت‌نام کنید."
+            f"👤 **نام:** {first_name} {last_name}\n"
+            f"📱 **شماره تماس:** {phone}\n"
+            f"📍 **استان:** {db_user.province or '—'}\n"
+            f"🏙 **شهر:** {db_user.city or '—'}\n"
+            f"📚 **پایه تحصیلی:** {db_user.grade or '—'}\n"
+            f"🎓 **رشته تحصیلی:** {db_user.field_of_study or '—'}\n"
         )
 
         await update.message.reply_text(profile_text, parse_mode="Markdown")
