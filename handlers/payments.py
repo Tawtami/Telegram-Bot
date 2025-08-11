@@ -409,6 +409,11 @@ async def handle_payment_decision(
                         session, item_id, status="approved"
                     )
                 lines = [str(uid) for uid in uids]
+                from utils.performance_monitor import monitor
+                try:
+                    monitor.increment_hourly("participant_pushes")
+                except Exception:
+                    pass
                 await send_paginated_list(
                     context,
                     context.bot_data.get("config").bot.admin_user_ids,

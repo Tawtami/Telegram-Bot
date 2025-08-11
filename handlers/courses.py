@@ -338,6 +338,11 @@ async def handle_course_registration(
                         session, course_id, status="approved"
                     )
                 lines = [str(uid) for uid in uids]
+                from utils.performance_monitor import monitor
+                try:
+                    monitor.increment_hourly("participant_pushes")
+                except Exception:
+                    pass
                 await send_paginated_list(
                     context,
                     app_config.bot.admin_user_ids,

@@ -135,6 +135,7 @@ class PerformanceMonitor:
         self.user_activity: Dict[int, Dict[str, Any]] = defaultdict(dict)
         self.system_metrics: Dict[str, Any] = {}
         self.counters: Dict[str, int] = defaultdict(int)
+        self.hourly_counters: Dict[str, Dict[int, int]] = defaultdict(lambda: defaultdict(int))
         self.alerts: List[Dict[str, Any]] = []
         self.alert_handlers: List[Callable] = []
         self._lock = asyncio.Lock()
@@ -258,6 +259,12 @@ class PerformanceMonitor:
                 ]
             )
 
+            # Aggregate hourly counters (last hour)
+            current_hour = int(time.time() // 3600)
+            hourly_summary = {}
+            for name, buckets in self.hourly_counters.items():
+                hourly_summary[name] = buckets.get(current_hour, 0)
+
             return {
                 "system": {
                     "uptime_hours": round(uptime_hours, 2),
@@ -272,6 +279,7 @@ class PerformanceMonitor:
                 "handlers": {
                     name: metrics.to_dict() for name, metrics in self.metrics.items()
                 },
+                "hourly": hourly_summary,
                 "alerts": self.alerts[-10:],  # Last 10 alerts
                 "timestamp": time.time(),
             }
@@ -364,6 +372,10 @@ class PerformanceMonitor:
 
     def increment_counter(self, name: str, increment: int = 1):
         self.counters[name] += increment
+
+    def increment_hourly(self, name: str, increment: int = 1):
+        hour = int(time.time() // 3600)
+        self.hourly_counters[name][hour] += increment
 
 
 # Global performance monitor instance

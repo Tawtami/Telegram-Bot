@@ -840,6 +840,7 @@ async def metrics_command(update: Update, context: Any) -> None:
         if not await _ensure_admin(update):
             return
         from utils.performance_monitor import monitor
+
         stats = await monitor.get_stats()
         sys = stats.get("system", {})
         counters = stats.get("counters", {})
@@ -858,7 +859,9 @@ async def metrics_command(update: Update, context: Any) -> None:
         lines.append("")
         lines.append("🧩 هندلرها:")
         for name, data in handlers.items():
-            lines.append(f"• {name}: {data.get('total_requests',0)} req | err {data.get('error_count',0)} | avg {data.get('avg_duration',0)}s")
+            lines.append(
+                f"• {name}: {data.get('total_requests',0)} req | err {data.get('error_count',0)} | avg {data.get('avg_duration',0)}s"
+            )
         await update.effective_message.reply_text("\n".join(lines))
     except Exception as e:
         logger.error(f"Error in metrics_command: {e}")
