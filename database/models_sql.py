@@ -57,7 +57,7 @@ class Course(Base):
     type: Mapped[str] = mapped_column(String(16))  # free|paid
     grade: Mapped[str] = mapped_column(String(32), nullable=True)
     price: Mapped[int] = mapped_column(Integer, default=0)
-    metadata: Mapped[dict] = mapped_column(JSON, default={})
+    extra: Mapped[dict] = mapped_column(JSON, default={})
 
 
 class Purchase(Base):
