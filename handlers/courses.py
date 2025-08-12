@@ -18,6 +18,9 @@ from database.db import session_scope
 from database.service import get_or_create_user, create_purchase
 from utils.admin_notify import send_paginated_list
 from database.service import get_course_participants_by_slug
+from database.service import get_daily_question, submit_answer
+from sqlalchemy import select
+from database.models_sql import User as DBUser
 
 logger = logging.getLogger(__name__)
 
@@ -428,4 +431,68 @@ def build_course_handlers():
         CallbackQueryHandler(handle_paid_courses, pattern=r"^courses_paid$"),
         CallbackQueryHandler(handle_purchased_courses, pattern=r"^courses_purchased$"),
         CallbackQueryHandler(handle_course_registration, pattern=r"^register_course_"),
+        CallbackQueryHandler(handle_daily_quiz, pattern=r"^daily_quiz$"),
+        CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
     ]
+
+
+# ---------------------
+# Learning: daily quiz (basic inline flow)
+# ---------------------
+
+
+async def handle_daily_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    user = query.from_user
+    with session_scope() as session:
+        db_user = session.execute(
+            select(DBUser).where(DBUser.telegram_user_id == user.id)
+        ).scalar_one_or_none()
+        if not db_user:
+            await query.edit_message_text("❌ ابتدا ثبت‌نام کنید.")
+            return
+        q = get_daily_question(session, db_user.grade or "دهم")
+    if not q:
+        await query.edit_message_text("سوال روز موجود نیست. فردا دوباره تلاش کنید.")
+        return
+    choices = (q.options or {}).get("choices", [])
+    rows = [
+        [InlineKeyboardButton(text=c, callback_data=f"quiz:{q.id}:{i}")]
+        for i, c in enumerate(choices[:8])
+    ]
+    rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
+    await query.edit_message_text(
+        f"سوال روز ({q.grade})\n\n{q.question_text}",
+        reply_markup=InlineKeyboardMarkup(rows),
+    )
+
+
+async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    data = (query.data or "").split(":")
+    if len(data) != 3:
+        return
+    _, qid, sel = data
+    try:
+        qid = int(qid)
+        sel = int(sel)
+    except ValueError:
+        return
+    with session_scope() as session:
+        u = session.execute(
+            select(DBUser).where(DBUser.telegram_user_id == query.from_user.id)
+        ).scalar_one_or_none()
+        if not u:
+            await query.edit_message_text("❌ ابتدا ثبت‌نام کنید.")
+            return
+        correct = submit_answer(session, u.id, qid, sel)
+    if correct:
+        await query.edit_message_text("✅ پاسخ صحیح! آفرین! 🎉")
+    else:
+        await query.edit_message_text("❌ پاسخ نادرست. دوباره تلاش کن! 💪")

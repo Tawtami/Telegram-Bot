@@ -80,6 +80,9 @@ def _upgrade_schema_if_needed(conn):
             "receipts",
             "purchase_audits",
             "profile_changes",
+            "quiz_questions",
+            "quiz_attempts",
+            "user_stats",
         ]
         for tname in creation_order:
             table = name_to_table.get(tname)

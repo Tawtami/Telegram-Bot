@@ -71,6 +71,7 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
                 text="🛒 سبد خرید من", callback_data="courses_purchased"
             )
         ],
+        [InlineKeyboardButton(text="🧠 سوال روز", callback_data="daily_quiz")],
         [InlineKeyboardButton(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")],
         [InlineKeyboardButton(text="🌐 شبکه‌های اجتماعی", callback_data="social_media")],
         [InlineKeyboardButton(text="☎️ ارتباط با ما", callback_data="contact_us")],

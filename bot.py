@@ -1260,7 +1260,10 @@ async def run_webhook_mode(application: Application) -> None:
                 from sqlalchemy import select
                 from database.db import session_scope
                 from database.models_sql import Purchase, User as DBUser
-                from database.service import get_stats_summary, list_stale_pending_purchases
+                from database.service import (
+                    get_stats_summary,
+                    list_stale_pending_purchases,
+                )
                 from datetime import datetime, timedelta
                 import secrets
 
@@ -1489,13 +1492,18 @@ async def run_webhook_mode(application: Application) -> None:
                     try:
                         with session_scope() as session:
                             stats = get_stats_summary(session)
-                            stale = list_stale_pending_purchases(session, older_than_days=14)
+                            stale = list_stale_pending_purchases(
+                                session, older_than_days=14
+                            )
                     except Exception:
-                        stats = {"users": 0, "purchases": {}, "grades": [], "cities_top": []}
+                        stats = {
+                            "users": 0,
+                            "purchases": {},
+                            "grades": [],
+                            "cities_top": [],
+                        }
                         stale = []
-                    stats_html = (
-                        f"<div class='meta'>کاربران: {stats.get('users',0)} | سفارش‌ها: کل {stats.get('purchases',{}).get('total',0)}، در انتظار {stats.get('purchases',{}).get('pending',0)}</div>"
-                    )
+                    stats_html = f"<div class='meta'>کاربران: {stats.get('users',0)} | سفارش‌ها: کل {stats.get('purchases',{}).get('total',0)}، در انتظار {stats.get('purchases',{}).get('pending',0)}</div>"
                     stale_html = ""
                     if stale:
                         stale_html = (

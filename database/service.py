@@ -18,6 +18,9 @@ from database.models_sql import (
     Receipt,
     PurchaseAudit,
     BannedUser,
+    QuizQuestion,
+    QuizAttempt,
+    UserStats,
 )
 from utils.crypto import crypto_manager
 
@@ -394,3 +397,82 @@ def list_stale_pending_purchases(session: Session, older_than_days: int = 14) ->
         }
         for r in q
     ]
+
+
+# ---------------------
+# Learning services (Quiz)
+# ---------------------
+
+
+def upsert_user_stats(session: Session, user_db_id: int, correct: bool) -> None:
+    today = dt.datetime.utcnow().date().isoformat()
+    stats = (
+        session.execute(select(UserStats).where(UserStats.user_id == user_db_id))
+        .scalars()
+        .first()
+    )
+    if stats is None:
+        stats = UserStats(
+            user_id=user_db_id,
+            total_attempts=1,
+            total_correct=1 if correct else 0,
+            streak_days=1 if correct else 0,
+            last_attempt_date=today,
+        )
+        session.add(stats)
+        session.flush()
+        return
+    stats.total_attempts += 1
+    if correct:
+        stats.total_correct += 1
+    # streak
+    if stats.last_attempt_date == today:
+        pass
+    else:
+        try:
+            prev = dt.date.fromisoformat(stats.last_attempt_date or today)
+            if prev == dt.date.fromisoformat(today) - dt.timedelta(days=1):
+                stats.streak_days += 1
+            else:
+                stats.streak_days = 1 if correct else 0
+        except Exception:
+            stats.streak_days = 1 if correct else 0
+        stats.last_attempt_date = today
+    session.flush()
+
+
+def get_daily_question(session: Session, grade: str) -> QuizQuestion | None:
+    # Pick the easiest unanswered question for daily practice
+    q = (
+        session.execute(
+            select(QuizQuestion)
+            .where(QuizQuestion.grade == grade)
+            .order_by(QuizQuestion.difficulty.asc(), QuizQuestion.id.asc())
+        )
+        .scalars()
+        .first()
+    )
+    return q
+
+
+def submit_answer(
+    session: Session, user_db_id: int, question_id: int, selected_index: int
+) -> bool:
+    question = (
+        session.execute(select(QuizQuestion).where(QuizQuestion.id == question_id))
+        .scalars()
+        .first()
+    )
+    if not question:
+        return False
+    is_correct = int(selected_index == int(question.correct_index))
+    attempt = QuizAttempt(
+        user_id=user_db_id,
+        question_id=question_id,
+        selected_index=selected_index,
+        correct=is_correct,
+    )
+    session.add(attempt)
+    upsert_user_stats(session, user_db_id, bool(is_correct))
+    session.flush()
+    return bool(is_correct)
