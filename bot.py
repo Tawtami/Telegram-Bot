@@ -1522,8 +1522,8 @@ async def run_webhook_mode(application: Application) -> None:
                         const uidInput = document.getElementById('uid');
                         const productInput = document.getElementById('product');
                         let t1=null, t2=null;
-                        uidInput && uidInput.addEventListener('input', ()=>{ clearTimeout(t1); t1=setTimeout(()=>form.submit(), 550); });
-                        productInput && productInput.addEventListener('input', ()=>{ clearTimeout(t2); t2=setTimeout(()=>form.submit(), 550); });
+                        uidInput && uidInput.addEventListener('input', ()=>{{ clearTimeout(t1); t1=setTimeout(()=>form.submit(), 550); }});
+                        productInput && productInput.addEventListener('input', ()=>{{ clearTimeout(t2); t2=setTimeout(()=>form.submit(), 550); }});
                       </script>
                     </body></html>
                     """
