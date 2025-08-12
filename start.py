@@ -32,6 +32,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+
 def _prepare_webhook_env() -> None:
     """Set WEBHOOK_URL from Railway's public domain if available."""
     railway_public_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
@@ -64,6 +65,7 @@ def _validate_environment() -> bool:
         return False
 
     return True
+
 
 
 def main() -> None:

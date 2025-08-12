@@ -276,6 +276,8 @@ error_handler = ErrorHandler()
 async def ptb_error_handler(update, context) -> None:
     try:
         err = getattr(context, "error", None)
-        await error_handler.handle_error(err or Exception("Unknown error"), handler_name="ptb_error_handler")
+        await error_handler.handle_error(
+            err or Exception("Unknown error"), handler_name="ptb_error_handler"
+        )
     except Exception as e:
         logger.error(f"Failed to handle error: {e}")
