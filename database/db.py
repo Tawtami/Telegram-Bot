@@ -22,6 +22,13 @@ class Base(DeclarativeBase):
 def _build_db_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
     if url:
+        # Normalize to psycopg v3 driver if not explicitly specified
+        # e.g., 'postgres://...' or 'postgresql://...' -> 'postgresql+psycopg://...'
+        lowered = url.lower()
+        if (lowered.startswith("postgres://") or lowered.startswith("postgresql://")) and "+" not in url:
+            return url.replace("postgres://", "postgresql+psycopg://").replace(
+                "postgresql://", "postgresql+psycopg://"
+            )
         return url
     # Fallback to SQLite for development
     return "sqlite:///data/app.db"

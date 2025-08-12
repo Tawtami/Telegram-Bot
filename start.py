@@ -76,6 +76,17 @@ def main() -> None:
         _prepare_webhook_env()
 
         # Import and run the bot's main function
+        # Ensure DATABASE_URL uses psycopg v3 driver on Railway
+        try:
+            import os
+            url = os.environ.get("DATABASE_URL", "")
+            if url and "+" not in url and (url.startswith("postgres://") or url.startswith("postgresql://")):
+                os.environ["DATABASE_URL"] = url.replace("postgres://", "postgresql+psycopg://").replace(
+                    "postgresql://", "postgresql+psycopg://"
+                )
+        except Exception:
+            pass
+
         from bot import main as bot_main
 
         bot_main()
