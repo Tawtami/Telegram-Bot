@@ -1,7 +1,7 @@
 # 🎓 Ostad Hatami Math Classes Bot
 
-[![CI](https://github.com/Tawtami/Bot/actions/workflows/alembic.yml/badge.svg)](https://github.com/Tawtami/Bot/actions/workflows/alembic.yml)
-[![Coverage](https://img.shields.io/badge/coverage-codecov-blue)](#)
+[![CI](https://github.com/Tawtami/Telegram-Bot/actions/workflows/alembic.yml/badge.svg)](https://github.com/Tawtami/Telegram-Bot/actions/workflows/alembic.yml)
+[![codecov](https://codecov.io/gh/Tawtami/Telegram-Bot/branch/main/graph/badge.svg)](https://codecov.io/gh/Tawtami/Telegram-Bot)
 
 ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 
