@@ -3,7 +3,7 @@ python-dotenv==1.0.1
 aiohttp==3.9.5
 cryptography==42.0.8
 SQLAlchemy==2.0.32
-psycopg==3.2.1
+psycopg[binary]==3.2.1
 alembic==1.13.2
 sentry-sdk==2.8.0
 openpyxl==3.1.5
