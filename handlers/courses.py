@@ -11,7 +11,7 @@ from telegram.constants import ParseMode
 
 import logging
 from config import config
-from utils.storage import StudentStorage
+from database.db import session_scope
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from database.db import session_scope
@@ -197,9 +197,39 @@ async def handle_purchased_courses(
 
     await query.answer()
 
-    # Get user's courses
-    storage: StudentStorage = context.bot_data["storage"]
-    user_courses = storage.get_user_courses(query.from_user.id)
+    # Build user's courses from SQL purchases
+    from sqlalchemy import select
+    from database.models_sql import Purchase, User as DBUser
+
+    with session_scope() as session:
+        db_user = session.execute(
+            select(DBUser).where(DBUser.telegram_user_id == query.from_user.id)
+        ).scalar_one_or_none()
+        if not db_user:
+            await query.edit_message_text(
+                "❌ ابتدا ثبت‌نام کنید.",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
+                ),
+            )
+            return
+        rows = list(
+            session.execute(
+                select(Purchase).where(Purchase.user_id == db_user.id)
+            ).scalars()
+        )
+    user_courses = {
+        "free_courses": [
+            p.product_id
+            for p in rows
+            if p.product_type == "course" and p.status == "approved"
+        ],
+        "purchased_courses": [
+            p.product_id
+            for p in rows
+            if p.product_type == "course" and p.status != "approved"
+        ],
+    }
 
     if not user_courses["purchased_courses"] and not user_courses["free_courses"]:
         await query.edit_message_text(
@@ -297,7 +327,7 @@ async def handle_course_registration(
         course_type, course_id = rest.split("_", 1)
     except ValueError:
         course_type, course_id = "paid", rest
-    storage: StudentStorage = context.bot_data["storage"]
+    # no JSON storage
 
     # Load course details from JSON
     import json
@@ -321,14 +351,7 @@ async def handle_course_registration(
                     product_id=course_id,
                     status="approved",
                 )
-            # Reflect in JSON storage for user-facing "سبد خرید من"
-            try:
-                storage: StudentStorage = context.bot_data["storage"]
-                storage.save_course_registration(
-                    query.from_user.id, course_id, is_paid=False
-                )
-            except Exception:
-                pass
+            # JSON reflection removed; SQL is the source of truth
             course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
                 f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد!\n\n"

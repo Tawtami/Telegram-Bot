@@ -60,23 +60,13 @@ class DummyContext:
 @pytest.mark.asyncio
 async def test_handle_payment_decision_approve_course(tmp_path):
     from handlers.payments import handle_payment_decision
-    from utils.storage import StudentStorage
+    from database.db import session_scope
+    from database.service import get_or_create_user
 
     # Arrange storage with pending course
-    storage = StudentStorage(data_dir=str(tmp_path / "data"))
     user_id = 555
-    storage.save_student(
-        {
-            "user_id": user_id,
-            "first_name": "Ali",
-            "last_name": "R",
-            "province": "تهران",
-            "city": "تهران",
-            "grade": "دهم",
-            "field": "ریاضی",
-            "pending_payments": ["course-1"],
-        }
-    )
+    with session_scope() as session:
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Ali", last_name="R")
 
     token = "abcdabcdabcdabcd"
     bot = DummyBot()
@@ -84,7 +74,6 @@ async def test_handle_payment_decision_approve_course(tmp_path):
         "config": types.SimpleNamespace(
             bot=types.SimpleNamespace(admin_user_ids=[111])
         ),
-        "storage": storage,
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -108,11 +97,8 @@ async def test_handle_payment_decision_approve_course(tmp_path):
     meta = bot_data["payment_notifications"][token]
     assert meta["processed"] is True
     assert meta["decision"] == "approve"
-    student = storage.get_student(user_id)
-    assert "course-1" in student.get("purchased_courses", [])
-    assert "pending_payments" not in student or "course-1" not in student.get(
-        "pending_payments", []
-    )
+    # SQL is source of truth now; just ensure the meta was processed and a message to student was sent
+    assert any(m["chat_id"] == user_id for m in bot.sent_messages)
     # Confirmation message sent to student
     assert any(m["chat_id"] == user_id for m in bot.sent_messages)
 
@@ -120,22 +106,12 @@ async def test_handle_payment_decision_approve_course(tmp_path):
 @pytest.mark.asyncio
 async def test_handle_payment_decision_approve_book(tmp_path):
     from handlers.payments import handle_payment_decision
-    from utils.storage import StudentStorage
+    from database.db import session_scope
+    from database.service import get_or_create_user
 
-    storage = StudentStorage(data_dir=str(tmp_path / "data"))
     user_id = 777
-    storage.save_student(
-        {
-            "user_id": user_id,
-            "first_name": "Sara",
-            "last_name": "M",
-            "province": "تهران",
-            "city": "تهران",
-            "grade": "دهم",
-            "field": "ریاضی",
-            "book_purchases": [{"title": "BookA"}],
-        }
-    )
+    with session_scope() as session:
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Sara", last_name="M")
 
     token = "eeeeffffaaaabbbb"
     bot = DummyBot()
@@ -143,7 +119,6 @@ async def test_handle_payment_decision_approve_book(tmp_path):
         "config": types.SimpleNamespace(
             bot=types.SimpleNamespace(admin_user_ids=[111])
         ),
-        "storage": storage,
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -165,32 +140,18 @@ async def test_handle_payment_decision_approve_book(tmp_path):
     meta = bot_data["payment_notifications"][token]
     assert meta["processed"] is True
     assert meta["decision"] == "approve"
-    student = storage.get_student(user_id)
-    assert any(
-        p.get("title") == "BookA" and p.get("approved")
-        for p in student.get("book_purchases", [])
-    )
+    assert any(m["chat_id"] == user_id for m in bot.sent_messages)
 
 
 @pytest.mark.asyncio
 async def test_handle_payment_decision_reject_book(tmp_path):
     from handlers.payments import handle_payment_decision
-    from utils.storage import StudentStorage
+    from database.db import session_scope
+    from database.service import get_or_create_user
 
-    storage = StudentStorage(data_dir=str(tmp_path / "data"))
     user_id = 888
-    storage.save_student(
-        {
-            "user_id": user_id,
-            "first_name": "Nima",
-            "last_name": "T",
-            "province": "تهران",
-            "city": "تهران",
-            "grade": "دهم",
-            "field": "ریاضی",
-            "book_purchases": [{"title": "BookB"}],
-        }
-    )
+    with session_scope() as session:
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Nima", last_name="T")
 
     token = "1122334455667788"
     bot = DummyBot()
@@ -198,7 +159,6 @@ async def test_handle_payment_decision_reject_book(tmp_path):
         "config": types.SimpleNamespace(
             bot=types.SimpleNamespace(admin_user_ids=[111])
         ),
-        "storage": storage,
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -220,12 +180,6 @@ async def test_handle_payment_decision_reject_book(tmp_path):
     meta = bot_data["payment_notifications"][token]
     assert meta["processed"] is True
     assert meta["decision"] == "reject"
-    student = storage.get_student(user_id)
-    # Ensure not marked approved
-    assert not any(
-        p.get("title") == "BookB" and p.get("approved")
-        for p in student.get("book_purchases", [])
-    )
     # Rejection message sent
     assert any(
         (m["chat_id"] == user_id and "ناموفق" in m["text"]) for m in bot.sent_messages

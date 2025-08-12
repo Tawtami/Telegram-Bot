@@ -70,7 +70,8 @@ from handlers.social import build_social_handlers, handle_social_media
 
 # Import utilities
 from utils.rate_limiter import rate_limiter, multi_rate_limiter, rate_limit_handler
-from utils.storage import StudentStorage
+from database.db import session_scope
+from database.service import is_user_banned, ban_user, unban_user
 from utils.error_handler import ptb_error_handler
 from ui.keyboards import build_register_keyboard
 from datetime import datetime
@@ -143,8 +144,25 @@ async def students_command(update: Update, context: Any) -> None:
             )
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-        students = storage.get_all_students()
+        # Export: basic CSV from DB users table
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser
+
+        with session_scope() as session:
+            rows = list(session.execute(select(DBUser)).scalars())
+        students = [
+            {
+                "user_id": u.telegram_user_id,
+                "first_name": None,
+                "last_name": None,
+                "phone_number": None,
+                "province": u.province,
+                "city": u.city,
+                "grade": u.grade,
+                "field": u.field_of_study,
+            }
+            for u in rows
+        ]
 
         if not students:
             await update.message.reply_text("هیچ دانش‌آموزی ثبت‌نام نکرده است.")
@@ -201,8 +219,13 @@ async def broadcast_command(update: Update, context: Any) -> None:
         if not await _ensure_admin(update):
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-        students = storage.get_all_students()
+        # Broadcast to all registered users
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser
+
+        with session_scope() as session:
+            rows = list(session.execute(select(DBUser)).scalars())
+        students = [{"user_id": u.telegram_user_id} for u in rows]
 
         if not students:
             await update.effective_message.reply_text(
@@ -256,10 +279,16 @@ async def broadcast_grade_command(update: Update, context: Any) -> None:
             await update.effective_message.reply_text("پایه تحصیلی نامعتبر است.")
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-        students = [
-            s for s in storage.get_all_students() if s.get("grade") == target_grade
-        ]
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser
+
+        with session_scope() as session:
+            rows = list(
+                session.execute(
+                    select(DBUser).where(DBUser.grade == target_grade)
+                ).scalars()
+            )
+        students = [{"user_id": u.telegram_user_id} for u in rows]
         if not students:
             await update.effective_message.reply_text("کاربری با این پایه یافت نشد.")
             return
@@ -269,7 +298,7 @@ async def broadcast_grade_command(update: Update, context: Any) -> None:
         for student in students:
             try:
                 uid = student.get("user_id")
-                if not uid or storage.is_user_banned(uid):
+                if not uid:
                     continue
                 await context.bot.send_message(chat_id=uid, text=text)
                 sent += 1
@@ -307,8 +336,9 @@ async def ban_command(update: Update, context: Any) -> None:
             await update.effective_message.reply_text("فرمت درست: /ban 123456789")
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-        if storage.ban_user(uid):
+        with session_scope() as session:
+            ok = ban_user(session, uid)
+        if ok:
             await update.effective_message.reply_text(f"✅ کاربر {uid} مسدود شد.")
         else:
             await update.effective_message.reply_text("❌ خطا در مسدودسازی کاربر.")
@@ -337,8 +367,9 @@ async def unban_command(update: Update, context: Any) -> None:
             await update.effective_message.reply_text("فرمت درست: /unban 123456789")
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-        if storage.unban_user(uid):
+        with session_scope() as session:
+            ok = unban_user(session, uid)
+        if ok:
             await update.effective_message.reply_text(f"✅ کاربر {uid} آزاد شد.")
         else:
             await update.effective_message.reply_text("❌ خطا در آزادسازی کاربر.")
@@ -374,13 +405,7 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
             )
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-
-        if not storage.confirm_payment(student_id):
-            await update.message.reply_text(
-                "❌ دانش‌آموز یافت نشد یا پرداختی در انتظار تایید ندارد."
-            )
-            return
+        # No longer needed: approvals handled via buttons/DB; keep manual ack minimal
 
         # Notify student
         try:
@@ -486,23 +511,25 @@ async def user_search_command(update: Update, context: Any) -> None:
             return
         q = q.strip().lower()
 
-        storage: StudentStorage = context.bot_data["storage"]
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser
+
         results = []
-        for s in storage.get_all_students():
-            if any(
-                (str(s.get(k, "")).lower().find(q) != -1)
-                for k in ("first_name", "last_name", "phone_number")
-            ):
-                results.append(s)
+        with session_scope() as session:
+            rows = list(session.execute(select(DBUser)).scalars())
+        for u in rows:
+            hay = f"{(u.province or '').lower()} {(u.city or '').lower()} {(u.grade or '').lower()} {(u.field_of_study or '').lower()}"
+            if q in hay or q in str(u.telegram_user_id):
+                results.append(u)
 
         if not results:
             await update.effective_message.reply_text("چیزی یافت نشد.")
             return
 
         lines = ["نتایج:"]
-        for s in results[:25]:
+        for u in results[:25]:
             lines.append(
-                f"• {s.get('first_name','')} {s.get('last_name','')} | {s.get('phone_number','')} | id={s.get('user_id')}"
+                f"• id={u.telegram_user_id} | {u.province or '—'} {u.city or '—'} | {u.grade or '—'} {u.field_of_study or '—'}"
             )
         await update.effective_message.reply_text("\n".join(lines))
     except Exception as e:
@@ -787,8 +814,6 @@ async def status_command(update: Update, context: Any) -> None:
         if not await _ensure_admin(update):
             return
 
-        storage: StudentStorage = context.bot_data["storage"]
-
         # Get bot info
         try:
             bot_info = await context.bot.get_me()
@@ -799,9 +824,17 @@ async def status_command(update: Update, context: Any) -> None:
             bot_name = "Unknown"
             bot_username = "Unknown"
 
-        # Get storage stats
-        students = storage.get_all_students()
-        total_students = len(students)
+        # Get user count from DB
+        try:
+            from sqlalchemy import select, func
+            from database.models_sql import User as DBUser
+
+            with session_scope() as session:
+                total_students = (
+                    session.execute(select(func.count(DBUser.id))).scalar() or 0
+                )
+        except Exception:
+            total_students = 0
 
         # Get rate limiter stats if available
         rate_limiter_stats = {}
@@ -954,11 +987,12 @@ async def setup_handlers(application: Application) -> None:
         # Add pre-check handlers for banned users
         async def block_banned_messages(update: Update, context: Any) -> None:
             try:
-                storage: StudentStorage = context.bot_data["storage"]
                 user_id = (
                     update.effective_user.id if update and update.effective_user else 0
                 )
-                if storage.is_user_banned(user_id):
+                with session_scope() as session:
+                    banned = is_user_banned(session, user_id)
+                if banned:
                     if update.effective_message:
                         await update.effective_message.reply_text(
                             "⛔️ دسترسی شما محدود شده است."
@@ -1983,9 +2017,7 @@ def main() -> None:
             .build()
         )
 
-        # Initialize storage
-        storage = StudentStorage()
-        application.bot_data["storage"] = storage
+        # No JSON storage; DB is source of truth
         application.bot_data["config"] = config
         application.bot_data["broadcast_manager"] = BroadcastManager()
 

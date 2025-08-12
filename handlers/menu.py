@@ -11,7 +11,7 @@ from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
 from config import config
-from utils.storage import StudentStorage
+from database.db import session_scope
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard, build_register_keyboard
 from database.db import session_scope

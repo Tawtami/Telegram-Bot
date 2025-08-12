@@ -37,6 +37,13 @@ class User(Base):
     )
 
 
+class BannedUser(Base):
+    __tablename__ = "banned_users"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class ProfileChange(Base):
     __tablename__ = "profile_changes"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

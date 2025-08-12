@@ -8,7 +8,6 @@ from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from config import config
-from utils.storage import StudentStorage
 from database.models_sql import User as DBUser
 from utils.crypto import crypto_manager
 from utils.rate_limiter import rate_limit_handler
@@ -52,35 +51,31 @@ async def handle_payment_receipt(
         )
         return
 
-    storage: StudentStorage = context.bot_data["storage"]
-    student = storage.get_student(update.effective_user.id)
-    if not student:
-        # Fallback به DB: اگر در JSON نبود، از DB وجود کاربر را چک می‌کنیم
-        with session_scope() as session:
-            db_user = (
-                session.query(DBUser)
-                .filter(DBUser.telegram_user_id == update.effective_user.id)
-                .one_or_none()
-            )
-        if not db_user:
-            await update.message.reply_text(
-                "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
-                reply_markup=build_main_menu_keyboard(),
-            )
-            return
-        # ساخت نمای سازگار برای کپشن از روی DB (بدون نشت PII در لاگ)
-        try:
-            first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
-            last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
-            phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
-        except Exception:
-            first_name, last_name, phone = "", "", "ثبت نشده"
-        student = {
-            "first_name": first_name,
-            "last_name": last_name,
-            "phone_number": phone,
-            "city": db_user.city or "—",
-        }
+    # Fetch student from DB (PII decrypted for caption only)
+    with session_scope() as session:
+        db_user = (
+            session.query(DBUser)
+            .filter(DBUser.telegram_user_id == update.effective_user.id)
+            .one_or_none()
+        )
+    if not db_user:
+        await update.message.reply_text(
+            "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
+            reply_markup=build_main_menu_keyboard(),
+        )
+        return
+    try:
+        first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
+        last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
+        phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
+    except Exception:
+        first_name, last_name, phone = "", "", "ثبت نشده"
+    student = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "phone_number": phone,
+        "city": db_user.city or "—",
+    }
 
     caption = None
     success_message = None
@@ -349,7 +344,6 @@ async def handle_payment_decision(
         await query.edit_message_text("⛔️ مجاز نیست.")
         return
 
-    storage: StudentStorage = context.bot_data["storage"]
     notifications = context.bot_data.setdefault("payment_notifications", {})
     meta = notifications.get(token)
     if not meta:
@@ -393,27 +387,7 @@ async def handle_payment_decision(
             if db_purchase:
                 approve_or_reject_purchase(session, db_purchase.id, user_id, decision)
 
-        # Reflect decision in JSON storage for UX (cart/my courses)
-        try:
-            if decision == "approve":
-                if item_type == "course":
-                    storage.save_course_registration(student_id, item_id, is_paid=True)
-                elif item_type == "book":
-                    # Mark or add approved book purchase in storage
-                    s = storage.get_student(student_id)
-                    if s is not None:
-                        purchases = list(s.get("book_purchases", []))
-                        updated = False
-                        for p in purchases:
-                            if p.get("title") == item_id:
-                                p["approved"] = True
-                                updated = True
-                        if not updated:
-                            purchases.append({"title": item_id, "approved": True})
-                        s["book_purchases"] = purchases
-                        storage.save_student(s)
-        except Exception:
-            pass
+        # JSON reflection removed; SQL is the source of truth
 
         # Notify student
         await context.bot.send_message(

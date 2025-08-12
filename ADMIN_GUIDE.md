@@ -40,7 +40,7 @@
 
 ## راه‌اندازی سریع
 
-1. تنظیم متغیرها: `BOT_TOKEN`, `ADMIN_USER_IDS`, `ENCRYPTION_KEY`, `WEBHOOK_URL`, `DATABASE_URL`.
+1. تنظیم متغیرها: `BOT_TOKEN`, `ADMIN_USER_IDS`, `ENCRYPTION_KEY`, `WEBHOOK_URL` یا `RAILWAY_PUBLIC_DOMAIN`, `DATABASE_URL`.
 2. استقرار Railway (وب‌هوک فعال).
 3. بررسی `/status` و `/metrics`.
 

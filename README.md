@@ -1,4 +1,4 @@
-## 🎓 Ostad Hatami Math Classes Bot
+# 🎓 Ostad Hatami Math Classes Bot
 
 ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 
@@ -22,7 +22,7 @@ A **high-performance**, **production-ready** Telegram bot for registering studen
 - **7-step registration process** with FSM
 - **Real-time validation** for Persian names and Iranian phone numbers
 - **Interactive keyboards** for easy selection
-- **JSON-based data storage** with individual user files
+- **SQL database** for users/purchases (PostgreSQL in prod, SQLite in dev)
 - **Edit functionality** for all registered fields
 - **Contact sharing** support for phone numbers
 
@@ -122,19 +122,19 @@ Full migration steps (example):
 python -m database.migrate
 ```
 
-2. Dry-run JSON import
+1. Dry-run JSON import
 
 ```bash
 python scripts/json_to_db.py --dry-run
 ```
 
-3. Execute import
+1. Execute import
 
 ```bash
 python scripts/json_to_db.py
 ```
 
-4. Verify counts via a simple SQL query or by adding a temporary `/status` report.
+1. Verify counts via a simple SQL query or by adding a temporary `/status` report.
 
 ## 🔐 Security & Env
 
@@ -218,22 +218,9 @@ Both admins listed in `ADMIN_USER_IDS` have identical privileges and can use the
 
 ## 📊 Data Storage
 
-User data is stored in JSON format:
-
-```json
-{
-  "user_id": 123456789,
-  "first_name": "علی",
-  "last_name": "رضایی",
-  "grade": "یازدهم",
-  "major": "ریاضی",
-  "province": "خراسان رضوی",
-  "city": "مشهد",
-  "phone": "+989121234567",
-  "registration_date": "2024-01-15T10:30:00",
-  "last_updated": "2024-01-15T10:30:00"
-}
-```
+- Production: PostgreSQL via `DATABASE_URL` using models in `database/models_sql.py`.
+- Development: SQLite file at `data/app.db`.
+- A thin JSON `StudentStorage` remains for some UX lists, but the source of truth is SQL.
 
 ## 🛠️ Configuration
 
@@ -274,7 +261,6 @@ User data is stored in JSON format:
 - **Error count monitoring** by type
 - **User activity tracking**
 - **Cache hit/miss statistics**
-- **Memory usage optimization**
 - **Automatic cleanup** of expired data
 
 ### Configuration Options
@@ -291,7 +277,7 @@ LOG_LEVEL=INFO                  # Logging level
 
 - **Telegram:** @Ostad_Hatami
 - **Email:** info@ostadhatami.ir
-- **Website:** `www.ostadhatami.ir`
+- **Website:** [`www.ostadhatami.ir`](https://www.ostadhatami.ir)
 
 ## 📊 Performance Metrics
 
@@ -301,11 +287,11 @@ The optimized bot provides:
 - **Memory-efficient** user data management
 - **Scalable architecture** supporting hundreds of concurrent users
 - **99.9% uptime** with graceful error handling
-- **Real-time monitoring** and performance tracking
+- Real-time monitoring and performance tracking
 
 ## 🛠️ Advanced Features
 
-- **Singleton DataManager** - Single instance for all operations
+- **LRU Cache** - Simple in-memory cache for hot data
 - **File Locking** - Prevents data corruption in concurrent access
 - **Async Operations** - Non-blocking file I/O
 - **Smart Caching** - Reduces database hits by 80%
@@ -314,7 +300,7 @@ The optimized bot provides:
 
 ---
 
-**🎓 Production-ready, high-performance bot for math class registration! 🚀**
+🎓 Production-ready, high-performance bot for math class registration! 🚀
 
 ## Operations (Railway)
 

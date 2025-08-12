@@ -1,33 +1,26 @@
 import types
 import pytest
 
-from utils.storage import StudentStorage
+from database.db import session_scope
+from database.service import (
+    ban_user,
+    unban_user,
+    is_user_banned,
+    get_or_create_user,
+    create_purchase,
+)
+from database.models_sql import User, Purchase
 
 
 def test_storage_has_admin_methods(tmp_path):
-    storage = StudentStorage(data_dir=str(tmp_path / "data"))
-    assert hasattr(storage, "ban_user")
-    assert hasattr(storage, "unban_user")
-    assert hasattr(storage, "is_user_banned")
+    with session_scope() as s:
+        assert ban_user(s, 1) is True
+        assert is_user_banned(s, 1) is True
+        assert unban_user(s, 1) is True
 
 
-def test_confirm_payment_moves_pending_to_purchased(tmp_path):
-    storage = StudentStorage(data_dir=str(tmp_path / "data"))
-    user_id = 456
-    # Seed student with pending payment
-    storage.save_student(
-        {
-            "user_id": user_id,
-            "first_name": "A",
-            "last_name": "B",
-            "province": "تهران",
-            "city": "تهران",
-            "grade": "دهم",
-            "field": "ریاضی",
-            "pending_payments": ["course-1"],
-        }
-    )
-    assert storage.confirm_payment(user_id)
-    student = storage.get_student(user_id)
-    assert "pending_payments" not in student
-    assert "course-1" in student.get("purchased_courses", [])
+def test_sql_create_purchase(tmp_path):
+    with session_scope() as s:
+        u = get_or_create_user(s, telegram_user_id=456, first_name="A", last_name="B")
+        p = create_purchase(s, user_id=u.id, product_type="book", product_id="X")
+        assert isinstance(p, Purchase)

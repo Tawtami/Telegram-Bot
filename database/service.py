@@ -11,7 +11,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database.db import session_scope
-from database.models_sql import User, ProfileChange, Purchase, Receipt, PurchaseAudit
+from database.models_sql import (
+    User,
+    ProfileChange,
+    Purchase,
+    Receipt,
+    PurchaseAudit,
+    BannedUser,
+)
 from utils.crypto import crypto_manager
 
 
@@ -264,3 +271,36 @@ def get_free_course_participants_by_grade(
         .order_by(Purchase.created_at.desc())
     )
     return [r[0] for r in q]
+
+
+# ---------------------
+# Ban management (SQL)
+# ---------------------
+
+
+def is_user_banned(session: Session, telegram_user_id: int) -> bool:
+    return (
+        session.execute(
+            select(BannedUser).where(BannedUser.telegram_user_id == telegram_user_id)
+        ).scalar_one_or_none()
+        is not None
+    )
+
+
+def ban_user(session: Session, telegram_user_id: int) -> bool:
+    if is_user_banned(session, telegram_user_id):
+        return True
+    session.add(BannedUser(telegram_user_id=telegram_user_id))
+    session.flush()
+    return True
+
+
+def unban_user(session: Session, telegram_user_id: int) -> bool:
+    row = session.execute(
+        select(BannedUser).where(BannedUser.telegram_user_id == telegram_user_id)
+    ).scalar_one_or_none()
+    if not row:
+        return True
+    session.delete(row)
+    session.flush()
+    return True
