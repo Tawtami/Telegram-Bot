@@ -304,3 +304,93 @@ def unban_user(session: Session, telegram_user_id: int) -> bool:
     session.delete(row)
     session.flush()
     return True
+
+
+# ---------------------
+# Reporting & Housekeeping
+# ---------------------
+
+
+def get_stats_summary(session: Session) -> Dict:
+    total_users = session.execute(select(func.count(User.id))).scalar() or 0
+    total_purchases = session.execute(select(func.count(Purchase.id))).scalar() or 0
+    pending_purchases = (
+        session.execute(
+            select(func.count(Purchase.id)).where(Purchase.status == "pending")
+        ).scalar()
+        or 0
+    )
+    approved_purchases = (
+        session.execute(
+            select(func.count(Purchase.id)).where(Purchase.status == "approved")
+        ).scalar()
+        or 0
+    )
+    rejected_purchases = (
+        session.execute(
+            select(func.count(Purchase.id)).where(Purchase.status == "rejected")
+        ).scalar()
+        or 0
+    )
+
+    grades = [
+        {
+            "grade": r[0] or "",
+            "count": int(r[1] or 0),
+        }
+        for r in session.execute(
+            select(User.grade, func.count(User.id))
+            .group_by(User.grade)
+            .order_by(func.count(User.id).desc())
+        )
+    ]
+
+    cities_top = [
+        {
+            "city": r[0] or "",
+            "count": int(r[1] or 0),
+        }
+        for r in session.execute(
+            select(User.city, func.count(User.id))
+            .group_by(User.city)
+            .order_by(func.count(User.id).desc())
+        ).fetchmany(10)
+    ]
+
+    return {
+        "users": total_users,
+        "purchases": {
+            "total": total_purchases,
+            "pending": pending_purchases,
+            "approved": approved_purchases,
+            "rejected": rejected_purchases,
+        },
+        "grades": grades,
+        "cities_top": cities_top,
+    }
+
+
+def list_stale_pending_purchases(session: Session, older_than_days: int = 14) -> List[Dict]:
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=max(1, older_than_days))
+    q = session.execute(
+        select(
+            Purchase.id,
+            Purchase.user_id,
+            Purchase.product_type,
+            Purchase.product_id,
+            Purchase.created_at,
+        )
+        .where(Purchase.status == "pending", Purchase.created_at < cutoff)
+        .order_by(Purchase.created_at.asc())
+        .limit(200)
+    )
+    return [
+        {
+            "purchase_id": r.id,
+            "user_id": r.user_id,
+            "product_type": r.product_type,
+            "product_id": r.product_id,
+            "created_at": r.created_at,
+        }
+        for r in q
+    ]

@@ -1177,6 +1177,7 @@ async def run_webhook_mode(application: Application) -> None:
             try:
                 from database.db import ENGINE
                 from sqlalchemy import text as _text
+
                 with ENGINE.connect() as conn:
                     conn.execute(_text("SELECT 1"))
                 return web.json_response({"db": "ok"})
@@ -1259,6 +1260,7 @@ async def run_webhook_mode(application: Application) -> None:
                 from sqlalchemy import select
                 from database.db import session_scope
                 from database.models_sql import Purchase, User as DBUser
+                from database.service import get_stats_summary, list_stale_pending_purchases
                 from datetime import datetime, timedelta
                 import secrets
 
@@ -1482,6 +1484,28 @@ async def run_webhook_mode(application: Application) -> None:
                         f"</td></tr>"
                         for r in rows
                     )
+
+                    # Stats summary (top)
+                    try:
+                        with session_scope() as session:
+                            stats = get_stats_summary(session)
+                            stale = list_stale_pending_purchases(session, older_than_days=14)
+                    except Exception:
+                        stats = {"users": 0, "purchases": {}, "grades": [], "cities_top": []}
+                        stale = []
+                    stats_html = (
+                        f"<div class='meta'>کاربران: {stats.get('users',0)} | سفارش‌ها: کل {stats.get('purchases',{}).get('total',0)}، در انتظار {stats.get('purchases',{}).get('pending',0)}</div>"
+                    )
+                    stale_html = ""
+                    if stale:
+                        stale_html = (
+                            "<details><summary>در انتظارهای قدیمی (14+ روز)</summary><ul>"
+                            + "".join(
+                                f"<li>#{s['purchase_id']} | u={s['user_id']} | {s['product_type']}:{s['product_id']} | {s['created_at']}</li>"
+                                for s in stale[:20]
+                            )
+                            + "</ul></details>"
+                        )
                     body = f"""
                     <html>
                     <head>
@@ -1517,6 +1541,7 @@ async def run_webhook_mode(application: Application) -> None:
                       <div class='panel'>
                         {flash_html}
                         <h3>سفارش‌ها ({status})</h3>
+                        {stats_html}
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
                           <label>وضعیت:
@@ -1569,6 +1594,7 @@ async def run_webhook_mode(application: Application) -> None:
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
                           <a class='btn filter' href='{_qs(page=0)}&format=xlsx'>XLSX</a>
                         </div>
+                        {stale_html}
                       </div>
                       <script>
                         const form = document.querySelector('form.controls');
@@ -1951,10 +1977,13 @@ async def run_webhook_mode(application: Application) -> None:
 
         # 24/7 watchdog: periodically verify DB and webhook health and auto-heal
         async def _watchdog_task():
-            interval = max(60, int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300") or 300))
+            interval = max(
+                60, int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300") or 300)
+            )
             expected_webhook = config.webhook.url.rstrip("/") + config.webhook.path
             from database.db import ENGINE
             from sqlalchemy import text as _text
+
             while True:
                 try:
                     # DB ping
@@ -1962,9 +1991,12 @@ async def run_webhook_mode(application: Application) -> None:
                         with ENGINE.connect() as _conn:
                             _conn.execute(_text("SELECT 1"))
                     except Exception as de:
-                        logger.warning(f"Watchdog DB ping failed: {de}. Attempting init_db().")
+                        logger.warning(
+                            f"Watchdog DB ping failed: {de}. Attempting init_db()."
+                        )
                         try:
                             from database.migrate import init_db
+
                             init_db()
                         except Exception as ie:
                             logger.error(f"Watchdog init_db failed: {ie}")
@@ -1972,11 +2004,19 @@ async def run_webhook_mode(application: Application) -> None:
                     # Webhook verification
                     try:
                         info = await application.bot.get_webhook_info()
-                        if not info or str(info.url or "") != expected_webhook or getattr(info, "last_error_date", None):
+                        if (
+                            not info
+                            or str(info.url or "") != expected_webhook
+                            or getattr(info, "last_error_date", None)
+                        ):
                             await application.bot.set_webhook(
                                 url=expected_webhook,
                                 drop_pending_updates=False,
-                                secret_token=(config.webhook.secret_token if config.webhook.secret_token else None),
+                                secret_token=(
+                                    config.webhook.secret_token
+                                    if config.webhook.secret_token
+                                    else None
+                                ),
                                 max_connections=40,
                             )
                             logger.info("Watchdog reset webhook to expected URL")
