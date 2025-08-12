@@ -1343,6 +1343,39 @@ async def run_webhook_mode(application: Application) -> None:
                         charset="utf-8",
                     )
 
+                # XLSX export
+                if fmt == "xlsx":
+                    try:
+                        import io
+                        from openpyxl import Workbook
+
+                        wb = Workbook()
+                        ws = wb.active
+                        ws.title = "orders"
+                        ws.append(["id", "user_id", "type", "product", "status", "created_at"])
+                        for p in items:
+                            ws.append([
+                                p.id,
+                                p.user_id,
+                                p.product_type,
+                                p.product_id,
+                                p.status,
+                                p.created_at.isoformat() if getattr(p, "created_at", None) else "",
+                            ])
+                        bio = io.BytesIO()
+                        wb.save(bio)
+                        bio.seek(0)
+                        return web.Response(
+                            body=bio.getvalue(),
+                            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            headers={
+                                "Content-Disposition": f"attachment; filename=orders_{status or 'all'}.xlsx"
+                            },
+                        )
+                    except Exception as e:
+                        logger.error(f"xlsx export failed: {e}")
+                        return web.Response(status=500, text="xlsx error")
+
                 if "text/html" in accept or not accept:
                     qbase = f"/admin?token={config.bot.admin_dashboard_token}"
 
@@ -1375,7 +1408,7 @@ async def run_webhook_mode(application: Application) -> None:
                     )
 
                     html_rows = "".join(
-                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
+                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r.get('created_at','')}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
                         f"<form method='POST' action='/admin/act' style='display:inline'>"
                         f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
@@ -1410,6 +1443,7 @@ async def run_webhook_mode(application: Application) -> None:
                         th {{ background:#f1f5f9; font-weight:600; }}
                         .controls {{ display:flex; gap:8px; margin:10px 0; align-items:center; flex-wrap:wrap; }}
                         input, select {{ padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px; }}
+                        input[type='text']{{ width:180px; }}
                         .btn {{ padding:6px 10px; border-radius:6px; text-decoration:none; color:#fff; margin-right:6px; border:none; cursor:pointer; }}
                         .approve {{ background:#16a34a; }}
                         .reject {{ background:#dc2626; }}
@@ -1447,10 +1481,10 @@ async def run_webhook_mode(application: Application) -> None:
                             </select>
                           </label>
                           <label>UID:
-                            <input name='uid' value='{uid_str}' placeholder='telegram id' />
+                            <input id='uid' name='uid' value='{uid_str}' placeholder='telegram id' />
                           </label>
                           <label>محصول:
-                            <input name='product' value='{product_q}' placeholder='عنوان/شناسه' />
+                            <input id='product' name='product' value='{product_q}' placeholder='عنوان/شناسه' />
                           </label>
                           <label>از:
                             <input type='date' name='from' value='{from_str}' />
@@ -1469,7 +1503,7 @@ async def run_webhook_mode(application: Application) -> None:
                         </div>
                         <table>
                           <thead>
-                            <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Status</th><th>Action</th></tr>
+                            <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Created</th><th>Status</th><th>Action</th></tr>
                           </thead>
                           <tbody>{html_rows or '<tr><td colspan=6>موردی یافت نشد</td></tr>'}</tbody>
                         </table>
@@ -1478,7 +1512,19 @@ async def run_webhook_mode(application: Application) -> None:
                           |
                           <a href='{_qs(page=page+1)}'>بعدی &raquo;</a>
                         </div>
+                        <div class='controls' style='margin-top:10px;'>
+                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
+                          <a class='btn filter' href='{_qs(page=0)}&format=xlsx'>XLSX</a>
+                        </div>
                       </div>
+                      <script>
+                        const form = document.querySelector('form.controls');
+                        const uidInput = document.getElementById('uid');
+                        const productInput = document.getElementById('product');
+                        let t1=null, t2=null;
+                        uidInput && uidInput.addEventListener('input', ()=>{ clearTimeout(t1); t1=setTimeout(()=>form.submit(), 550); });
+                        productInput && productInput.addEventListener('input', ()=>{ clearTimeout(t2); t2=setTimeout(()=>form.submit(), 550); });
+                      </script>
                     </body></html>
                     """
                     resp = web.Response(
