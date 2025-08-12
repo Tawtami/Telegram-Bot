@@ -75,6 +75,13 @@ def _ensure_schema_initialized() -> None:
                 except Exception:
                     # missing banned_users: run init
                     raise
+                # Probe learning tables (if any missing, trigger init)
+                try:
+                    conn.exec_driver_sql("SELECT 1 FROM quiz_questions LIMIT 1")
+                    conn.exec_driver_sql("SELECT 1 FROM quiz_attempts LIMIT 1")
+                    conn.exec_driver_sql("SELECT 1 FROM user_stats LIMIT 1")
+                except Exception:
+                    raise
                 _SCHEMA_INIT_DONE = True
                 return
             except Exception:

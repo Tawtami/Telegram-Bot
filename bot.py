@@ -1119,6 +1119,7 @@ async def setup_handlers(application: Application) -> None:
         )
         # Learning: daily quiz
         from handlers.courses import handle_daily_quiz, handle_quiz_answer
+
         application.add_handler(
             CallbackQueryHandler(handle_daily_quiz, pattern="^daily_quiz$"), group=1
         )
