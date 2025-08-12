@@ -1809,7 +1809,9 @@ async def run_webhook_mode(application: Application) -> None:
                     from database.migrate import init_db
 
                     init_db()
-                    return web.Response(text="ok", content_type="text/plain", charset="utf-8")
+                    return web.Response(
+                        text="ok", content_type="text/plain", charset="utf-8"
+                    )
                 except Exception as e:
                     logger.error(f"admin_init error: {e}")
                     return web.Response(status=500, text="init error")
