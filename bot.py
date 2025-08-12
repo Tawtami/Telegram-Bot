@@ -1763,7 +1763,8 @@ async def run_webhook_mode(application: Application) -> None:
                             max_age=3600,
                             path="/",
                             secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Strict",
+                            httponly=True,
+                            samesite="Lax",
                         )
                     except Exception:
                         pass
@@ -2017,7 +2018,7 @@ async def run_webhook_mode(application: Application) -> None:
                             max_age=10,
                             path="/",
                             secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Strict",
+                            samesite="Lax",
                         )
                         resp.set_cookie(
                             "flash_type",
@@ -2025,7 +2026,7 @@ async def run_webhook_mode(application: Application) -> None:
                             max_age=10,
                             path="/",
                             secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Strict",
+                            samesite="Lax",
                         )
                     except Exception:
                         pass
@@ -2045,7 +2046,7 @@ async def run_webhook_mode(application: Application) -> None:
                             max_age=10,
                             path="/",
                             secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Strict",
+                            samesite="Lax",
                         )
                         resp.set_cookie(
                             "flash_type",
@@ -2053,7 +2054,7 @@ async def run_webhook_mode(application: Application) -> None:
                             max_age=10,
                             path="/",
                             secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Strict",
+                            samesite="Lax",
                         )
                     except Exception:
                         pass
