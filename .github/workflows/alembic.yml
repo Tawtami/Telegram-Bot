@@ -46,11 +46,35 @@ jobs:
         run: |
           python -m black --check .
 
-      - name: Run tests (pytest)
+      - name: Run tests (pytest with coverage)
         env:
           PYTHONUNBUFFERED: "1"
         run: |
-          pytest -q || true
+          pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-report=term
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+      - name: Add coverage to job summary
+        run: |
+          python - <<'PY'
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('coverage.xml')
+          rate = float(tree.getroot().attrib.get('line-rate', 0)) * 100
+          print(f"Coverage: {rate:.2f}%")
+          with open('/tmp/summary.md','w', encoding='utf-8') as f:
+              f.write(f"## Coverage\n\n{rate:.2f}%\n")
+          PY
+          cat /tmp/summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage to Codecov (optional)
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: false
+          files: coverage.xml
 
       - name: Wait for DB
         env:
