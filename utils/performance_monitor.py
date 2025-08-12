@@ -288,6 +288,7 @@ class PerformanceMonitor:
             # DB health light probe
             try:
                 from database.db import ENGINE
+
                 with ENGINE.connect() as conn:
                     conn.exec_driver_sql("SELECT 1")
                 stats["db"] = {"ok": True}
