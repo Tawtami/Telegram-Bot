@@ -143,6 +143,60 @@ def _upgrade_schema_if_needed(conn):
             f"Could not read/upgrade purchases.admin_action_by column type: {e}"
         )
 
+    # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
+    try:
+        if ENGINE.dialect.name == "postgresql":
+            conn.execute(
+                text(
+                    "CREATE TABLE IF NOT EXISTS banned_users (\n"
+                    "  id SERIAL PRIMARY KEY,\n"
+                    "  telegram_user_id BIGINT UNIQUE,\n"
+                    "  created_at TIMESTAMP DEFAULT NOW()\n"
+                    ")"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE TABLE IF NOT EXISTS quiz_questions (\n"
+                    "  id SERIAL PRIMARY KEY,\n"
+                    "  grade VARCHAR(32),\n"
+                    "  difficulty INTEGER DEFAULT 1,\n"
+                    "  question_text VARCHAR(2048),\n"
+                    "  options JSON,\n"
+                    "  correct_index INTEGER,\n"
+                    "  created_at TIMESTAMP DEFAULT NOW()\n"
+                    ")"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE TABLE IF NOT EXISTS quiz_attempts (\n"
+                    "  id SERIAL PRIMARY KEY,\n"
+                    "  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,\n"
+                    "  question_id INTEGER REFERENCES quiz_questions(id) ON DELETE CASCADE,\n"
+                    "  selected_index INTEGER,\n"
+                    "  correct INTEGER DEFAULT 0,\n"
+                    "  created_at TIMESTAMP DEFAULT NOW()\n"
+                    ")"
+                )
+            )
+            conn.execute(
+                text(
+                    "CREATE TABLE IF NOT EXISTS user_stats (\n"
+                    "  id SERIAL PRIMARY KEY,\n"
+                    "  user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,\n"
+                    "  total_attempts INTEGER DEFAULT 0,\n"
+                    "  total_correct INTEGER DEFAULT 0,\n"
+                    "  streak_days INTEGER DEFAULT 0,\n"
+                    "  last_attempt_date VARCHAR(10),\n"
+                    "  points INTEGER DEFAULT 0,\n"
+                    "  last_daily_award_date VARCHAR(10),\n"
+                    "  updated_at TIMESTAMP DEFAULT NOW()\n"
+                    ")"
+                )
+            )
+    except Exception as e:
+        logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
     # 3) Create recommended indexes if missing (Postgres)
     try:
         if ENGINE.dialect.name == "postgresql":

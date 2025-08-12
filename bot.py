@@ -724,23 +724,36 @@ async def help_command(update: Update, context: Any) -> None:
 @rate_limit_handler("default")
 async def daily_command(update: Update, context: Any) -> None:
     try:
-        # Redirect to quiz flow via callback
-        from handlers.courses import handle_daily_quiz
+        # Send daily quiz directly (no mock), same logic as handle_daily_quiz
+        from database.db import session_scope
+        from database.models_sql import User as DBUser
+        from database.service import get_daily_question
+        from sqlalchemy import select
+        from telegram import InlineKeyboardMarkup, InlineKeyboardButton
 
-        class _Fake:
-            def __init__(self, u):
-                self.callback_query = type(
-                    "Q",
-                    (),
-                    {
-                        "from_user": u,
-                        "data": "daily_quiz",
-                        "answer": (lambda *_: None),
-                        "edit_message_text": update.effective_message.reply_text,
-                    },
-                )
-
-        await handle_daily_quiz(_Fake(update.effective_user), context)
+        with session_scope() as session:
+            db_user = session.execute(
+                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
+            ).scalar_one_or_none()
+        if not db_user:
+            await update.effective_message.reply_text("❌ ابتدا ثبت‌نام کنید.")
+            return
+        q = None
+        with session_scope() as session:
+            q = get_daily_question(session, db_user.grade or "دهم")
+        if not q:
+            await update.effective_message.reply_text("سوال روز موجود نیست. فردا دوباره تلاش کنید.")
+            return
+        choices = (q.options or {}).get("choices", [])
+        rows = [
+            [InlineKeyboardButton(text=c, callback_data=f"quiz:{q.id}:{i}")]
+            for i, c in enumerate(choices[:8])
+        ]
+        rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
+        await update.effective_message.reply_text(
+            f"سوال روز ({q.grade})\n\n{q.question_text}",
+            reply_markup=InlineKeyboardMarkup(rows),
+        )
     except Exception as e:
         logger.error(f"Error in daily_command: {e}")
         await update.message.reply_text("❌ خطا در سوال روز.")
