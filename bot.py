@@ -1331,7 +1331,13 @@ async def run_webhook_mode(application: Application) -> None:
                     logger.warning("Empty webhook data received")
                     return web.Response(status=400)
 
-                # Process update
+                # Process update (ensure DB schema at start of bursts)
+                try:
+                    from database.migrate import init_db
+
+                    init_db()
+                except Exception:
+                    pass
                 update = Update.de_json(data, application.bot)
                 # Avoid logging raw user content to protect sensitive data
                 try:

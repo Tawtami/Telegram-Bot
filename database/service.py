@@ -282,12 +282,24 @@ def get_free_course_participants_by_grade(
 
 
 def is_user_banned(session: Session, telegram_user_id: int) -> bool:
-    return (
-        session.execute(
-            select(BannedUser).where(BannedUser.telegram_user_id == telegram_user_id)
-        ).scalar_one_or_none()
-        is not None
-    )
+    try:
+        return (
+            session.execute(
+                select(BannedUser).where(
+                    BannedUser.telegram_user_id == telegram_user_id
+                )
+            ).scalar_one_or_none()
+            is not None
+        )
+    except Exception:
+        # Table may be missing on first boot → attempt init once and treat as not banned
+        try:
+            from database.migrate import init_db
+
+            init_db()
+        except Exception:
+            pass
+        return False
 
 
 def ban_user(session: Session, telegram_user_id: int) -> bool:
