@@ -1781,6 +1781,8 @@ async def run_webhook_mode(application: Application) -> None:
                 return web.Response(status=500, text="server error")
 
         async def admin_act_post(request):
+            data = None
+            redirect_to = ""
             try:
                 token_ok = await _require_token(request)
                 if token_ok is None:
@@ -1788,6 +1790,7 @@ async def run_webhook_mode(application: Application) -> None:
                 data = await request.post()
                 csrf_cookie = request.cookies.get("csrf", "")
                 csrf_form = (data.get("csrf") or "").strip()
+                redirect_to = data.get("redirect") or ""
                 if not csrf_cookie or not csrf_form or csrf_cookie != csrf_form:
                     return web.Response(status=403, text="forbidden")
 
@@ -1801,7 +1804,6 @@ async def run_webhook_mode(application: Application) -> None:
                 except ValueError:
                     return web.Response(status=400, text="bad request")
                 action = (data.get("action") or "").lower()
-                redirect_to = data.get("redirect") or ""
                 if action not in ("approve", "reject") or pid <= 0:
                     return web.Response(status=400, text="bad request")
 
@@ -1846,6 +1848,29 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(
                             f"admin_act_post fatal DB error after init retry: {e2}"
                         )
+                        # Redirect back with error if possible
+                        if redirect_to:
+                            resp = web.HTTPSeeOther(location=redirect_to)
+                            try:
+                                resp.set_cookie(
+                                    "flash",
+                                    "خطا در انجام عملیات",
+                                    max_age=10,
+                                    path="/",
+                                    secure=str(config.webhook.url).startswith("https://"),
+                                    samesite="Strict",
+                                )
+                                resp.set_cookie(
+                                    "flash_type",
+                                    "error",
+                                    max_age=10,
+                                    path="/",
+                                    secure=str(config.webhook.url).startswith("https://"),
+                                    samesite="Strict",
+                                )
+                            except Exception:
+                                pass
+                            raise resp
                         return web.Response(status=500, text="server error")
 
                 # Notify student fire-and-forget
@@ -1907,34 +1932,29 @@ async def run_webhook_mode(application: Application) -> None:
                 raise
             except Exception as e:
                 logger.error(f"admin_act_post error: {e}")
-                # Attempt to redirect back with error flash if redirect provided
-                try:
-                    data = await request.post()
-                    redirect_to = data.get("redirect") or ""
-                    if redirect_to:
-                        resp = web.HTTPSeeOther(location=redirect_to)
-                        try:
-                            resp.set_cookie(
-                                "flash",
-                                "خطا در انجام عملیات",
-                                max_age=10,
-                                path="/",
-                                secure=str(config.webhook.url).startswith("https://"),
-                                samesite="Strict",
-                            )
-                            resp.set_cookie(
-                                "flash_type",
-                                "error",
-                                max_age=10,
-                                path="/",
-                                secure=str(config.webhook.url).startswith("https://"),
-                                samesite="Strict",
-                            )
-                        except Exception:
-                            pass
-                        raise resp
-                except Exception:
-                    pass
+                # Redirect back with error flash if we already parsed body
+                if redirect_to:
+                    resp = web.HTTPSeeOther(location=redirect_to)
+                    try:
+                        resp.set_cookie(
+                            "flash",
+                            "خطا در انجام عملیات",
+                            max_age=10,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Strict",
+                        )
+                        resp.set_cookie(
+                            "flash_type",
+                            "error",
+                            max_age=10,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Strict",
+                        )
+                    except Exception:
+                        pass
+                    raise resp
                 return web.Response(status=500, text="server error")
 
         async def admin_init(request):
