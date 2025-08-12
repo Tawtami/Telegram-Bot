@@ -733,7 +733,9 @@ async def daily_command(update: Update, context: Any) -> None:
 
         with session_scope() as session:
             db_user = session.execute(
-                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
+                select(DBUser).where(
+                    DBUser.telegram_user_id == update.effective_user.id
+                )
             ).scalar_one_or_none()
         if not db_user:
             await update.effective_message.reply_text("❌ ابتدا ثبت‌نام کنید.")
@@ -742,7 +744,9 @@ async def daily_command(update: Update, context: Any) -> None:
         with session_scope() as session:
             q = get_daily_question(session, db_user.grade or "دهم")
         if not q:
-            await update.effective_message.reply_text("سوال روز موجود نیست. فردا دوباره تلاش کنید.")
+            await update.effective_message.reply_text(
+                "سوال روز موجود نیست. فردا دوباره تلاش کنید."
+            )
             return
         choices = (q.options or {}).get("choices", [])
         rows = [
