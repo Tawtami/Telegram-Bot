@@ -11,7 +11,7 @@ from .error_handler import ErrorHandler as BotErrorHandler
 
 __all__ = [
     "Validator",
-    "SimpleCache", 
+    "SimpleCache",
     "RateLimiter",
     "BotErrorHandler",
 ]

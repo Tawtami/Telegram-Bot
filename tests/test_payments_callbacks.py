@@ -99,8 +99,6 @@ async def test_handle_payment_decision_approve_course(tmp_path):
     assert meta["decision"] == "approve"
     # SQL is source of truth now; just ensure the meta was processed and a message to student was sent
     assert any(m["chat_id"] == user_id for m in bot.sent_messages)
-    # Confirmation message sent to student
-    assert any(m["chat_id"] == user_id for m in bot.sent_messages)
 
 
 @pytest.mark.asyncio
