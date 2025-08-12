@@ -6,6 +6,8 @@ For production use Alembic; this provides a quick start.
 """
 
 import logging
+from sqlalchemy import text
+
 from database.db import ENGINE, Base
 from database.models_sql import *  # noqa
 
@@ -14,26 +16,63 @@ logger = logging.getLogger(__name__)
 
 
 def init_db():
-    """Initialize DB schema robustly (idempotent).
+    """Initialize DB schema robustly (idempotent, concurrency-safe on Postgres).
 
-    - First try normal metadata.create_all (checkfirst=True by default)
-    - If anything fails (e.g., duplicate index/object), fall back to creating
-      each table and its indexes individually with checkfirst=True.
+    Strategy:
+    - Acquire a Postgres advisory lock (no-op for other DBs) to avoid race conditions
+      when multiple app instances start concurrently.
+    - Attempt normal `metadata.create_all` first.
+    - If that fails, create tables individually in a stable order.
+    - Perform lightweight, idempotent upgrades (e.g., BIGINT for telegram_user_id).
     """
-    try:
-        Base.metadata.create_all(ENGINE)
-        try:
-            _upgrade_schema_if_needed()
-        except Exception as ue:
-            logger.warning(f"Schema upgrade check failed: {ue}")
-        return
-    except Exception as e:
-        logger.warning(f"create_all failed, falling back to per-table creation: {e}")
 
-    # Fallback: create tables one by one and then indexes
+    is_postgres = ENGINE.dialect.name == "postgresql"
+
+    # Use a dedicated connection/transaction to serialize initialization on Postgres
+    with ENGINE.connect() as conn:
+        locked = False
+        try:
+            if is_postgres:
+                # Arbitrary app-level lock id; must be constant across instances
+                conn.execute(text("SELECT pg_advisory_lock(54193217)"))
+                locked = True
+        except Exception as e:
+            logger.warning(f"Could not acquire advisory lock: {e}")
+
+        try:
+            try:
+                Base.metadata.create_all(bind=conn)
+            except Exception as e:
+                logger.warning(
+                    f"create_all failed, falling back to per-table creation: {e}"
+                )
+                _create_tables_individually(conn)
+
+            # Run idempotent upgrades after ensuring tables exist
+            try:
+                _upgrade_schema_if_needed(conn)
+            except Exception as ue:
+                logger.warning(f"Schema upgrade check failed: {ue}")
+        finally:
+            # Always release the advisory lock if we acquired it
+            if locked:
+                try:
+                    conn.execute(text("SELECT pg_advisory_unlock(54193217)"))
+                except Exception:
+                    pass
+
+
+def _upgrade_schema_if_needed(conn):
+    """Lightweight, idempotent upgrades for live DB.
+
+    - Ensure tables exist (users, courses, purchases, receipts, purchase_audits, profile_changes)
+    - Ensure users.telegram_user_id is BIGINT (for large Telegram IDs)
+    """
+
+    # 1) Ensure core tables exist (idempotent)
     try:
-        # Ensure parent tables first (users, courses, purchases, receipts, audits)
-        order = [
+        name_to_table = {t.name: t for t in Base.metadata.sorted_tables}
+        creation_order = [
             "users",
             "courses",
             "purchases",
@@ -41,71 +80,78 @@ def init_db():
             "purchase_audits",
             "profile_changes",
         ]
-        name_to_table = {t.name: t for t in Base.metadata.sorted_tables}
-        for tname in order:
+        for tname in creation_order:
             table = name_to_table.get(tname)
-            if not table:
+            if table is None:
                 continue
             try:
-                table.create(bind=ENGINE, checkfirst=True)
+                table.create(bind=conn, checkfirst=True)
             except Exception as te:
-                logger.warning(f"Table create skipped/failed for {table.name}: {te}")
-        # Create remaining tables if any
-        for table in Base.metadata.sorted_tables:
-            if table.name in order:
-                continue
-            try:
-                table.create(bind=ENGINE, checkfirst=True)
-            except Exception as te:
-                logger.warning(f"Table create skipped/failed for {table.name}: {te}")
-        # Create indexes explicitly (checkfirst) — minimal explicit indexes left after model change
-        for table in Base.metadata.sorted_tables:
-            for idx in table.indexes:
-                try:
-                    idx.create(bind=ENGINE, checkfirst=True)
-                except Exception as ie:
-                    logger.warning(f"Index create skipped/failed for {idx.name}: {ie}")
-        try:
-            _upgrade_schema_if_needed()
-        except Exception as ue:
-            logger.warning(f"Schema upgrade check failed: {ue}")
+                logger.warning(f"Table create skipped/failed for {tname}: {te}")
     except Exception as e:
-        logger.error(f"Fallback schema init failed: {e}")
-        raise
+        logger.warning(f"Ensuring tables failed: {e}")
 
-
-def _upgrade_schema_if_needed():
-    """Lightweight, idempotent upgrades for live DB.
-
-    - Ensure users.telegram_user_id is BIGINT (for large Telegram IDs)
-    """
-    from sqlalchemy import text
-
-    with ENGINE.connect() as conn:
-        try:
-            dt = conn.execute(
-                text(
-                    "SELECT data_type FROM information_schema.columns "
-                    "WHERE table_name='users' AND column_name='telegram_user_id'"
-                )
-            ).scalar()
-        except Exception as e:
-            logger.warning(
-                f"Could not read column type for users.telegram_user_id: {e}"
+    # 2) Ensure BIGINT for users.telegram_user_id
+    try:
+        dt_row = conn.execute(
+            text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_name='users' AND column_name='telegram_user_id'"
             )
-            return
-
-        if not dt:
-            return
-        if str(dt).lower() in ("integer", "int4"):
+        ).scalar()
+        if dt_row and str(dt_row).lower() in ("integer", "int4"):
             try:
+                # Use USING to be explicit and future-proof
                 conn.execute(
-                    text("ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT")
+                    text(
+                        "ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT USING telegram_user_id::bigint"
+                    )
                 )
-                conn.commit()
                 logger.info("Upgraded users.telegram_user_id to BIGINT")
             except Exception as e:
                 logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
+    except Exception as e:
+        logger.warning(
+            f"Could not read/upgrade users.telegram_user_id column type: {e}"
+        )
+
+
+def _create_tables_individually(conn):
+    """Create tables one by one and then indexes with checkfirst=True."""
+    # Ensure parent tables first (users, courses, purchases, receipts, audits)
+    order = [
+        "users",
+        "courses",
+        "purchases",
+        "receipts",
+        "purchase_audits",
+        "profile_changes",
+    ]
+    name_to_table = {t.name: t for t in Base.metadata.sorted_tables}
+    for tname in order:
+        table = name_to_table.get(tname)
+        if not table:
+            continue
+        try:
+            table.create(bind=conn, checkfirst=True)
+        except Exception as te:
+            logger.warning(f"Table create skipped/failed for {table.name}: {te}")
+    # Create remaining tables if any
+    for table in Base.metadata.sorted_tables:
+        if table.name in order:
+            continue
+        try:
+            table.create(bind=conn, checkfirst=True)
+        except Exception as te:
+            logger.warning(f"Table create skipped/failed for {table.name}: {te}")
+    # Create indexes explicitly (checkfirst). This may be a no-op if the tables
+    # were just created above.
+    for table in Base.metadata.sorted_tables:
+        for idx in table.indexes:
+            try:
+                idx.create(bind=conn, checkfirst=True)
+            except Exception as ie:
+                logger.warning(f"Index create skipped/failed for {idx.name}: {ie}")
 
 
 if __name__ == "__main__":
