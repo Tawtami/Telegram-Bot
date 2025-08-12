@@ -1352,16 +1352,24 @@ async def run_webhook_mode(application: Application) -> None:
                         wb = Workbook()
                         ws = wb.active
                         ws.title = "orders"
-                        ws.append(["id", "user_id", "type", "product", "status", "created_at"])
+                        ws.append(
+                            ["id", "user_id", "type", "product", "status", "created_at"]
+                        )
                         for p in items:
-                            ws.append([
-                                p.id,
-                                p.user_id,
-                                p.product_type,
-                                p.product_id,
-                                p.status,
-                                p.created_at.isoformat() if getattr(p, "created_at", None) else "",
-                            ])
+                            ws.append(
+                                [
+                                    p.id,
+                                    p.user_id,
+                                    p.product_type,
+                                    p.product_id,
+                                    p.status,
+                                    (
+                                        p.created_at.isoformat()
+                                        if getattr(p, "created_at", None)
+                                        else ""
+                                    ),
+                                ]
+                            )
                         bio = io.BytesIO()
                         wb.save(bio)
                         bio.seek(0)
