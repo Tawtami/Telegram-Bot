@@ -74,6 +74,7 @@ def _upgrade_schema_if_needed(conn):
         name_to_table = {t.name: t for t in Base.metadata.sorted_tables}
         creation_order = [
             "users",
+            "banned_users",
             "courses",
             "purchases",
             "receipts",
@@ -91,7 +92,7 @@ def _upgrade_schema_if_needed(conn):
     except Exception as e:
         logger.warning(f"Ensuring tables failed: {e}")
 
-    # 2) Ensure BIGINT for users.telegram_user_id
+    # 2) Ensure BIGINT for users.telegram_user_id and purchases.admin_action_by
     try:
         dt_row = conn.execute(
             text(
@@ -113,6 +114,28 @@ def _upgrade_schema_if_needed(conn):
     except Exception as e:
         logger.warning(
             f"Could not read/upgrade users.telegram_user_id column type: {e}"
+        )
+
+    try:
+        dt_row = conn.execute(
+            text(
+                "SELECT data_type FROM information_schema.columns "
+                "WHERE table_name='purchases' AND column_name='admin_action_by'"
+            )
+        ).scalar()
+        if dt_row and str(dt_row).lower() in ("integer", "int4"):
+            try:
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ALTER COLUMN admin_action_by TYPE BIGINT USING admin_action_by::bigint"
+                    )
+                )
+                logger.info("Upgraded purchases.admin_action_by to BIGINT")
+            except Exception as e:
+                logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
+    except Exception as e:
+        logger.warning(
+            f"Could not read/upgrade purchases.admin_action_by column type: {e}"
         )
 
 

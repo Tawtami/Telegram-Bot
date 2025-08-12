@@ -79,7 +79,7 @@ class Purchase(Base):
     status: Mapped[str] = mapped_column(
         String(16), index=True
     )  # pending|approved|rejected
-    admin_action_by: Mapped[int] = mapped_column(Integer, nullable=True)
+    admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
