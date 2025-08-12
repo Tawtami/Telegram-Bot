@@ -1149,8 +1149,35 @@ async def run_webhook_mode(application: Application) -> None:
         import aiohttp
         from aiohttp import web
 
-        # Create web application
-        app = web.Application()
+        # Create web application with gzip compression
+        @web.middleware
+        async def gzip_middleware(request, handler):
+            resp = await handler(request)
+            try:
+                # Only compress JSON/text and when client accepts gzip
+                if (
+                    resp.status == 200
+                    and isinstance(resp, web.Response)
+                    and "gzip" in (request.headers.get("Accept-Encoding", ""))
+                    and (resp.content_type or "").startswith(("application/json", "text/"))
+                    and not resp.headers.get("Content-Encoding")
+                    and resp.body is not None
+                    and len(resp.body) > 256
+                ):
+                    import gzip
+                    compressed = gzip.compress(resp.body)
+                    resp.body = compressed
+                    resp.headers["Content-Encoding"] = "gzip"
+                    resp.headers["Vary"] = "Accept-Encoding"
+            except Exception:
+                pass
+            # Add cache and security headers
+            resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+            resp.headers.setdefault("X-Frame-Options", "DENY")
+            resp.headers.setdefault("Cache-Control", "private, max-age=60")
+            return resp
+
+        app = web.Application(middlewares=[gzip_middleware])
 
         # Health check endpoint
         async def health_check(request):

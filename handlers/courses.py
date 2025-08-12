@@ -36,19 +36,23 @@ async def handle_free_courses(
 
     await query.answer()
 
-    # Load free courses from JSON file
-    import json
-
-    try:
-        with open("data/courses.json", "r", encoding="utf-8") as f:
-            all_courses = json.load(f)
-        free_courses = [
-            course
-            for course in all_courses
-            if course["course_type"] == "free" and course["is_active"]
-        ]
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        free_courses = []
+    # Load free courses with caching
+    import json, os
+    from utils.cache import cache_manager
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+        except Exception:
+            all_courses = []
+        c._set_sync("all_courses", all_courses, ttl=600)
+    free_courses = [
+        course
+        for course in all_courses
+        if course.get("course_type") == "free" and course.get("is_active")
+    ]
 
     if not free_courses:
         await query.edit_message_text(
@@ -109,19 +113,23 @@ async def handle_paid_courses(
 
     await query.answer()
 
-    # Load paid courses from JSON file
+    # Load paid courses with caching
     import json
-
-    try:
-        with open("data/courses.json", "r", encoding="utf-8") as f:
-            all_courses = json.load(f)
-        paid_courses = [
-            course
-            for course in all_courses
-            if course["course_type"] == "paid" and course["is_active"]
-        ]
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        paid_courses = []
+    from utils.cache import cache_manager
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+        except Exception:
+            all_courses = []
+        c._set_sync("all_courses", all_courses, ttl=600)
+    paid_courses = [
+        course
+        for course in all_courses
+        if course.get("course_type") == "paid" and course.get("is_active")
+    ]
 
     if not paid_courses:
         await query.edit_message_text(
@@ -248,15 +256,19 @@ async def handle_purchased_courses(
         )
         return
 
-    # Load course details from JSON
+    # Load course details from cache
     import json
-
-    try:
-        with open("data/courses.json", "r", encoding="utf-8") as f:
-            all_courses = json.load(f)
-        course_details = {c["course_id"]: c for c in all_courses}
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        course_details = {}
+    from utils.cache import cache_manager
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+        except Exception:
+            all_courses = []
+        c._set_sync("all_courses", all_courses, ttl=600)
+    course_details = {c["course_id"]: c for c in all_courses if isinstance(c, dict) and c.get("course_id")}
 
     # Build courses list
     message_text = "🛒 سبد خرید من:\n\n"
@@ -332,15 +344,19 @@ async def handle_course_registration(
         course_type, course_id = "paid", rest
     # no JSON storage
 
-    # Load course details from JSON
+    # Load course details from cache
     import json
-
-    try:
-        with open("data/courses.json", "r", encoding="utf-8") as f:
-            all_courses = json.load(f)
-        course = next((c for c in all_courses if c["course_id"] == course_id), None)
-    except (FileNotFoundError, json.JSONDecodeError, KeyError):
-        course = None
+    from utils.cache import cache_manager
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+        except Exception:
+            all_courses = []
+        c._set_sync("all_courses", all_courses, ttl=600)
+    course = next((c for c in all_courses if isinstance(c, dict) and c.get("course_id") == course_id), None)
 
     if course_type == "free":
         # Register free course in SQL as approved purchase

@@ -139,27 +139,37 @@ class QuizQuestion(Base):
     options: Mapped[dict] = mapped_column(JSON)  # {"choices": ["A","B",...]} (max 8)
     correct_index: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    __table_args__ = (
-        Index("ix_quiz_grade_diff", "grade", "difficulty"),
-    )
+    __table_args__ = (Index("ix_quiz_grade_diff", "grade", "difficulty"),)
 
 
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    question_id: Mapped[int] = mapped_column(ForeignKey("quiz_questions.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("quiz_questions.id", ondelete="CASCADE"), index=True
+    )
     selected_index: Mapped[int] = mapped_column(Integer)
     correct: Mapped[int] = mapped_column(Integer, default=0)  # 0/1
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, index=True
+    )
 
 
 class UserStats(Base):
     __tablename__ = "user_stats"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True
+    )
     total_attempts: Mapped[int] = mapped_column(Integer, default=0)
     total_correct: Mapped[int] = mapped_column(Integer, default=0)
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
-    last_attempt_date: Mapped[str] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_attempt_date: Mapped[str] = mapped_column(
+        String(10), nullable=True
+    )  # YYYY-MM-DD
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
