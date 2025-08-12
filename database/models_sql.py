@@ -68,9 +68,7 @@ class Purchase(Base):
     )
     product_type: Mapped[str] = mapped_column(String(16))  # book|course
     product_id: Mapped[str] = mapped_column(String(128))
-    status: Mapped[str] = mapped_column(
-        String(16), index=True
-    )  # pending|approved|rejected
+    status: Mapped[str] = mapped_column(String(16), index=True)  # pending|approved|rejected
     admin_action_by: Mapped[int] = mapped_column(Integer, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
@@ -78,7 +76,7 @@ class Purchase(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    __table_args__ = (Index("ix_purchases_status", "status"),)
+    __table_args__ = ()
 
 
 class Receipt(Base):
@@ -88,12 +86,11 @@ class Receipt(Base):
         ForeignKey("purchases.id", ondelete="CASCADE"), index=True
     )
     telegram_file_id: Mapped[str] = mapped_column(String(256))
-    file_unique_id: Mapped[str] = mapped_column(String(128), index=True)
+    file_unique_id: Mapped[str] = mapped_column(String(128))
     submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
     __table_args__ = (
         UniqueConstraint("file_unique_id", name="uq_file_unique_id"),
-        Index("ix_receipts_file_unique_id", "file_unique_id"),
     )
 
 

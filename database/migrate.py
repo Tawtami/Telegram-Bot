@@ -28,12 +28,33 @@ def init_db():
 
     # Fallback: create tables one by one and then indexes
     try:
-        for table in Base.metadata.sorted_tables:
+        # Ensure parent tables first (users, courses, purchases, receipts, audits)
+        order = [
+            "users",
+            "courses",
+            "purchases",
+            "receipts",
+            "purchase_audits",
+            "profile_changes",
+        ]
+        name_to_table = {t.name: t for t in Base.metadata.sorted_tables}
+        for tname in order:
+            table = name_to_table.get(tname)
+            if not table:
+                continue
             try:
                 table.create(bind=ENGINE, checkfirst=True)
             except Exception as te:
                 logger.warning(f"Table create skipped/failed for {table.name}: {te}")
-        # Create indexes explicitly (checkfirst)
+        # Create remaining tables if any
+        for table in Base.metadata.sorted_tables:
+            if table.name in order:
+                continue
+            try:
+                table.create(bind=ENGINE, checkfirst=True)
+            except Exception as te:
+                logger.warning(f"Table create skipped/failed for {table.name}: {te}")
+        # Create indexes explicitly (checkfirst) — minimal explicit indexes left after model change
         for table in Base.metadata.sorted_tables:
             for idx in table.indexes:
                 try:
