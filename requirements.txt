@@ -10,3 +10,5 @@ sentry-sdk==2.8.0
 openpyxl==3.1.5
 pytest==7.4.4
 pytest-asyncio==0.21.1
+black==24.4.2
+flake8==7.0.0
