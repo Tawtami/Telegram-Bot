@@ -514,7 +514,9 @@ def get_leaderboard_top(session: Session, limit: int = 10) -> List[Dict]:
         return []
     # Map user_id -> telegram id
     m = {}
-    rows = session.execute(select(User.id, User.telegram_user_id).where(User.id.in_(user_ids)))
+    rows = session.execute(
+        select(User.id, User.telegram_user_id).where(User.id.in_(user_ids))
+    )
     for r in rows:
         m[int(r.id)] = int(r.telegram_user_id)
     q2 = session.execute(
@@ -524,5 +526,10 @@ def get_leaderboard_top(session: Session, limit: int = 10) -> List[Dict]:
     )
     out = []
     for r in q2:
-        out.append({"telegram_user_id": int(m.get(int(r.user_id), 0)), "points": int(r.points or 0)})
+        out.append(
+            {
+                "telegram_user_id": int(m.get(int(r.user_id), 0)),
+                "points": int(r.points or 0),
+            }
+        )
     return out

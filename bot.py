@@ -726,9 +726,20 @@ async def daily_command(update: Update, context: Any) -> None:
     try:
         # Redirect to quiz flow via callback
         from handlers.courses import handle_daily_quiz
+
         class _Fake:
             def __init__(self, u):
-                self.callback_query = type("Q", (), {"from_user": u, "data": "daily_quiz", "answer": (lambda *_: None), "edit_message_text": update.effective_message.reply_text})
+                self.callback_query = type(
+                    "Q",
+                    (),
+                    {
+                        "from_user": u,
+                        "data": "daily_quiz",
+                        "answer": (lambda *_: None),
+                        "edit_message_text": update.effective_message.reply_text,
+                    },
+                )
+
         await handle_daily_quiz(_Fake(update.effective_user), context)
     except Exception as e:
         logger.error(f"Error in daily_command: {e}")
@@ -742,8 +753,13 @@ async def progress_command(update: Update, context: Any) -> None:
         from database.models_sql import User as DBUser
         from database.db import session_scope
         from database.service import get_user_stats
+
         with session_scope() as session:
-            u = session.execute(select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)).scalar_one_or_none()
+            u = session.execute(
+                select(DBUser).where(
+                    DBUser.telegram_user_id == update.effective_user.id
+                )
+            ).scalar_one_or_none()
             if not u:
                 await update.message.reply_text("❌ ابتدا ثبت‌نام کنید.")
                 return
@@ -761,6 +777,7 @@ async def leaderboard_command(update: Update, context: Any) -> None:
     try:
         from database.db import session_scope
         from database.service import get_leaderboard_top
+
         with session_scope() as session:
             top = get_leaderboard_top(session, limit=10)
         if not top:
@@ -773,6 +790,7 @@ async def leaderboard_command(update: Update, context: Any) -> None:
     except Exception as e:
         logger.error(f"Error in leaderboard_command: {e}")
         await update.message.reply_text("❌ خطا در جدول امتیازات.")
+
 
 @rate_limit_handler("default")
 async def courses_command(update: Update, context: Any) -> None:
@@ -1073,7 +1091,9 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(CommandHandler("help", help_command), group=1)
         application.add_handler(CommandHandler("daily", daily_command), group=1)
         application.add_handler(CommandHandler("progress", progress_command), group=1)
-        application.add_handler(CommandHandler("leaderboard", leaderboard_command), group=1)
+        application.add_handler(
+            CommandHandler("leaderboard", leaderboard_command), group=1
+        )
         application.add_handler(CommandHandler("courses", courses_command), group=1)
         application.add_handler(CommandHandler("mycourses", mycourses_command), group=1)
         application.add_handler(CommandHandler("book", book_command), group=1)
