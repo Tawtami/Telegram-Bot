@@ -1,9 +1,10 @@
 """bootstrap initial schema
 
 Revision ID: 0001_bootstrap
-Revises: 
+Revises:
 Create Date: 2025-08-12 22:25:00
 """
+
 from __future__ import annotations
 
 from alembic import op
@@ -64,9 +65,7 @@ def upgrade() -> None:
         sa.Column("timestamp", sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )
-    op.create_index(
-        "ix_profile_changes_timestamp", "profile_changes", ["timestamp"]
-    )
+    op.create_index("ix_profile_changes_timestamp", "profile_changes", ["timestamp"])
 
     # purchases
     op.create_table(
@@ -86,9 +85,7 @@ def upgrade() -> None:
     op.create_unique_constraint(
         "uq_user_product", "purchases", ["user_id", "product_type", "product_id"]
     )
-    op.create_index(
-        "ix_purchases_user_status", "purchases", ["user_id", "status"]
-    )
+    op.create_index("ix_purchases_user_status", "purchases", ["user_id", "status"])
     op.create_index("ix_purchases_created_at", "purchases", ["created_at"])
 
     # receipts
@@ -100,13 +97,9 @@ def upgrade() -> None:
         sa.Column("file_unique_id", sa.String(length=128), nullable=False),
         sa.Column("submitted_at", sa.DateTime(), nullable=True),
         sa.Column("duplicate_checked", sa.Integer(), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["purchase_id"], ["purchases.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["purchase_id"], ["purchases.id"], ondelete="CASCADE"),
     )
-    op.create_unique_constraint(
-        "uq_file_unique_id", "receipts", ["file_unique_id"]
-    )
+    op.create_unique_constraint("uq_file_unique_id", "receipts", ["file_unique_id"])
     op.create_index("ix_receipts_purchase_id", "receipts", ["purchase_id"])
     op.create_index("ix_receipts_submitted_at", "receipts", ["submitted_at"])
 
@@ -183,5 +176,3 @@ def downgrade() -> None:
     op.drop_table("profile_changes")
     op.drop_table("banned_users")
     op.drop_table("users")
-
-
