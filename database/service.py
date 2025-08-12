@@ -373,7 +373,9 @@ def get_stats_summary(session: Session) -> Dict:
     }
 
 
-def list_stale_pending_purchases(session: Session, older_than_days: int = 14) -> List[Dict]:
+def list_stale_pending_purchases(
+    session: Session, older_than_days: int = 14
+) -> List[Dict]:
     cutoff = dt.datetime.utcnow() - dt.timedelta(days=max(1, older_than_days))
     q = session.execute(
         select(
@@ -418,6 +420,8 @@ def upsert_user_stats(session: Session, user_db_id: int, correct: bool) -> None:
             total_correct=1 if correct else 0,
             streak_days=1 if correct else 0,
             last_attempt_date=today,
+            points=5 + (5 if correct else 0),
+            last_daily_award_date=today,
         )
         session.add(stats)
         session.flush()
@@ -425,6 +429,11 @@ def upsert_user_stats(session: Session, user_db_id: int, correct: bool) -> None:
     stats.total_attempts += 1
     if correct:
         stats.total_correct += 1
+        stats.points += 5
+    # daily award (once per day)
+    if stats.last_daily_award_date != today:
+        stats.points += 5
+        stats.last_daily_award_date = today
     # streak
     if stats.last_attempt_date == today:
         pass

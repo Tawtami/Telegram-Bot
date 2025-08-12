@@ -1117,6 +1117,15 @@ async def setup_handlers(application: Application) -> None:
             ),
             group=1,
         )
+        # Learning: daily quiz
+        from handlers.courses import handle_daily_quiz, handle_quiz_answer
+        application.add_handler(
+            CallbackQueryHandler(handle_daily_quiz, pattern="^daily_quiz$"), group=1
+        )
+        application.add_handler(
+            CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\\d+:\\d+$"),
+            group=1,
+        )
         # Payment receipt handler is provided by build_payment_handlers()
 
         application.add_handler(
@@ -1159,12 +1168,15 @@ async def run_webhook_mode(application: Application) -> None:
                     resp.status == 200
                     and isinstance(resp, web.Response)
                     and "gzip" in (request.headers.get("Accept-Encoding", ""))
-                    and (resp.content_type or "").startswith(("application/json", "text/"))
+                    and (resp.content_type or "").startswith(
+                        ("application/json", "text/")
+                    )
                     and not resp.headers.get("Content-Encoding")
                     and resp.body is not None
                     and len(resp.body) > 256
                 ):
                     import gzip
+
                     compressed = gzip.compress(resp.body)
                     resp.body = compressed
                     resp.headers["Content-Encoding"] = "gzip"

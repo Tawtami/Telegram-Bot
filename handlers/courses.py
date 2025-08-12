@@ -39,6 +39,7 @@ async def handle_free_courses(
     # Load free courses with caching
     import json, os
     from utils.cache import cache_manager
+
     c = cache_manager.get_cache("courses")
     all_courses = c._get_sync("all_courses")
     if all_courses is None:
@@ -116,6 +117,7 @@ async def handle_paid_courses(
     # Load paid courses with caching
     import json
     from utils.cache import cache_manager
+
     c = cache_manager.get_cache("courses")
     all_courses = c._get_sync("all_courses")
     if all_courses is None:
@@ -259,6 +261,7 @@ async def handle_purchased_courses(
     # Load course details from cache
     import json
     from utils.cache import cache_manager
+
     c = cache_manager.get_cache("courses")
     all_courses = c._get_sync("all_courses")
     if all_courses is None:
@@ -268,7 +271,11 @@ async def handle_purchased_courses(
         except Exception:
             all_courses = []
         c._set_sync("all_courses", all_courses, ttl=600)
-    course_details = {c["course_id"]: c for c in all_courses if isinstance(c, dict) and c.get("course_id")}
+    course_details = {
+        c["course_id"]: c
+        for c in all_courses
+        if isinstance(c, dict) and c.get("course_id")
+    }
 
     # Build courses list
     message_text = "🛒 سبد خرید من:\n\n"
@@ -347,6 +354,7 @@ async def handle_course_registration(
     # Load course details from cache
     import json
     from utils.cache import cache_manager
+
     c = cache_manager.get_cache("courses")
     all_courses = c._get_sync("all_courses")
     if all_courses is None:
@@ -356,7 +364,14 @@ async def handle_course_registration(
         except Exception:
             all_courses = []
         c._set_sync("all_courses", all_courses, ttl=600)
-    course = next((c for c in all_courses if isinstance(c, dict) and c.get("course_id") == course_id), None)
+    course = next(
+        (
+            c
+            for c in all_courses
+            if isinstance(c, dict) and c.get("course_id") == course_id
+        ),
+        None,
+    )
 
     if course_type == "free":
         # Register free course in SQL as approved purchase

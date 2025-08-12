@@ -170,6 +170,8 @@ class UserStats(Base):
     last_attempt_date: Mapped[str] = mapped_column(
         String(10), nullable=True
     )  # YYYY-MM-DD
+    points: Mapped[int] = mapped_column(Integer, default=0, index=True)
+    last_daily_award_date: Mapped[str] = mapped_column(String(10), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
