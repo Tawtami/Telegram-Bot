@@ -9,6 +9,8 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from config import config
 from utils.storage import StudentStorage
+from database.models_sql import User as DBUser
+from utils.crypto import crypto_manager
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
@@ -52,13 +54,33 @@ async def handle_payment_receipt(
 
     storage: StudentStorage = context.bot_data["storage"]
     student = storage.get_student(update.effective_user.id)
-
     if not student:
-        await update.message.reply_text(
-            "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
-            reply_markup=build_main_menu_keyboard(),
-        )
-        return
+        # Fallback به DB: اگر در JSON نبود، از DB وجود کاربر را چک می‌کنیم
+        with session_scope() as session:
+            db_user = (
+                session.query(DBUser)
+                .filter(DBUser.telegram_user_id == update.effective_user.id)
+                .one_or_none()
+            )
+        if not db_user:
+            await update.message.reply_text(
+                "❌ شما ثبت‌نام نکرده‌اید. لطفاً ابتدا ثبت‌نام کنید.",
+                reply_markup=build_main_menu_keyboard(),
+            )
+            return
+        # ساخت نمای سازگار برای کپشن از روی DB (بدون نشت PII در لاگ)
+        try:
+            first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
+            last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
+            phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
+        except Exception:
+            first_name, last_name, phone = "", "", "ثبت نشده"
+        student = {
+            "first_name": first_name,
+            "last_name": last_name,
+            "phone_number": phone,
+            "city": db_user.city or "—",
+        }
 
     caption = None
     success_message = None

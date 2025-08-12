@@ -90,14 +90,18 @@ def _upgrade_schema_if_needed():
                 )
             ).scalar()
         except Exception as e:
-            logger.warning(f"Could not read column type for users.telegram_user_id: {e}")
+            logger.warning(
+                f"Could not read column type for users.telegram_user_id: {e}"
+            )
             return
 
         if not dt:
             return
         if str(dt).lower() in ("integer", "int4"):
             try:
-                conn.execute(text("ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT"))
+                conn.execute(
+                    text("ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT")
+                )
                 conn.commit()
                 logger.info("Upgraded users.telegram_user_id to BIGINT")
             except Exception as e:
