@@ -518,6 +518,7 @@ def get_user_stats(session: Session, user_db_id: int) -> Dict:
     except Exception:
         try:
             from database.migrate import init_db
+
             init_db()
         except Exception:
             pass
@@ -566,6 +567,7 @@ def get_leaderboard_top(session: Session, limit: int = 10) -> List[Dict]:
     except Exception:
         try:
             from database.migrate import init_db
+
             init_db()
         except Exception:
             pass

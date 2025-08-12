@@ -13,6 +13,8 @@ from pathlib import Path
 
 from database.db import session_scope
 from database.service import get_or_create_user
+from database.models_sql import QuizQuestion
+from sqlalchemy import select
 
 
 def run(dry_run: bool = True):
@@ -43,8 +45,54 @@ def run(dry_run: bool = True):
     print(("Dry-run: " if dry_run else "Migrated: ") + str(count))
 
 
+def seed_quiz_from_json(json_path: str) -> int:
+    data = json.loads(Path(json_path).read_text(encoding="utf-8"))
+    rows = data if isinstance(data, list) else data.get("questions", [])
+    inserted = 0
+    with session_scope() as session:
+        for row in rows:
+            try:
+                grade = row.get("grade") or "دهم"
+                difficulty = int(row.get("difficulty") or 1)
+                question_text = (row.get("question_text") or "").strip()
+                choices = row.get("choices") or []
+                correct_index = int(row.get("correct_index") or 0)
+                if not question_text or not choices:
+                    continue
+                exists = (
+                    session.execute(
+                        select(QuizQuestion).where(
+                            QuizQuestion.grade == grade,
+                            QuizQuestion.question_text == question_text,
+                        )
+                    )
+                    .scalars()
+                    .first()
+                )
+                if exists:
+                    continue
+                session.add(
+                    QuizQuestion(
+                        grade=grade,
+                        difficulty=difficulty,
+                        question_text=question_text,
+                        options={"choices": choices},
+                        correct_index=correct_index,
+                    )
+                )
+                inserted += 1
+            except Exception:
+                continue
+    return inserted
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--seed-quiz", type=str, help="path to quiz json file")
     args = ap.parse_args()
-    run(dry_run=args.dry_run)
+    if args.seed_quiz:
+        n = seed_quiz_from_json(args.seed_quiz)
+        print(f"Inserted {n} quiz questions")
+    else:
+        run(dry_run=args.dry_run)

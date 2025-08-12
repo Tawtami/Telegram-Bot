@@ -12,3 +12,8 @@ from .db import Base, ENGINE, SessionLocal, session_scope  # noqa: F401
 from . import models_sql  # noqa: F401
 
 __all__ = ["Base", "ENGINE", "SessionLocal", "session_scope", "models_sql"]
+
+# Alembic convenience
+def alembic_metadata():
+    from .models_sql import *  # noqa: F401,F403
+    return Base.metadata

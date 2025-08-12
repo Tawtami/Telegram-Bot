@@ -267,7 +267,7 @@ class PerformanceMonitor:
             for name, buckets in self.hourly_counters.items():
                 hourly_summary[name] = buckets.get(current_hour, 0)
 
-            return {
+            stats = {
                 "system": {
                     "uptime_hours": round(uptime_hours, 2),
                     "total_requests": total_requests,
@@ -285,6 +285,15 @@ class PerformanceMonitor:
                 "alerts": self.alerts[-10:],  # Last 10 alerts
                 "timestamp": time.time(),
             }
+            # DB health light probe
+            try:
+                from database.db import ENGINE
+                with ENGINE.connect() as conn:
+                    conn.exec_driver_sql("SELECT 1")
+                stats["db"] = {"ok": True}
+            except Exception as e:
+                stats["db"] = {"ok": False, "error": str(e)}
+            return stats
 
     async def get_handler_stats(self, handler_name: str) -> Optional[Dict[str, Any]]:
         """Get statistics for a specific handler"""
