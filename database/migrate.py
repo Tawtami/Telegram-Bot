@@ -132,7 +132,9 @@ def _upgrade_schema_if_needed(conn):
                 )
                 logger.info("Upgraded purchases.admin_action_by to BIGINT")
             except Exception as e:
-                logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
+                logger.warning(
+                    f"Could not alter purchases.admin_action_by to BIGINT: {e}"
+                )
     except Exception as e:
         logger.warning(
             f"Could not read/upgrade purchases.admin_action_by column type: {e}"
@@ -144,6 +146,7 @@ def _create_tables_individually(conn):
     # Ensure parent tables first (users, courses, purchases, receipts, audits)
     order = [
         "users",
+        "banned_users",
         "courses",
         "purchases",
         "receipts",
@@ -175,6 +178,30 @@ def _create_tables_individually(conn):
                 idx.create(bind=conn, checkfirst=True)
             except Exception as ie:
                 logger.warning(f"Index create skipped/failed for {idx.name}: {ie}")
+
+    # Add constraints/checks that SQLAlchemy might not emit automatically
+    try:
+        # Enforce decision attribution when not pending
+        conn.execute(
+            text(
+                """
+                DO $$
+                BEGIN
+                  IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'ck_purchases_decision_fields'
+                  ) THEN
+                    ALTER TABLE purchases
+                      ADD CONSTRAINT ck_purchases_decision_fields
+                      CHECK (
+                        status = 'pending' OR (admin_action_by IS NOT NULL AND admin_action_at IS NOT NULL)
+                      );
+                  END IF;
+                END$$;
+                """
+            )
+        )
+    except Exception as e:
+        logger.warning(f"Check constraint create skipped/failed: {e}")
 
 
 if __name__ == "__main__":

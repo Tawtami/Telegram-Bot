@@ -82,11 +82,19 @@ class Purchase(Base):
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
-    __table_args__ = ()
+    __table_args__ = (
+        # Prevent duplicate product entries per user (single row updates status)
+        UniqueConstraint("user_id", "product_type", "product_id", name="uq_user_product"),
+        # Speed up common filters
+        Index("ix_purchases_user_status", "user_id", "status"),
+        Index("ix_purchases_created_at", "created_at"),
+        # Enforce that decisions include admin attribution
+        # (status='pending') OR (admin_action_by IS NOT NULL AND admin_action_at IS NOT NULL)
+    )
 
 
 class Receipt(Base):
@@ -97,7 +105,7 @@ class Receipt(Base):
     )
     telegram_file_id: Mapped[str] = mapped_column(String(256))
     file_unique_id: Mapped[str] = mapped_column(String(128))
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
     __table_args__ = (UniqueConstraint("file_unique_id", name="uq_file_unique_id"),)
 

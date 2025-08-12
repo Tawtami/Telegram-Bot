@@ -11,7 +11,7 @@ import os
 from contextlib import contextmanager
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 
@@ -36,7 +36,16 @@ def _build_db_url() -> str:
     return "sqlite:///data/app.db"
 
 
-ENGINE = create_engine(_build_db_url(), pool_pre_ping=True, future=True)
+_db_url = _build_db_url()
+is_postgres = _db_url.startswith("postgresql+") or _db_url.startswith("postgresql://")
+ENGINE = create_engine(
+    _db_url,
+    pool_pre_ping=True,
+    future=True,
+    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),
+)
 SessionLocal = sessionmaker(
     bind=ENGINE, autoflush=False, autocommit=False, expire_on_commit=False
 )
@@ -51,10 +60,21 @@ def _ensure_schema_initialized() -> None:
     if _SCHEMA_INIT_DONE:
         return
     try:
-        # Probe for a core table; if missing, run initializer
+        # Probe for core tables; if missing, run initializer
         with ENGINE.connect() as conn:
+            # Apply a conservative statement timeout on Postgres connections (server-side)
+            try:
+                if is_postgres:
+                    conn.execute(text("SET statement_timeout TO 8000"))
+            except Exception:
+                pass
             try:
                 conn.exec_driver_sql("SELECT 1 FROM users LIMIT 1")
+                try:
+                    conn.exec_driver_sql("SELECT 1 FROM banned_users LIMIT 1")
+                except Exception:
+                    # missing banned_users: run init
+                    raise
                 _SCHEMA_INIT_DONE = True
                 return
             except Exception:

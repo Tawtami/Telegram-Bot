@@ -1172,6 +1172,17 @@ async def run_webhook_mode(application: Application) -> None:
                     status=500,
                 )
 
+        # DB health endpoint
+        async def db_health(request):
+            try:
+                from database.db import ENGINE
+                from sqlalchemy import text as _text
+                with ENGINE.connect() as conn:
+                    conn.execute(_text("SELECT 1"))
+                return web.json_response({"db": "ok"})
+            except Exception as e:
+                return web.json_response({"db": "error", "error": str(e)}, status=500)
+
         # Telegram webhook endpoint
         async def telegram_webhook(request):
             if request.method != "POST":
@@ -1877,6 +1888,7 @@ async def run_webhook_mode(application: Application) -> None:
         app.router.add_get("/admin/act", admin_act)
         app.router.add_get("/admin/init", admin_init)
         app.router.add_post("/admin/act", admin_act_post)
+        app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
         # Setup webhook with proper error handling
