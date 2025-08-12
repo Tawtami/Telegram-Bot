@@ -722,6 +722,59 @@ async def help_command(update: Update, context: Any) -> None:
 
 
 @rate_limit_handler("default")
+async def daily_command(update: Update, context: Any) -> None:
+    try:
+        # Redirect to quiz flow via callback
+        from handlers.courses import handle_daily_quiz
+        class _Fake:
+            def __init__(self, u):
+                self.callback_query = type("Q", (), {"from_user": u, "data": "daily_quiz", "answer": (lambda *_: None), "edit_message_text": update.effective_message.reply_text})
+        await handle_daily_quiz(_Fake(update.effective_user), context)
+    except Exception as e:
+        logger.error(f"Error in daily_command: {e}")
+        await update.message.reply_text("❌ خطا در سوال روز.")
+
+
+@rate_limit_handler("default")
+async def progress_command(update: Update, context: Any) -> None:
+    try:
+        from sqlalchemy import select
+        from database.models_sql import User as DBUser
+        from database.db import session_scope
+        from database.service import get_user_stats
+        with session_scope() as session:
+            u = session.execute(select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)).scalar_one_or_none()
+            if not u:
+                await update.message.reply_text("❌ ابتدا ثبت‌نام کنید.")
+                return
+            s = get_user_stats(session, u.id)
+        await update.message.reply_text(
+            f"📊 پیشرفت شما:\nامتیاز: {s['points']}\nدرست‌ها: {s['total_correct']} از {s['total_attempts']}\nاستریک: {s['streak_days']} روز"
+        )
+    except Exception as e:
+        logger.error(f"Error in progress_command: {e}")
+        await update.message.reply_text("❌ خطا در نمایش پیشرفت.")
+
+
+@rate_limit_handler("default")
+async def leaderboard_command(update: Update, context: Any) -> None:
+    try:
+        from database.db import session_scope
+        from database.service import get_leaderboard_top
+        with session_scope() as session:
+            top = get_leaderboard_top(session, limit=10)
+        if not top:
+            await update.message.reply_text("هنوز جدول امتیازات خالی است.")
+            return
+        lines = ["🏆 جدول امتیازات:"]
+        for i, row in enumerate(top, 1):
+            lines.append(f"{i}. {row['telegram_user_id']} — {row['points']} امتیاز")
+        await update.message.reply_text("\n".join(lines))
+    except Exception as e:
+        logger.error(f"Error in leaderboard_command: {e}")
+        await update.message.reply_text("❌ خطا در جدول امتیازات.")
+
+@rate_limit_handler("default")
 async def courses_command(update: Update, context: Any) -> None:
     """Handle /courses command - Show available courses"""
     try:
@@ -1018,6 +1071,9 @@ async def setup_handlers(application: Application) -> None:
         application.add_handler(CommandHandler("unban", unban_command), group=1)
         application.add_handler(CommandHandler("profile", profile_command), group=1)
         application.add_handler(CommandHandler("help", help_command), group=1)
+        application.add_handler(CommandHandler("daily", daily_command), group=1)
+        application.add_handler(CommandHandler("progress", progress_command), group=1)
+        application.add_handler(CommandHandler("leaderboard", leaderboard_command), group=1)
         application.add_handler(CommandHandler("courses", courses_command), group=1)
         application.add_handler(CommandHandler("mycourses", mycourses_command), group=1)
         application.add_handler(CommandHandler("book", book_command), group=1)
@@ -1857,7 +1913,9 @@ async def run_webhook_mode(application: Application) -> None:
                                     "خطا در انجام عملیات",
                                     max_age=10,
                                     path="/",
-                                    secure=str(config.webhook.url).startswith("https://"),
+                                    secure=str(config.webhook.url).startswith(
+                                        "https://"
+                                    ),
                                     samesite="Strict",
                                 )
                                 resp.set_cookie(
@@ -1865,7 +1923,9 @@ async def run_webhook_mode(application: Application) -> None:
                                     "error",
                                     max_age=10,
                                     path="/",
-                                    secure=str(config.webhook.url).startswith("https://"),
+                                    secure=str(config.webhook.url).startswith(
+                                        "https://"
+                                    ),
                                     samesite="Strict",
                                 )
                             except Exception:

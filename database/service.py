@@ -485,3 +485,44 @@ def submit_answer(
     upsert_user_stats(session, user_db_id, bool(is_correct))
     session.flush()
     return bool(is_correct)
+
+
+def get_user_stats(session: Session, user_db_id: int) -> Dict:
+    stats = (
+        session.execute(select(UserStats).where(UserStats.user_id == user_db_id))
+        .scalars()
+        .first()
+    )
+    if not stats:
+        return {"total_attempts": 0, "total_correct": 0, "streak_days": 0, "points": 0}
+    return {
+        "total_attempts": int(stats.total_attempts or 0),
+        "total_correct": int(stats.total_correct or 0),
+        "streak_days": int(stats.streak_days or 0),
+        "points": int(stats.points or 0),
+    }
+
+
+def get_leaderboard_top(session: Session, limit: int = 10) -> List[Dict]:
+    q = session.execute(
+        select(UserStats.user_id, UserStats.points)
+        .order_by(UserStats.points.desc())
+        .limit(max(1, min(50, limit)))
+    )
+    user_ids = [r.user_id for r in q]
+    if not user_ids:
+        return []
+    # Map user_id -> telegram id
+    m = {}
+    rows = session.execute(select(User.id, User.telegram_user_id).where(User.id.in_(user_ids)))
+    for r in rows:
+        m[int(r.id)] = int(r.telegram_user_id)
+    q2 = session.execute(
+        select(UserStats.user_id, UserStats.points)
+        .order_by(UserStats.points.desc())
+        .limit(max(1, min(50, limit)))
+    )
+    out = []
+    for r in q2:
+        out.append({"telegram_user_id": int(m.get(int(r.user_id), 0)), "points": int(r.points or 0)})
+    return out
