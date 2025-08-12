@@ -7,7 +7,9 @@ from database.service import get_or_create_user
 
 def test_create_user_sql(tmp_path):
     with session_scope() as session:
-        u = get_or_create_user(session, telegram_user_id=123, first_name="A", last_name="B")
+        u = get_or_create_user(
+            session, telegram_user_id=123, first_name="A", last_name="B"
+        )
         assert isinstance(u, User)
 
 

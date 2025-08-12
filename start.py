@@ -32,7 +32,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
 def _prepare_webhook_env() -> None:
     """Set WEBHOOK_URL from Railway's public domain if available."""
     railway_public_url = os.environ.get("RAILWAY_PUBLIC_DOMAIN")
@@ -65,7 +64,6 @@ def _validate_environment() -> bool:
         return False
 
     return True
-
 
 
 def main() -> None:
@@ -109,12 +107,14 @@ def main() -> None:
         logger.error(f"💥 Fatal error: {e}")
         # Self-heal loop: retry bot start with exponential backoff to stay 24/7
         import time
+
         backoff = 5
         for attempt in range(1, 10):
             try:
                 logger.info(f"🔁 Restart attempt {attempt} in {backoff}s...")
                 time.sleep(backoff)
                 from bot import main as bot_main
+
                 bot_main()
                 return
             except Exception as e2:
