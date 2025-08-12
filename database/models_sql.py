@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy import (
     Column,
     Integer,
+    BigInteger,
     String,
     DateTime,
     Enum,
@@ -22,7 +23,7 @@ from database.db import Base
 class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    telegram_user_id: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
     first_name_enc: Mapped[str] = mapped_column(String(512))
     last_name_enc: Mapped[str] = mapped_column(String(512))
     phone_enc: Mapped[str] = mapped_column(String(512), nullable=True)
@@ -68,7 +69,9 @@ class Purchase(Base):
     )
     product_type: Mapped[str] = mapped_column(String(16))  # book|course
     product_id: Mapped[str] = mapped_column(String(128))
-    status: Mapped[str] = mapped_column(String(16), index=True)  # pending|approved|rejected
+    status: Mapped[str] = mapped_column(
+        String(16), index=True
+    )  # pending|approved|rejected
     admin_action_by: Mapped[int] = mapped_column(Integer, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
@@ -89,9 +92,7 @@ class Receipt(Base):
     file_unique_id: Mapped[str] = mapped_column(String(128))
     submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
-    __table_args__ = (
-        UniqueConstraint("file_unique_id", name="uq_file_unique_id"),
-    )
+    __table_args__ = (UniqueConstraint("file_unique_id", name="uq_file_unique_id"),)
 
 
 class PurchaseAudit(Base):
