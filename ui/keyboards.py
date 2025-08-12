@@ -49,6 +49,7 @@ def build_provinces_keyboard(provinces: List[str]) -> InlineKeyboardMarkup:
         for p in provinces
     ]
     # In registration flow, going back from province step returns to start/cancel
+    # In registration flow, back from province cancels the flow
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")])
     return InlineKeyboardMarkup(rows)
 

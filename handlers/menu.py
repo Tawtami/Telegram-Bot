@@ -77,10 +77,17 @@ async def handle_menu_selection(
     if not user:
         return
 
-    storage: StudentStorage = context.bot_data["storage"]
-    student = storage.get_student(user.id)
+    # Check registration against SQL DB (single source of truth)
+    from sqlalchemy import select
+    from database.db import session_scope
+    from database.models_sql import User as DBUser
 
-    if not student and user.id not in config.bot.admin_user_ids:
+    with session_scope() as session:
+        db_user = session.execute(
+            select(DBUser).where(DBUser.telegram_user_id == user.id)
+        ).scalar_one_or_none()
+
+    if not db_user and user.id not in config.bot.admin_user_ids:
         await query.edit_message_text(
             "⚠️ لطفاً ابتدا ثبت‌نام کنید:",
             reply_markup=_REGISTER_KEYBOARD,
@@ -94,7 +101,7 @@ async def handle_menu_selection(
         option = query.data.replace("menu_", "")
 
     if option == "profile":
-        if not student:
+        if not db_user:
             await query.edit_message_text(
                 "❌ پروفایل شما یافت نشد.",
                 reply_markup=_REGISTER_KEYBOARD,
@@ -102,10 +109,10 @@ async def handle_menu_selection(
             return
         profile_text = (
             "👤 **پروفایل شما**\n\n"
-            f"📍 **استان:** {student.province or '—'}\n"
-            f"🏙 **شهر:** {student.city or '—'}\n"
-            f"📚 **پایه تحصیلی:** {student.grade or '—'}\n"
-            f"🎓 **رشته تحصیلی:** {student.field_of_study or '—'}\n\n"
+            f"📍 **استان:** {db_user.province or '—'}\n"
+            f"🏙 **شهر:** {db_user.city or '—'}\n"
+            f"📚 **پایه تحصیلی:** {db_user.grade or '—'}\n"
+            f"🎓 **رشته تحصیلی:** {db_user.field_of_study or '—'}\n\n"
             "ℹ️ برای حفظ حریم خصوصی، نام و شماره تماس نمایش داده نمی‌شود."
         )
 

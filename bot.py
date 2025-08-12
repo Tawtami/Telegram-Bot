@@ -1592,6 +1592,15 @@ async def run_webhook_mode(application: Application) -> None:
                         db_purchase = session.execute(
                             select(Purchase).where(Purchase.id == pid)
                         ).scalar_one_or_none()
+                        if not db_purchase or db_purchase.status != "pending":
+                            return web.Response(
+                                status=404, text="not found or already decided"
+                            )
+                        result = approve_or_reject_purchase(
+                            session, db_purchase.id, admin_id, action
+                        )
+                        if not result:
+                            return web.Response(status=409, text="conflict")
                 except Exception as e:
                     try:
                         logger.warning(
@@ -1604,18 +1613,18 @@ async def run_webhook_mode(application: Application) -> None:
                             db_purchase = session.execute(
                                 select(Purchase).where(Purchase.id == pid)
                             ).scalar_one_or_none()
+                            if not db_purchase or db_purchase.status != "pending":
+                                return web.Response(
+                                    status=404, text="not found or already decided"
+                                )
+                            result = approve_or_reject_purchase(
+                                session, db_purchase.id, admin_id, action
+                            )
+                            if not result:
+                                return web.Response(status=409, text="conflict")
                     except Exception as e2:
                         logger.error(f"admin_act fatal DB error after init retry: {e2}")
                         return web.Response(status=500, text="server error")
-                    if not db_purchase or db_purchase.status != "pending":
-                        return web.Response(
-                            status=404, text="not found or already decided"
-                        )
-                    result = approve_or_reject_purchase(
-                        session, db_purchase.id, admin_id, action
-                    )
-                    if not result:
-                        return web.Response(status=409, text="conflict")
 
                 # Try to notify student and admins asynchronously (fire-and-forget)
                 try:
@@ -1684,6 +1693,15 @@ async def run_webhook_mode(application: Application) -> None:
                         db_purchase = session.execute(
                             select(Purchase).where(Purchase.id == pid)
                         ).scalar_one_or_none()
+                        if not db_purchase or db_purchase.status != "pending":
+                            return web.Response(
+                                status=404, text="not found or already decided"
+                            )
+                        result = approve_or_reject_purchase(
+                            session, db_purchase.id, admin_id, action
+                        )
+                        if not result:
+                            return web.Response(status=409, text="conflict")
                 except Exception as e:
                     try:
                         logger.warning(
@@ -1696,20 +1714,20 @@ async def run_webhook_mode(application: Application) -> None:
                             db_purchase = session.execute(
                                 select(Purchase).where(Purchase.id == pid)
                             ).scalar_one_or_none()
+                            if not db_purchase or db_purchase.status != "pending":
+                                return web.Response(
+                                    status=404, text="not found or already decided"
+                                )
+                            result = approve_or_reject_purchase(
+                                session, db_purchase.id, admin_id, action
+                            )
+                            if not result:
+                                return web.Response(status=409, text="conflict")
                     except Exception as e2:
                         logger.error(
                             f"admin_act_post fatal DB error after init retry: {e2}"
                         )
                         return web.Response(status=500, text="server error")
-                    if not db_purchase or db_purchase.status != "pending":
-                        return web.Response(
-                            status=404, text="not found or already decided"
-                        )
-                    result = approve_or_reject_purchase(
-                        session, db_purchase.id, admin_id, action
-                    )
-                    if not result:
-                        return web.Response(status=409, text="conflict")
 
                 # Notify student fire-and-forget
                 try:

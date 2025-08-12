@@ -321,6 +321,14 @@ async def handle_course_registration(
                     product_id=course_id,
                     status="approved",
                 )
+            # Reflect in JSON storage for user-facing "سبد خرید من"
+            try:
+                storage: StudentStorage = context.bot_data["storage"]
+                storage.save_course_registration(
+                    query.from_user.id, course_id, is_paid=False
+                )
+            except Exception:
+                pass
             course_title = course["title"] if course else "دوره رایگان"
             await query.edit_message_text(
                 f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد!\n\n"
