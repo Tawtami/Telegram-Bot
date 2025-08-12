@@ -1,5 +1,8 @@
 # 🎓 Ostad Hatami Math Classes Bot
 
+[![CI](https://github.com/Tawtami/Bot/actions/workflows/alembic.yml/badge.svg)](https://github.com/Tawtami/Bot/actions/workflows/alembic.yml)
+[![Coverage](https://img.shields.io/badge/coverage-codecov-blue)](#)
+
 ربات ثبت‌نام کلاس‌های ریاضی استاد حاتمی - نسخه بهینه‌شده
 
 ## 🎯 Overview
