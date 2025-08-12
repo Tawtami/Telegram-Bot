@@ -22,6 +22,10 @@ def init_db():
     """
     try:
         Base.metadata.create_all(ENGINE)
+        try:
+            _upgrade_schema_if_needed()
+        except Exception as ue:
+            logger.warning(f"Schema upgrade check failed: {ue}")
         return
     except Exception as e:
         logger.warning(f"create_all failed, falling back to per-table creation: {e}")
@@ -61,9 +65,43 @@ def init_db():
                     idx.create(bind=ENGINE, checkfirst=True)
                 except Exception as ie:
                     logger.warning(f"Index create skipped/failed for {idx.name}: {ie}")
+        try:
+            _upgrade_schema_if_needed()
+        except Exception as ue:
+            logger.warning(f"Schema upgrade check failed: {ue}")
     except Exception as e:
         logger.error(f"Fallback schema init failed: {e}")
         raise
+
+
+def _upgrade_schema_if_needed():
+    """Lightweight, idempotent upgrades for live DB.
+
+    - Ensure users.telegram_user_id is BIGINT (for large Telegram IDs)
+    """
+    from sqlalchemy import text
+
+    with ENGINE.connect() as conn:
+        try:
+            dt = conn.execute(
+                text(
+                    "SELECT data_type FROM information_schema.columns "
+                    "WHERE table_name='users' AND column_name='telegram_user_id'"
+                )
+            ).scalar()
+        except Exception as e:
+            logger.warning(f"Could not read column type for users.telegram_user_id: {e}")
+            return
+
+        if not dt:
+            return
+        if str(dt).lower() in ("integer", "int4"):
+            try:
+                conn.execute(text("ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT"))
+                conn.commit()
+                logger.info("Upgraded users.telegram_user_id to BIGINT")
+            except Exception as e:
+                logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
 
 
 if __name__ == "__main__":
