@@ -87,8 +87,8 @@ def main() -> None:
                 and (url.startswith("postgres://") or url.startswith("postgresql://"))
             ):
                 os.environ["DATABASE_URL"] = url.replace(
-                    "postgres://", "postgresql+psycopg_binary://"
-                ).replace("postgresql://", "postgresql+psycopg_binary://")
+                    "postgres://", "postgresql+psycopg://"
+                ).replace("postgresql://", "postgresql+psycopg://")
         except Exception:
             pass
 

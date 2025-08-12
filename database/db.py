@@ -28,9 +28,7 @@ def _build_db_url() -> str:
         if (
             lowered.startswith("postgres://") or lowered.startswith("postgresql://")
         ) and "+" not in url:
-            return url.replace(
-                "postgres://", "postgresql+psycopg_binary://"
-            ).replace(
+            return url.replace("postgres://", "postgresql+psycopg_binary://").replace(
                 "postgresql://", "postgresql+psycopg_binary://"
             )
         return url
