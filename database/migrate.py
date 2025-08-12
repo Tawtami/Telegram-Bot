@@ -140,6 +140,17 @@ def _upgrade_schema_if_needed(conn):
             f"Could not read/upgrade purchases.admin_action_by column type: {e}"
         )
 
+    # 3) Create recommended indexes if missing (Postgres)
+    try:
+        if ENGINE.dialect.name == "postgresql":
+            # Users demography indexes
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
+    except Exception as e:
+        logger.warning(f"Creating optional indexes failed: {e}")
+
 
 def _create_tables_individually(conn):
     """Create tables one by one and then indexes with checkfirst=True."""

@@ -27,10 +27,10 @@ class User(Base):
     first_name_enc: Mapped[str] = mapped_column(String(512))
     last_name_enc: Mapped[str] = mapped_column(String(512))
     phone_enc: Mapped[str] = mapped_column(String(512), nullable=True)
-    province: Mapped[str] = mapped_column(String(128), nullable=True)
-    city: Mapped[str] = mapped_column(String(128), nullable=True)
-    grade: Mapped[str] = mapped_column(String(32), nullable=True)
-    field_of_study: Mapped[str] = mapped_column(String(32), nullable=True)
+    province: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    city: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
+    grade: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
+    field_of_study: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
@@ -82,13 +82,17 @@ class Purchase(Base):
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     __table_args__ = (
         # Prevent duplicate product entries per user (single row updates status)
-        UniqueConstraint("user_id", "product_type", "product_id", name="uq_user_product"),
+        UniqueConstraint(
+            "user_id", "product_type", "product_id", name="uq_user_product"
+        ),
         # Speed up common filters
         Index("ix_purchases_user_status", "user_id", "status"),
         Index("ix_purchases_created_at", "created_at"),
@@ -105,7 +109,9 @@ class Receipt(Base):
     )
     telegram_file_id: Mapped[str] = mapped_column(String(256))
     file_unique_id: Mapped[str] = mapped_column(String(128))
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, index=True
+    )
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
     __table_args__ = (UniqueConstraint("file_unique_id", name="uq_file_unique_id"),)
 

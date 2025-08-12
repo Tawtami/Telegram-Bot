@@ -42,8 +42,8 @@ ENGINE = create_engine(
     _db_url,
     pool_pre_ping=True,
     future=True,
-    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
-    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
+    pool_size=int(os.getenv("DB_POOL_SIZE", "20")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "30")),
     pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),
 )
 SessionLocal = sessionmaker(
