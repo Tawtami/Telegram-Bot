@@ -144,10 +144,20 @@ def _upgrade_schema_if_needed(conn):
     try:
         if ENGINE.dialect.name == "postgresql":
             # Users demography indexes
-            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
-            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)")
+            )
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)")
+            )
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)")
+            )
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"
+                )
+            )
     except Exception as e:
         logger.warning(f"Creating optional indexes failed: {e}")
 

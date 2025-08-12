@@ -1949,6 +1949,46 @@ async def run_webhook_mode(application: Application) -> None:
         except Exception as e:
             logger.warning(f"Could not start rate limiter cleanup tasks: {e}")
 
+        # 24/7 watchdog: periodically verify DB and webhook health and auto-heal
+        async def _watchdog_task():
+            interval = max(60, int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300") or 300))
+            expected_webhook = config.webhook.url.rstrip("/") + config.webhook.path
+            from database.db import ENGINE
+            from sqlalchemy import text as _text
+            while True:
+                try:
+                    # DB ping
+                    try:
+                        with ENGINE.connect() as _conn:
+                            _conn.execute(_text("SELECT 1"))
+                    except Exception as de:
+                        logger.warning(f"Watchdog DB ping failed: {de}. Attempting init_db().")
+                        try:
+                            from database.migrate import init_db
+                            init_db()
+                        except Exception as ie:
+                            logger.error(f"Watchdog init_db failed: {ie}")
+
+                    # Webhook verification
+                    try:
+                        info = await application.bot.get_webhook_info()
+                        if not info or str(info.url or "") != expected_webhook or getattr(info, "last_error_date", None):
+                            await application.bot.set_webhook(
+                                url=expected_webhook,
+                                drop_pending_updates=False,
+                                secret_token=(config.webhook.secret_token if config.webhook.secret_token else None),
+                                max_connections=40,
+                            )
+                            logger.info("Watchdog reset webhook to expected URL")
+                    except Exception as we:
+                        logger.warning(f"Watchdog webhook check failed: {we}")
+                except Exception as e:
+                    logger.warning(f"Watchdog unexpected error: {e}")
+                await asyncio.sleep(interval)
+
+        watchdog_handle = asyncio.create_task(_watchdog_task())
+        application.bot_data["watchdog"] = watchdog_handle
+
         # Start web server
         runner = web.AppRunner(app)
         await runner.setup()
@@ -1975,6 +2015,13 @@ async def run_webhook_mode(application: Application) -> None:
 
             await application.stop()
             await application.shutdown()
+            # Stop watchdog
+            try:
+                wd = application.bot_data.get("watchdog")
+                if wd:
+                    wd.cancel()
+            except Exception:
+                pass
             await runner.cleanup()
             logger.info("✅ Webhook mode shutdown complete")
 

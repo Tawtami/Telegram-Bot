@@ -105,6 +105,19 @@ def main() -> None:
         sys.exit(1)
     except Exception as e:
         logger.error(f"💥 Fatal error: {e}")
+        # Self-heal loop: retry bot start with exponential backoff to stay 24/7
+        import time
+        backoff = 5
+        for attempt in range(1, 10):
+            try:
+                logger.info(f"🔁 Restart attempt {attempt} in {backoff}s...")
+                time.sleep(backoff)
+                from bot import main as bot_main
+                bot_main()
+                return
+            except Exception as e2:
+                logger.error(f"Restart attempt {attempt} failed: {e2}")
+                backoff = min(backoff * 2, 300)
         sys.exit(1)
 
 
