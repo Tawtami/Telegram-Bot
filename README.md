@@ -311,5 +311,5 @@ The optimized bot provides:
 - Webhook mode: set `WEBHOOK_URL=https://<your-domain>` or `RAILWAY_PUBLIC_DOMAIN=<your-domain>` (no scheme). The app will auto-register webhook.
 - Polling mode: remove webhook vars or set `FORCE_POLLING=true`.
 - Healthcheck: in polling mode a tiny HTTP server responds 200 OK at `/`; in webhook mode PTB binds the port.
- - DB health: `/db/health` returns `{ "db": "ok" }`.
- - 24/7 watchdog: periodic DB ping + webhook auto-heal; start script retries with backoff on fatal errors.
+- DB health: `/db/health` returns `{ "db": "ok" }`.
+- 24/7 watchdog: periodic DB ping + webhook auto-heal; start script retries with backoff on fatal errors.

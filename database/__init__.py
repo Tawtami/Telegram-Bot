@@ -16,6 +16,6 @@ __all__ = ["Base", "ENGINE", "SessionLocal", "session_scope", "models_sql"]
 
 # Alembic convenience
 def alembic_metadata():
-    from .models_sql import *  # noqa: F401,F403
-
+    # Import models module (no wildcard) so Base.metadata is populated
+    _ = models_sql  # noqa: F841
     return Base.metadata
