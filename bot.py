@@ -1275,14 +1275,18 @@ async def run_webhook_mode(application: Application) -> None:
                         items = list(session.execute(stmt).scalars())
                 except Exception as e:
                     try:
-                        logger.warning(f"admin_list query failed, attempting DB init: {e}")
+                        logger.warning(
+                            f"admin_list query failed, attempting DB init: {e}"
+                        )
                         from database.migrate import init_db
 
                         init_db()
                         with session_scope() as session:
                             items = list(session.execute(stmt).scalars())
                     except Exception as e2:
-                        logger.error(f"admin_list fatal DB error after init retry: {e2}")
+                        logger.error(
+                            f"admin_list fatal DB error after init retry: {e2}"
+                        )
                         return web.Response(status=500, text="server error")
 
                 total = len(items)
@@ -1332,10 +1336,11 @@ async def run_webhook_mode(application: Application) -> None:
                     csv_bytes = buf.getvalue().encode("utf-8")
                     return web.Response(
                         body=csv_bytes,
-                        content_type="text/csv; charset=utf-8",
+                        content_type="text/csv",
                         headers={
                             "Content-Disposition": f"attachment; filename=orders_{status or 'all'}.csv"
                         },
+                        charset="utf-8",
                     )
 
                 if "text/html" in accept or not accept:
@@ -1477,7 +1482,7 @@ async def run_webhook_mode(application: Application) -> None:
                     </body></html>
                     """
                     resp = web.Response(
-                        text=body, content_type="text/html; charset=utf-8"
+                        text=body, content_type="text/html", charset="utf-8"
                     )
                     try:
                         resp.set_cookie(
@@ -1535,7 +1540,9 @@ async def run_webhook_mode(application: Application) -> None:
                         ).scalar_one_or_none()
                 except Exception as e:
                     try:
-                        logger.warning(f"admin_act query failed, attempting DB init: {e}")
+                        logger.warning(
+                            f"admin_act query failed, attempting DB init: {e}"
+                        )
                         from database.migrate import init_db
 
                         init_db()
@@ -1625,7 +1632,9 @@ async def run_webhook_mode(application: Application) -> None:
                         ).scalar_one_or_none()
                 except Exception as e:
                     try:
-                        logger.warning(f"admin_act_post query failed, attempting DB init: {e}")
+                        logger.warning(
+                            f"admin_act_post query failed, attempting DB init: {e}"
+                        )
                         from database.migrate import init_db
 
                         init_db()
@@ -1634,7 +1643,9 @@ async def run_webhook_mode(application: Application) -> None:
                                 select(Purchase).where(Purchase.id == pid)
                             ).scalar_one_or_none()
                     except Exception as e2:
-                        logger.error(f"admin_act_post fatal DB error after init retry: {e2}")
+                        logger.error(
+                            f"admin_act_post fatal DB error after init retry: {e2}"
+                        )
                         return web.Response(status=500, text="server error")
                     if not db_purchase or db_purchase.status != "pending":
                         return web.Response(
