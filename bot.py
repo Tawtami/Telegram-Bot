@@ -1800,10 +1800,28 @@ async def run_webhook_mode(application: Application) -> None:
                     pass
                 return web.Response(status=500, text="server error")
 
+        async def admin_init(request):
+            try:
+                token_ok = await _require_token(request)
+                if token_ok is None:
+                    return web.Response(status=401, text="unauthorized")
+                try:
+                    from database.migrate import init_db
+
+                    init_db()
+                    return web.Response(text="ok", content_type="text/plain", charset="utf-8")
+                except Exception as e:
+                    logger.error(f"admin_init error: {e}")
+                    return web.Response(status=500, text="init error")
+            except Exception as e:
+                logger.error(f"admin_init fatal: {e}")
+                return web.Response(status=500, text="server error")
+
         # Add routes
         app.router.add_get("/", health_check)
         app.router.add_get("/admin", admin_list)
         app.router.add_get("/admin/act", admin_act)
+        app.router.add_get("/admin/init", admin_init)
         app.router.add_post("/admin/act", admin_act_post)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
