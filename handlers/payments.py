@@ -104,12 +104,26 @@ async def handle_payment_receipt(
         # Create DB purchase pending
         with session_scope() as session:
             u = get_or_create_user(session, update.effective_user.id)
+            # Derive amount for course if available from courses.json
+            _amount = None
+            try:
+                import json as _json
+                with open("data/courses.json", "r", encoding="utf-8") as _f:
+                    _all = _json.load(_f)
+                for c in _all or []:
+                    if c.get("course_id") == course_id:
+                        _amount = c.get("price")
+                        break
+            except Exception:
+                _amount = None
+
             purchase = create_purchase(
                 session,
                 user_id=u.id,
                 product_type="course",
                 product_id=course_id,
                 status="pending",
+                amount=_amount,
             )
             # Save receipt row for dedupe
             try:
@@ -173,12 +187,27 @@ async def handle_payment_receipt(
         # Create DB purchase pending (book)
         with session_scope() as session:
             u = get_or_create_user(session, update.effective_user.id)
+            # Book price if available
+            _amount = None
+            try:
+                import json as _json
+                with open("data/books.json", "r", encoding="utf-8") as _f:
+                    _all = _json.load(_f)
+                title = book_data.get("title", "book")
+                for b in _all or []:
+                    if (b.get("title") == title) or (b.get("book_id") == title):
+                        _amount = b.get("price")
+                        break
+            except Exception:
+                _amount = None
+
             purchase = create_purchase(
                 session,
                 user_id=u.id,
                 product_type="book",
                 product_id=book_data.get("title", "book"),
                 status="pending",
+                amount=_amount,
             )
             try:
                 add_receipt(

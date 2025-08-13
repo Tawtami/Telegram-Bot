@@ -124,12 +124,20 @@ def create_purchase(
     product_id: str,
     status: str = "pending",
     notes: Optional[str] = None,
+    amount: Optional[int] = None,
+    discount: Optional[int] = None,
+    payment_method: Optional[str] = None,
+    transaction_id: Optional[str] = None,
 ) -> Purchase:
     purchase = Purchase(
         user_id=user_id,
         product_type=product_type,
         product_id=product_id,
         status=status,
+        amount=amount,
+        discount=discount,
+        payment_method=payment_method,
+        transaction_id=transaction_id,
         notes_enc=encrypt_text(notes) if notes else None,
     )
     session.add(purchase)

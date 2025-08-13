@@ -79,6 +79,10 @@ class Purchase(Base):
     status: Mapped[str] = mapped_column(
         String(16), index=True
     )  # pending|approved|rejected
+    amount: Mapped[int] = mapped_column(Integer, nullable=True)
+    discount: Mapped[int] = mapped_column(Integer, nullable=True)
+    payment_method: Mapped[str] = mapped_column(String(32), nullable=True)
+    transaction_id: Mapped[str] = mapped_column(String(128), nullable=True)
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)

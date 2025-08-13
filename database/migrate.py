@@ -147,6 +147,23 @@ def _upgrade_schema_if_needed(conn):
     # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
     try:
         if ENGINE.dialect.name.startswith("postgresql"):
+            # Add financial columns to purchases if missing
+            try:
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER"))
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)"))
+            except Exception:
+                pass
+            try:
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)"))
+            except Exception:
+                pass
             conn.execute(
                 text(
                     "CREATE TABLE IF NOT EXISTS banned_users (\n"
