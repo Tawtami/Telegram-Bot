@@ -1398,6 +1398,7 @@ async def run_webhook_mode(application: Application) -> None:
                 return getattr(request.url, "scheme", "http") == "https"
             except Exception:
                 return False
+
         async def _require_token(request):
             token = request.query.get("token", "").strip()
             if not token and request.method.upper() == "POST":
