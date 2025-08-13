@@ -1811,6 +1811,18 @@ async def run_webhook_mode(application: Application) -> None:
                         else ""
                     )
 
+                    # Build dynamic payment method options from config
+                    try:
+                        _methods = list(config.bot.payment_methods or ["card", "cash", "transfer"])
+                    except Exception:
+                        _methods = ["card", "cash", "transfer"]
+                    _method_opts = "".join(
+                        [
+                            f"<option value=''>{'method'}</option>"
+                        ]
+                        + [f"<option value='{m}'>{m}</option>" for m in _methods]
+                    )
+
                     html_rows = "".join(
                         f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r.get('created_at','')}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
@@ -1820,12 +1832,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
-                        f"<select name='payment_method' style='width:110px;margin-inline:4px'>"
-                        f"<option value='' selected>method</option>"
-                        f"<option value='card'>card</option>"
-                        f"<option value='cash'>cash</option>"
-                        f"<option value='transfer'>transfer</option>"
-                        f"</select>"
+                        f"<select name='payment_method' style='width:120px;margin-inline:4px'>{_method_opts}</select>"
                         f"<input type='text' name='transaction_id' placeholder='txn' style='width:120px;margin-inline:4px'/>"
                         f"<input type='number' name='discount' placeholder='discount' style='width:80px;margin-inline:4px'/>"
                         f"<button class='btn approve' type='submit'>تایید</button>"
@@ -2040,7 +2047,9 @@ async def run_webhook_mode(application: Application) -> None:
                         except Exception:
                             dc = None
                         # Validate payment method
-                        _allowed_pm = set(config.bot.payment_methods or ["card", "cash", "transfer"])
+                        _allowed_pm = set(
+                            config.bot.payment_methods or ["card", "cash", "transfer"]
+                        )
                         if pm not in _allowed_pm:
                             pm = None
                         # Validate transaction id (basic)
@@ -2162,7 +2171,9 @@ async def run_webhook_mode(application: Application) -> None:
                             dc = int(data.get("discount") or 0)
                         except Exception:
                             dc = None
-                        _allowed_pm = set(config.bot.payment_methods or ["card", "cash", "transfer"])
+                        _allowed_pm = set(
+                            config.bot.payment_methods or ["card", "cash", "transfer"]
+                        )
                         if pm not in _allowed_pm:
                             pm = None
                         if tx and not (4 <= len(tx) <= 64):
