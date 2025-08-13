@@ -1400,7 +1400,11 @@ async def run_webhook_mode(application: Application) -> None:
                     token = (data.get("token") or "").strip()
                 except Exception:
                     token = ""
-            expected = (config.bot.admin_dashboard_token or "").strip()
+            # Allow environment override so tests that set ADMIN_DASHBOARD_TOKEN at runtime work
+            expected = (
+                config.bot.admin_dashboard_token
+                or os.getenv("ADMIN_DASHBOARD_TOKEN", "")
+            ).strip()
             if not expected or token != expected:
                 return None
             return token
