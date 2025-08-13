@@ -14,6 +14,3 @@ async def test_help_and_menu_mocked_bot():
     import bot as app
 
     assert callable(app.main)
-
-
-

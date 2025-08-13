@@ -27,7 +27,12 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
     from database.models_sql import User, Purchase
 
     with session_scope() as s:
-        u = User(telegram_user_id=999001, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=999001,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
 
@@ -74,7 +79,9 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
         # 1) Filter by status=pending
         st, js = await _http_json(base + "&status=pending")
         assert st == 200
-        assert all(item["status"] == "pending" for item in js["items"]) or js["total"] >= 0
+        assert (
+            all(item["status"] == "pending" for item in js["items"]) or js["total"] >= 0
+        )
 
         # 2) type=book
         st, js = await _http_json(base + "&type=book")
@@ -84,12 +91,17 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
         # 3) uid filter (by telegram id)
         st, js = await _http_json(base + "&uid=999001")
         assert st == 200
-        assert all(isinstance(item["user_id"], int) for item in js["items"]) or js["total"] >= 0
+        assert (
+            all(isinstance(item["user_id"], int) for item in js["items"])
+            or js["total"] >= 0
+        )
 
         # 4) product substring
         st, js = await _http_json(base + "&product=book")
         assert st == 200
-        assert all("book" in item["product"] for item in js["items"]) or js["total"] >= 0
+        assert (
+            all("book" in item["product"] for item in js["items"]) or js["total"] >= 0
+        )
 
         # 5) date range (from/to) inclusive of from and exclusive of to (day-based)
         day1 = (datetime.utcnow() - timedelta(days=4)).date().isoformat()
@@ -114,5 +126,3 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

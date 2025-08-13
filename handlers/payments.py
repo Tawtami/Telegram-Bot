@@ -108,6 +108,7 @@ async def handle_payment_receipt(
             _amount = None
             try:
                 import json as _json
+
                 with open("data/courses.json", "r", encoding="utf-8") as _f:
                     _all = _json.load(_f)
                 for c in _all or []:
@@ -191,6 +192,7 @@ async def handle_payment_receipt(
             _amount = None
             try:
                 import json as _json
+
                 with open("data/books.json", "r", encoding="utf-8") as _f:
                     _all = _json.load(_f)
                 title = book_data.get("title", "book")

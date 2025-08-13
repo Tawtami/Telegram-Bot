@@ -100,5 +100,3 @@ async def test_admin_filters_i18n_labels(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

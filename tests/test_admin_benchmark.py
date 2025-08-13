@@ -98,12 +98,8 @@ async def test_admin_benchmark_optional(monkeypatch):
             ts = datetime.utcnow().isoformat() + "Z"
             mean_v = statistics.mean(runs)
             median_v = statistics.median(runs)
-            row = (
-                f"{ts},{len(runs)},{mean_v:.6f},{median_v:.6f},{p95:.6f},{max(runs):.6f},{threshold:.6f}\n"
-            )
-            header = (
-                "timestamp,runs_count,mean_sec,median_sec,p95_sec,max_sec,threshold_sec\n"
-            )
+            row = f"{ts},{len(runs)},{mean_v:.6f},{median_v:.6f},{p95:.6f},{max(runs):.6f},{threshold:.6f}\n"
+            header = "timestamp,runs_count,mean_sec,median_sec,p95_sec,max_sec,threshold_sec\n"
             # Write header if file does not exist
             if not os.path.exists(csv_path):
                 os.makedirs(os.path.dirname(csv_path), exist_ok=True)

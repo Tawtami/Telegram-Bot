@@ -91,6 +91,7 @@ async def test_admin_flash_messages_i18n(monkeypatch):
         with pytest.raises(asyncio.CancelledError):
             await task
 
+
 async def test_admin_flash_messages_reject_i18n(monkeypatch):
     monkeypatch.setenv("PORT", "8087")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")

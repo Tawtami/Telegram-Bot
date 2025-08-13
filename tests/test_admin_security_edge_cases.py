@@ -80,7 +80,12 @@ async def test_admin_act_post_csrf_mismatch(monkeypatch):
     from datetime import datetime
 
     with session_scope() as s:
-        u = User(telegram_user_id=123999, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=123999,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         p = Purchase(
@@ -129,5 +134,3 @@ async def test_admin_act_post_csrf_mismatch(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

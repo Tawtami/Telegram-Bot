@@ -51,7 +51,10 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
             app, "test-token"
         )
         assert status_csv == 200
-        assert b"id,user_id,telegram_user_id,product_type,product_id,status,admin_action_by,admin_action_at,created_at" in body_csv
+        assert (
+            b"id,user_id,telegram_user_id,product_type,product_id,status,admin_action_by,admin_action_at,created_at"
+            in body_csv
+        )
         assert "text/csv" in headers_csv.get("Content-Type", "")
 
         # XLSX export

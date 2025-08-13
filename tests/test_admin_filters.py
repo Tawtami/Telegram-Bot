@@ -8,5 +8,3 @@ def test_parse_admin_filters_smoke():
     from bot import _parse_admin_filters  # noqa: F401
 
     assert callable(_parse_admin_filters)
-
-

@@ -11,5 +11,3 @@ class BotWebhookUser(HttpUser):
     def health(self):
         port = os.getenv("PORT", "8080")
         self.client.get("/", name="health")
-
-

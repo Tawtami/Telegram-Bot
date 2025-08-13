@@ -35,7 +35,12 @@ async def test_admin_filters_status_and_type(monkeypatch):
 
     # Seed a mix of purchases
     with session_scope() as s:
-        u = User(telegram_user_id=818283, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=818283,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         now = datetime.utcnow()
@@ -45,7 +50,15 @@ async def test_admin_filters_status_and_type(monkeypatch):
             ("course", "math-2", "rejected", now - timedelta(days=2)),
         ]
         for t, pid, st, ts in samples:
-            s.add(Purchase(user_id=u.id, product_type=t, product_id=pid, status=st, created_at=ts))
+            s.add(
+                Purchase(
+                    user_id=u.id,
+                    product_type=t,
+                    product_id=pid,
+                    status=st,
+                    created_at=ts,
+                )
+            )
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
     from config import config
@@ -80,5 +93,3 @@ async def test_admin_filters_status_and_type(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

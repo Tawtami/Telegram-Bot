@@ -14,7 +14,15 @@ async def test_admin_pagination_large_dataset(monkeypatch):
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",
-        json.dumps({"results_total": "مجموع نتایج", "page": "صفحه", "prev": "قبلی", "next": "بعدی"}, ensure_ascii=False),
+        json.dumps(
+            {
+                "results_total": "مجموع نتایج",
+                "page": "صفحه",
+                "prev": "قبلی",
+                "next": "بعدی",
+            },
+            ensure_ascii=False,
+        ),
     )
 
     from database.db import session_scope
@@ -22,12 +30,25 @@ async def test_admin_pagination_large_dataset(monkeypatch):
     from datetime import datetime, timedelta
 
     with session_scope() as s:
-        u = User(telegram_user_id=112233, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=112233,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         now = datetime.utcnow()
         for i in range(51):
-            s.add(Purchase(user_id=u.id, product_type="course", product_id=f"L{i+1}", status="pending", created_at=now - timedelta(seconds=i)))
+            s.add(
+                Purchase(
+                    user_id=u.id,
+                    product_type="course",
+                    product_id=f"L{i+1}",
+                    status="pending",
+                    created_at=now - timedelta(seconds=i),
+                )
+            )
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
     from config import config
@@ -57,5 +78,3 @@ async def test_admin_pagination_large_dataset(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

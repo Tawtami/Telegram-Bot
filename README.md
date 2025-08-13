@@ -158,12 +158,14 @@ Includes: validators (Persian-only), encryption at rest, payment decisions, logg
 CI runs flake8, black check, mypy, pytest with coverage (Codecov upload), Bandit security scan, and Alembic migration validation against a Postgres service.
 
 Environment variables for tests (set via GitHub Secrets or local .env):
+
 - BOT_TOKEN (sandbox; mocked for most tests)
 - ADMIN_USER_IDS (e.g., 123,456)
 - ENCRYPTION_KEY (32-byte base64/hex)
 - Optional for webhook: WEBHOOK_URL, PORT, WEBHOOK_SECRET
 
 Load testing (optional):
+
 ```bash
 locust -f locustfile.py --host http://localhost:8080
 ```

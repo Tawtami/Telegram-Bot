@@ -33,7 +33,12 @@ async def test_admin_combined_filters(monkeypatch):
 
     now = datetime.utcnow()
     with session_scope() as s:
-        u = User(telegram_user_id=334455, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=334455,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         samples = [
@@ -43,7 +48,15 @@ async def test_admin_combined_filters(monkeypatch):
             ("book", "bk3", "pending", now),
         ]
         for t, pid, st, ts in samples:
-            s.add(Purchase(user_id=u.id, product_type=t, product_id=pid, status=st, created_at=ts))
+            s.add(
+                Purchase(
+                    user_id=u.id,
+                    product_type=t,
+                    product_id=pid,
+                    status=st,
+                    created_at=ts,
+                )
+            )
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
     from config import config
@@ -65,7 +78,12 @@ async def test_admin_combined_filters(monkeypatch):
                 assert r.status == 200
                 html = await r.text()
                 # Header labels present
-                assert "وضعیت:" in html and "نوع:" in html and "از:" in html and "تا:" in html
+                assert (
+                    "وضعیت:" in html
+                    and "نوع:" in html
+                    and "از:" in html
+                    and "تا:" in html
+                )
                 # Only approved books within date range (bk1, bk2)
                 assert "bk1" in html and "bk2" in html
                 assert "bk3" not in html and "c1" not in html
@@ -73,5 +91,3 @@ async def test_admin_combined_filters(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

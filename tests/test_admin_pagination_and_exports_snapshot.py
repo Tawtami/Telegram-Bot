@@ -33,7 +33,12 @@ async def test_admin_pagination_labels_and_links(monkeypatch):
     from datetime import datetime, timedelta
 
     with session_scope() as s:
-        u = User(telegram_user_id=555666, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=555666,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         now = datetime.utcnow()
@@ -107,7 +112,9 @@ async def test_admin_export_links_with_filters(monkeypatch):
         await asyncio.sleep(0.8)
         base = "http://0.0.0.0:8090"
         async with ClientSession() as sess:
-            async with sess.get(f"{base}/admin?token=test-token&status=approved&type=book&size=7&page=0") as r:
+            async with sess.get(
+                f"{base}/admin?token=test-token&status=approved&type=book&size=7&page=0"
+            ) as r:
                 assert r.status == 200
                 html = await r.text()
                 # Find export links
@@ -124,5 +131,3 @@ async def test_admin_export_links_with_filters(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

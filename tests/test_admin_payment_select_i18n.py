@@ -27,7 +27,11 @@ async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",
         json.dumps(
-            {"admin_title": "مدیریت سفارش‌ها", "orders": "سفارش‌ها", "not_found": "موردی یافت نشد"},
+            {
+                "admin_title": "مدیریت سفارش‌ها",
+                "orders": "سفارش‌ها",
+                "not_found": "موردی یافت نشد",
+            },
             ensure_ascii=False,
         ),
     )
