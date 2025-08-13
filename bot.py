@@ -1949,18 +1949,18 @@ async def run_webhook_mode(application: Application) -> None:
                     </body></html>
                     """
                     resp = web.Response(text=body, content_type="text/html", charset="utf-8")
-                    try:
-                        resp.set_cookie(
-                            "csrf",
-                            csrf_value,
-                            max_age=3600,
-                            path="/",
-                            secure=_cookie_secure(request),
-                            httponly=True,
-                            samesite="Lax",
-                        )
-                    except Exception:
-                        pass
+                        try:
+                            resp.set_cookie(
+                                "csrf",
+                                csrf_value,
+                                max_age=3600,
+                                path="/",
+                                secure=_cookie_secure(request),
+                                httponly=False,
+                                samesite="Lax",
+                            )
+                        except Exception:
+                            pass
                     return resp
 
                 # Default to JSON when explicitly requested
