@@ -1928,9 +1928,9 @@ async def run_webhook_mode(application: Application) -> None:
                           <tbody>{html_rows or f"<tr><td colspan=6>{_ui_t('not_found','موردی یافت نشد')}</td></tr>"}</tbody>
                         </table>
                         <div class='pager'>
-                          <a href='{_qs(page=max(0, f['page']-1))}'>&laquo; {_ui_t('prev','قبلی')}</a>
+                          <a href='{_qs(page=max(0, f['page']-1))}'>{_ui_t('prev','قبلی')}</a>
                           |
-                          <a href='{_qs(page=f['page']+1)}'>{_ui_t('next','بعدی')} &raquo;</a>
+                          <a href='{_qs(page=f['page']+1)}'>{_ui_t('next','بعدی')}</a>
                         </div>
                         <div class='controls' style='margin-top:10px;'>
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>{_ui_t('csv_button_label','CSV')}</a>
