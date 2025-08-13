@@ -1962,55 +1962,55 @@ async def run_webhook_mode(application: Application) -> None:
                         {stats_html}
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
-                          <label>وضعیت:
+                          <label>{_ui_t('status_label','وضعیت:')}
                             <select name='status'>
-                              <option value='pending' {'selected' if f['status']=='pending' else ''}>pending</option>
-                              <option value='approved' {'selected' if f['status']=='approved' else ''}>approved</option>
-                              <option value='rejected' {'selected' if f['status']=='rejected' else ''}>rejected</option>
+                              <option value='pending' {'selected' if f['status']=='pending' else ''}>{_ui_t('status_pending','pending')}</option>
+                              <option value='approved' {'selected' if f['status']=='approved' else ''}>{_ui_t('status_approved','approved')}</option>
+                              <option value='rejected' {'selected' if f['status']=='rejected' else ''}>{_ui_t('status_rejected','rejected')}</option>
                             </select>
                           </label>
-                          <label>نوع:
+                          <label>{_ui_t('type_label','نوع:')}
                             <select name='type'>
-                              <option value='' {'selected' if not f['ptype'] else ''}>همه</option>
-                              <option value='course' {'selected' if f['ptype']=='course' else ''}>course</option>
-                              <option value='book' {'selected' if f['ptype']=='book' else ''}>book</option>
+                              <option value='' {'selected' if not f['ptype'] else ''}>{_ui_t('type_all','همه')}</option>
+                              <option value='course' {'selected' if f['ptype']=='course' else ''}>{_ui_t('type_course','course')}</option>
+                              <option value='book' {'selected' if f['ptype']=='book' else ''}>{_ui_t('type_book','book')}</option>
                             </select>
                           </label>
-                          <label>UID:
-                            <input id='uid' name='uid' value='{f['uid_str']}' placeholder='telegram id' />
+                          <label>{_ui_t('uid_label','UID:')}
+                            <input id='uid' name='uid' value='{f['uid_str']}' placeholder='{_ui_t('uid_placeholder','telegram id')}' />
                           </label>
-                          <label>محصول:
-                            <input id='product' name='product' value='{f['product_q']}' placeholder='عنوان/شناسه' />
+                          <label>{_ui_t('product_label','محصول:')}
+                            <input id='product' name='product' value='{f['product_q']}' placeholder='{_ui_t('product_placeholder','عنوان/شناسه')}' />
                           </label>
-                          <label>از:
+                          <label>{_ui_t('from_label','از:')}
                             <input type='date' name='from' value='{f['from_str']}' />
                           </label>
-                          <label>تا:
+                          <label>{_ui_t('to_label','تا:')}
                             <input type='date' name='to' value='{f['to_str']}' />
                           </label>
-                          <label>سایز صفحه:
+                          <label>{_ui_t('page_size_label','سایز صفحه:')}
                             <input type='number' min='1' max='100' name='size' value='{f['page_size']}' />
                           </label>
-                          <button class='btn filter' type='submit'>فیلتر</button>
-                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
+                          <button class='btn filter' type='submit'>{_ui_t('filter_button','فیلتر')}</button>
+                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>{_ui_t('csv_button_label','CSV')}</a>
                         </form>
                         <div class='meta'>
-                           مجموع نتایج: {total} | صفحه: {f['page']+1}
+                           {_ui_t('results_total','مجموع نتایج')}: {total} | {_ui_t('page','صفحه')}: {f['page']+1}
                         </div>
                         <table>
                           <thead>
-                            <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Created</th><th>Status</th><th>Action</th></tr>
+                            <tr><th>{_ui_t('th_id','ID')}</th><th>{_ui_t('th_user','User')}</th><th>{_ui_t('th_type','Type')}</th><th>{_ui_t('th_product','Product')}</th><th>{_ui_t('th_created','Created')}</th><th>{_ui_t('th_status','Status')}</th><th>{_ui_t('th_action','Action')}</th></tr>
                           </thead>
                           <tbody>{html_rows or f"<tr><td colspan=6>{_ui_t('not_found','موردی یافت نشد')}</td></tr>"}</tbody>
                         </table>
                         <div class='pager'>
-                          <a href='{_qs(page=max(0, f['page']-1))}'>&laquo; قبلی</a>
+                          <a href='{_qs(page=max(0, f['page']-1))}'>&laquo; {_ui_t('prev','قبلی')}</a>
                           |
-                          <a href='{_qs(page=f['page']+1)}'>بعدی &raquo;</a>
+                          <a href='{_qs(page=f['page']+1)}'>{_ui_t('next','بعدی')} &raquo;</a>
                         </div>
                         <div class='controls' style='margin-top:10px;'>
-                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
-                          <a class='btn filter' href='{_qs(page=0)}&format=xlsx'>XLSX</a>
+                          <a class='btn csv' href='{_qs(page=0)}&format=csv'>{_ui_t('csv_button_label','CSV')}</a>
+                          <a class='btn filter' href='{_qs(page=0)}&format=xlsx'>{_ui_t('xlsx_button_label','XLSX')}</a>
                         </div>
                         {stale_html}
                       </div>
