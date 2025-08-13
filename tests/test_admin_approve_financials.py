@@ -58,13 +58,16 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
             async with sess.get(f"{base}/admin?token=test-token") as r:
                 assert r.status == 200
                 # cookie jar stores csrf
+            # extra fetch to ensure Set-Cookie processed in some aiohttp versions
+            async with sess.get(f"{base}/admin?token=test-token") as r2:
+                assert r2.status == 200
 
             # POST approve with financial fields
             form = {
                 "token": "test-token",
                 "id": str(pid),
                 "action": "approve",
-                "csrf": sess.cookie_jar.filter_cookies(base).get("csrf").value,
+                "csrf": (sess.cookie_jar.filter_cookies(base).get("csrf") or {}).get("value",""),
                 "payment_method": "card",
                 "transaction_id": "TXN-123456",
                 "discount": "5000",
