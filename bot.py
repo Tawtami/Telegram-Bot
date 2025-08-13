@@ -1545,20 +1545,52 @@ async def run_webhook_mode(application: Application) -> None:
                 wants_csv = f["fmt"] == "csv" or ("text/csv" in accept)
                 if wants_csv:
                     import csv, io
+                    # Map internal user_id -> telegram_user_id for richer exports
+                    try:
+                        user_ids = {getattr(p, "user_id", None) for p in items}
+                        user_ids.discard(None)
+                        tg_map = {}
+                        if user_ids:
+                            from sqlalchemy import select as _select
+                            from database.models_sql import User as _User
+                            with session_scope() as _s:
+                                for _id, _tg in _s.execute(
+                                    _select(_User.id, _User.telegram_user_id).where(_User.id.in_(list(user_ids)))
+                                ):
+                                    tg_map[int(_id)] = int(_tg)
+                    except Exception:
+                        tg_map = {}
 
                     buf = io.StringIO()
                     writer = csv.writer(buf)
                     writer.writerow(
-                        ["id", "user_id", "type", "product", "status", "created_at"]
+                        [
+                            "id",
+                            "user_id",
+                            "telegram_user_id",
+                            "product_type",
+                            "product_id",
+                            "status",
+                            "admin_action_by",
+                            "admin_action_at",
+                            "created_at",
+                        ]
                     )
                     for p in items:
                         writer.writerow(
                             [
-                                p.id,
-                                p.user_id,
-                                p.product_type,
-                                p.product_id,
-                                p.status,
+                                getattr(p, "id", None),
+                                getattr(p, "user_id", None),
+                                tg_map.get(getattr(p, "user_id", None), None),
+                                getattr(p, "product_type", None),
+                                getattr(p, "product_id", None),
+                                getattr(p, "status", None),
+                                getattr(p, "admin_action_by", None),
+                                (
+                                    p.admin_action_at.isoformat()
+                                    if getattr(p, "admin_action_at", None)
+                                    else ""
+                                ),
                                 (
                                     p.created_at.isoformat()
                                     if getattr(p, "created_at", None)
@@ -1582,20 +1614,53 @@ async def run_webhook_mode(application: Application) -> None:
                         import io
                         from openpyxl import Workbook
 
+                        # Map internal user_id -> telegram_user_id for richer exports
+                        try:
+                            user_ids = {getattr(p, "user_id", None) for p in items}
+                            user_ids.discard(None)
+                            tg_map = {}
+                            if user_ids:
+                                from sqlalchemy import select as _select
+                                from database.models_sql import User as _User
+                                with session_scope() as _s:
+                                    for _id, _tg in _s.execute(
+                                        _select(_User.id, _User.telegram_user_id).where(_User.id.in_(list(user_ids)))
+                                    ):
+                                        tg_map[int(_id)] = int(_tg)
+                        except Exception:
+                            tg_map = {}
+
                         wb = Workbook()
                         ws = wb.active
                         ws.title = "orders"
                         ws.append(
-                            ["id", "user_id", "type", "product", "status", "created_at"]
+                            [
+                                "id",
+                                "user_id",
+                                "telegram_user_id",
+                                "product_type",
+                                "product_id",
+                                "status",
+                                "admin_action_by",
+                                "admin_action_at",
+                                "created_at",
+                            ]
                         )
                         for p in items:
                             ws.append(
                                 [
-                                    p.id,
-                                    p.user_id,
-                                    p.product_type,
-                                    p.product_id,
-                                    p.status,
+                                    getattr(p, "id", None),
+                                    getattr(p, "user_id", None),
+                                    tg_map.get(getattr(p, "user_id", None), None),
+                                    getattr(p, "product_type", None),
+                                    getattr(p, "product_id", None),
+                                    getattr(p, "status", None),
+                                    getattr(p, "admin_action_by", None),
+                                    (
+                                        p.admin_action_at.isoformat()
+                                        if getattr(p, "admin_action_at", None)
+                                        else ""
+                                    ),
                                     (
                                         p.created_at.isoformat()
                                         if getattr(p, "created_at", None)

@@ -38,11 +38,7 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
     # Provide an admin dashboard token
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
 
-    app = (
-        ApplicationBuilder()
-        .token(config.bot_token)
-        .build()
-    )
+    app = ApplicationBuilder().token(config.bot_token).build()
     await setup_handlers(app)
 
     # Start webhook server in background
@@ -50,14 +46,18 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
     try:
         # Allow server to start
         await asyncio.sleep(0.8)
-        # CSV export
-        status_csv, body_csv, headers_csv = await _call_admin_list_csv(app, "test-token")
+        # CSV export (enriched columns)
+        status_csv, body_csv, headers_csv = await _call_admin_list_csv(
+            app, "test-token"
+        )
         assert status_csv == 200
-        assert b"id,user_id,type,product,status,created_at" in body_csv
+        assert b"id,user_id,telegram_user_id,product_type,product_id,status,admin_action_by,admin_action_at,created_at" in body_csv
         assert "text/csv" in headers_csv.get("Content-Type", "")
 
         # XLSX export
-        status_xlsx, body_xlsx, headers_xlsx = await _call_admin_list_xlsx(app, "test-token")
+        status_xlsx, body_xlsx, headers_xlsx = await _call_admin_list_xlsx(
+            app, "test-token"
+        )
         assert status_xlsx == 200
         assert headers_xlsx.get("Content-Type", "").startswith(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -68,5 +68,3 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-
