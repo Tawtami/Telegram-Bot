@@ -29,8 +29,9 @@ def test_atomic_approve(tmp_path):
         u, p = _seed_purchase(session, crypto_manager)
 
     # Two competing approvals
-    with session_scope() as s1, session_scope() as s2:
+    with session_scope() as s1:
         r1 = approve_or_reject_purchase(s1, p.id, admin_id=1, decision="approve")
+    with session_scope() as s2:
         r2 = approve_or_reject_purchase(s2, p.id, admin_id=2, decision="approve")
 
     # Exactly one should succeed

@@ -38,14 +38,23 @@ def _build_db_url() -> str:
 
 _db_url = _build_db_url()
 is_postgres = _db_url.startswith("postgresql+") or _db_url.startswith("postgresql://")
-ENGINE = create_engine(
-    _db_url,
-    pool_pre_ping=True,
-    future=True,
-    pool_size=int(os.getenv("DB_POOL_SIZE", "20")),
-    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "30")),
-    pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),
-)
+# Engine configuration differs for SQLite to improve concurrency in tests
+if _db_url.startswith("sqlite"):
+    ENGINE = create_engine(
+        _db_url,
+        pool_pre_ping=True,
+        future=True,
+        connect_args={"check_same_thread": False, "timeout": 30},
+    )
+else:
+    ENGINE = create_engine(
+        _db_url,
+        pool_pre_ping=True,
+        future=True,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "20")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "30")),
+        pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),
+    )
 SessionLocal = sessionmaker(
     bind=ENGINE, autoflush=False, autocommit=False, expire_on_commit=False
 )
