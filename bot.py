@@ -2420,7 +2420,7 @@ async def run_webhook_mode(application: Application) -> None:
         await runner.setup()
         bind_host = (
             "127.0.0.1" if skip_webhook else "0.0.0.0"
-        )  # nosec B104: bind-all only in prod/container; tests/dev use 127.0.0.1
+        )  # nosec B104
         site = web.TCPSite(
             runner, bind_host, config.webhook.port
         )  # nosec B104: container/webhook bind
