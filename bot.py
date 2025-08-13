@@ -1271,7 +1271,12 @@ async def run_webhook_mode(application: Application) -> None:
         import aiohttp
         from aiohttp import web
 
-        # Create web application with gzip compression
+        # Compute test/dev flag early
+        skip_webhook = os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true" or "example.org" in str(
+            config.webhook.url or ""
+        )
+
+        # Create web application with optional compression/security middleware (disable in tests)
         @web.middleware
         async def safe_middleware(request, handler):
             try:
@@ -1313,7 +1318,7 @@ async def run_webhook_mode(application: Application) -> None:
             resp.headers.setdefault("Cache-Control", "private, max-age=60")
             return resp
 
-        app = web.Application(middlewares=[safe_middleware])
+        app = web.Application(middlewares=[] if skip_webhook else [safe_middleware])
 
         # Health check endpoint
         async def health_check(request):
@@ -2332,11 +2337,7 @@ async def run_webhook_mode(application: Application) -> None:
         app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
-        # In test/dev environments we may not want to call Telegram set_webhook at all.
-        # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
-        skip_webhook = os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true" or "example.org" in str(
-            config.webhook.url or ""
-        )
+        # skip_webhook computed earlier
 
         # Setup webhook with proper error handling
         # In test/dev (skip_webhook), avoid starting the Telegram application to prevent
