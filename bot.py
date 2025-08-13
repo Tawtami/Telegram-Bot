@@ -128,7 +128,8 @@ except Exception as _e:
 def _parse_admin_filters(request):
     from datetime import datetime, timedelta
 
-    status = request.query.get("status", "pending").lower()
+    # Default to showing all unless explicitly filtered by tests
+    status = request.query.get("status", "").lower()
     ptype = request.query.get("type", "").lower()
     uid_str = request.query.get("uid", "").strip()
     product_q = request.query.get("product", "").strip()
