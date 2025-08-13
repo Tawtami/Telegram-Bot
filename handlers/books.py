@@ -136,9 +136,7 @@ async def show_book_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 @rate_limit_handler("default")
-async def start_book_purchase(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def start_book_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Start book purchase process"""
     query = update.callback_query
     if not query:
@@ -175,13 +173,7 @@ async def postal_code(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         await update.message.reply_text(
             "❌ کد پستی باید ۱۰ رقم باشد.\n" "لطفاً دوباره وارد کنید:",
             reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 انصراف", callback_data="cancel_book_purchase"
-                        )
-                    ]
-                ]
+                [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
             ),
         )
         return BookPurchaseStates.POSTAL_CODE
@@ -207,13 +199,7 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text(
             "❌ آدرس باید بین ۱۰ تا ۳۰۰ کاراکتر باشد.\n" "لطفاً دوباره وارد کنید:",
             reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🔙 انصراف", callback_data="cancel_book_purchase"
-                        )
-                    ]
-                ]
+                [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
             ),
         )
         return BookPurchaseStates.ADDRESS
@@ -225,11 +211,7 @@ async def address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         reply_markup=InlineKeyboardMarkup(
             [
                 [InlineKeyboardButton("رد کردن", callback_data="book_skip_notes")],
-                [
-                    InlineKeyboardButton(
-                        "🔙 انصراف", callback_data="cancel_book_purchase"
-                    )
-                ],
+                [InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")],
             ]
         ),
     )
@@ -272,26 +254,14 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await update.message.reply_text(
                 message_text,
                 reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "🔙 انصراف", callback_data="cancel_book_purchase"
-                            )
-                        ]
-                    ]
+                    [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
                 ),
             )
         elif update.callback_query:
             await update.callback_query.edit_message_text(
                 message_text,
                 reply_markup=InlineKeyboardMarkup(
-                    [
-                        [
-                            InlineKeyboardButton(
-                                "🔙 انصراف", callback_data="cancel_book_purchase"
-                            )
-                        ]
-                    ]
+                    [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
                 ),
             )
 
@@ -299,17 +269,13 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 @rate_limit_handler("default")
-async def handle_payment_receipt(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Delegate to unified payment receipt handler"""
     await unified_payment_receipt(update, context)
     return ConversationHandler.END
 
 
-async def cancel_book_purchase(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> int:
+async def cancel_book_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel book purchase process"""
     query = update.callback_query
     if query:
@@ -348,9 +314,7 @@ def build_book_purchase_conversation() -> ConversationHandler:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(
-                cancel_book_purchase, pattern="^cancel_book_purchase$"
-            ),
+            CallbackQueryHandler(cancel_book_purchase, pattern="^cancel_book_purchase$"),
             CommandHandler("cancel", cancel_book_purchase),
         ],
         name="book_purchase",

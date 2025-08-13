@@ -20,9 +20,7 @@ SOCIAL_LINKS = {
 
 
 @rate_limit_handler("default")
-async def handle_social_media(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_social_media(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle social media menu"""
     query = update.callback_query
     if not query:

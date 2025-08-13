@@ -73,9 +73,7 @@ class ErrorHandler:
     def _register_default_handlers(self):
         """Register default error handlers"""
         # Validation errors
-        self.register_error_handler(
-            ErrorCategory.VALIDATION, self._handle_validation_error
-        )
+        self.register_error_handler(ErrorCategory.VALIDATION, self._handle_validation_error)
 
         # Network errors
         self.register_error_handler(ErrorCategory.NETWORK, self._handle_network_error)
@@ -84,9 +82,7 @@ class ErrorHandler:
         self.register_error_handler(ErrorCategory.DATABASE, self._handle_database_error)
 
         # Authentication errors
-        self.register_error_handler(
-            ErrorCategory.AUTHENTICATION, self._handle_auth_error
-        )
+        self.register_error_handler(ErrorCategory.AUTHENTICATION, self._handle_auth_error)
 
         # System errors
         self.register_error_handler(ErrorCategory.SYSTEM, self._handle_system_error)
@@ -158,9 +154,7 @@ class ErrorHandler:
 
         # Log error
         log_level = self._get_log_level(severity)
-        logger.log(
-            log_level, f"Error [{error_id}]: {error} in {handler_name or 'unknown'}"
-        )
+        logger.log(log_level, f"Error [{error_id}]: {error} in {handler_name or 'unknown'}")
 
         # Call category-specific handlers
         await self._call_error_handlers(error_info)

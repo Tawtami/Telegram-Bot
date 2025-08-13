@@ -253,9 +253,7 @@ class Validator:
                 errors.append(error)
 
         if "city" in user_data and user_data["city"] and "province" in user_data:
-            is_valid, error = cls.validate_city(
-                user_data["city"], user_data["province"]
-            )
+            is_valid, error = cls.validate_city(user_data["city"], user_data["province"])
             if not is_valid:
                 errors.append(error)
 

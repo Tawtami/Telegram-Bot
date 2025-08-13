@@ -62,9 +62,7 @@ async def send_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
 
 @rate_limit_handler("default")
-async def handle_menu_selection(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_menu_selection(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle main menu button selections"""
     query = update.callback_query
     if not query:
@@ -118,17 +116,11 @@ async def handle_menu_selection(
 
         kb = InlineKeyboardMarkup(
             [
-                [
-                    InlineKeyboardButton(
-                        "✏️ ویرایش پروفایل", callback_data="menu_profile_edit"
-                    )
-                ],
+                [InlineKeyboardButton("✏️ ویرایش پروفایل", callback_data="menu_profile_edit")],
                 [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
             ]
         )
-        await query.edit_message_text(
-            profile_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN
-        )
+        await query.edit_message_text(profile_text, reply_markup=kb, parse_mode=ParseMode.MARKDOWN)
         return
 
     # Other menu options are handled by their respective handlers
@@ -136,9 +128,7 @@ async def handle_menu_selection(
 
 
 @rate_limit_handler("default")
-async def handle_back_to_menu(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle back to menu button"""
     query = update.callback_query
     if not query:
@@ -171,10 +161,7 @@ def build_menu_handlers():
 
         with session_scope() as session:
             buyers = get_approved_book_buyers(session, limit=1000)
-        lines = [
-            f"{b['user_id']} | {b['product_id']} | {b['created_at'].date()}"
-            for b in buyers
-        ]
+        lines = [f"{b['user_id']} | {b['product_id']} | {b['created_at'].date()}" for b in buyers]
         if len(lines) > 400:
             import csv, io
 
@@ -289,9 +276,7 @@ def build_menu_handlers():
         if update.effective_user.id not in config.bot.admin_user_ids:
             return
         if not context.args:
-            await update.effective_message.reply_text(
-                "فرمت: /profile_history <telegram_user_id>"
-            )
+            await update.effective_message.reply_text("فرمت: /profile_history <telegram_user_id>")
             return
         try:
             target = int(context.args[0])

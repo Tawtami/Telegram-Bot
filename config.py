@@ -74,9 +74,7 @@ class LoggingConfig:
     """Logging configuration"""
 
     level: str = "INFO"
-    format: str = (
-        "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
-    )
+    format: str = "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
     file_enabled: bool = True
     console_enabled: bool = True
     max_file_size_mb: int = 10
@@ -139,9 +137,7 @@ class BotConfig:
         # Normalize default_payment_method and ensure it's allowed
         if self.default_payment_method:
             d = (self.default_payment_method or "").strip().lower()
-            self.default_payment_method = (
-                d if d in (self.payment_methods or []) else None
-            )
+            self.default_payment_method = d if d in (self.payment_methods or []) else None
 
 
 @dataclass
@@ -165,9 +161,7 @@ class Config:
         if not self.bot_token or self.bot_token == "DEVELOPMENT_TOKEN_PLACEHOLDER":
             # For development/testing, allow missing token
             if os.getenv("ENVIRONMENT") == "production":
-                raise ValueError(
-                    "BOT_TOKEN environment variable is required in production"
-                )
+                raise ValueError("BOT_TOKEN environment variable is required in production")
             else:
                 print("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
                 self.bot_token = "DEVELOPMENT_TOKEN_PLACEHOLDER"
@@ -190,16 +184,13 @@ class Config:
             cleanup_interval_seconds=int(os.getenv("CLEANUP_INTERVAL_SECONDS", "300")),
             max_concurrent_users=int(os.getenv("MAX_CONCURRENT_USERS", "1000")),
             request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30")),
-            enable_compression=os.getenv("ENABLE_COMPRESSION", "true").lower()
-            == "true",
+            enable_compression=os.getenv("ENABLE_COMPRESSION", "true").lower() == "true",
         )
 
         self.security = SecurityConfig(
             max_name_length=int(os.getenv("MAX_NAME_LENGTH", "50")),
             min_name_length=int(os.getenv("MIN_NAME_LENGTH", "2")),
-            enable_input_sanitization=os.getenv(
-                "ENABLE_INPUT_SANITIZATION", "true"
-            ).lower()
+            enable_input_sanitization=os.getenv("ENABLE_INPUT_SANITIZATION", "true").lower()
             == "true",
             max_file_size_mb=int(os.getenv("MAX_FILE_SIZE_MB", "10")),
         )
@@ -210,8 +201,7 @@ class Config:
             console_enabled=os.getenv("LOG_CONSOLE_ENABLED", "true").lower() == "true",
             max_file_size_mb=int(os.getenv("LOG_MAX_FILE_SIZE_MB", "10")),
             backup_count=int(os.getenv("LOG_BACKUP_COUNT", "5")),
-            performance_log_enabled=os.getenv("PERFORMANCE_LOG_ENABLED", "true").lower()
-            == "true",
+            performance_log_enabled=os.getenv("PERFORMANCE_LOG_ENABLED", "true").lower() == "true",
         )
 
         # Admin user IDs from environment
@@ -233,28 +223,22 @@ class Config:
             payment_card_number=os.getenv("PAYMENT_CARD_NUMBER", "6037-9974-1234-5678"),
             payment_payee_name=os.getenv("PAYMENT_PAYEE_NAME", "استاد حاتمی"),
             payment_methods=[
-                pm.strip()
-                for pm in os.getenv("PAYMENT_METHODS", "").split(",")
-                if pm.strip()
+                pm.strip() for pm in os.getenv("PAYMENT_METHODS", "").split(",") if pm.strip()
             ]
             or None,
-            default_payment_method=os.getenv("DEFAULT_PAYMENT_METHOD", "").strip()
-            or None,
+            default_payment_method=os.getenv("DEFAULT_PAYMENT_METHOD", "").strip() or None,
             payment_placeholder_show_default=os.getenv(
                 "PAYMENT_PLACEHOLDER_SHOW_DEFAULT", "false"
             ).lower()
             == "true",
-            payment_default_first=os.getenv("PAYMENT_DEFAULT_FIRST", "false").lower()
-            == "true",
+            payment_default_first=os.getenv("PAYMENT_DEFAULT_FIRST", "false").lower() == "true",
             payment_method_labels=(
                 (lambda v: (json.loads(v) if v else None))(
                     os.getenv("PAYMENT_METHOD_LABELS_JSON", "")
                 )
             ),
             admin_ui_labels=(
-                (lambda v: (json.loads(v) if v else None))(
-                    os.getenv("ADMIN_UI_LABELS_JSON", "")
-                )
+                (lambda v: (json.loads(v) if v else None))(os.getenv("ADMIN_UI_LABELS_JSON", ""))
             ),
         )
 
@@ -712,9 +696,9 @@ class Config:
             and self.bot_token
             and self.bot_token != "DEVELOPMENT_TOKEN_PLACEHOLDER"
         ):
-            secret_token = hashlib.sha256(
-                (self.bot_token + "webhook_secret").encode()
-            ).hexdigest()[:32]
+            secret_token = hashlib.sha256((self.bot_token + "webhook_secret").encode()).hexdigest()[
+                :32
+            ]
 
         return WebhookConfig(
             enabled=enabled,
@@ -730,9 +714,7 @@ class Config:
         try:
             assert self.bot_token, "BOT_TOKEN is required"
             assert self.performance.cache_ttl_seconds > 0, "Cache TTL must be positive"
-            assert (
-                self.performance.max_requests_per_minute > 0
-            ), "Max requests must be positive"
+            assert self.performance.max_requests_per_minute > 0, "Max requests must be positive"
             assert self.security.min_name_length > 0, "Min name length must be positive"
             assert (
                 self.security.max_name_length > self.security.min_name_length
@@ -740,15 +722,9 @@ class Config:
 
             # Validate webhook configuration
             if self.webhook.enabled:
-                assert (
-                    self.webhook.url
-                ), "Webhook URL is required when webhook is enabled"
-                assert (
-                    self.webhook.port > 0
-                ), "Port must be positive when webhook is enabled"
-                assert str(self.webhook.url).startswith(
-                    "https://"
-                ), "Webhook URL must use HTTPS"
+                assert self.webhook.url, "Webhook URL is required when webhook is enabled"
+                assert self.webhook.port > 0, "Port must be positive when webhook is enabled"
+                assert str(self.webhook.url).startswith("https://"), "Webhook URL must use HTTPS"
 
             return True
         except AssertionError as e:
@@ -787,9 +763,7 @@ class Config:
                 "name": self.bot.name,
                 "version": self.bot.version,
                 "maintenance_mode": self.bot.maintenance_mode,
-                "admin_count": (
-                    len(self.bot.admin_user_ids) if self.bot.admin_user_ids else 0
-                ),
+                "admin_count": (len(self.bot.admin_user_ids) if self.bot.admin_user_ids else 0),
             },
         }
 

@@ -32,9 +32,7 @@ async def start_profile_edit(update: Update, context: Any) -> None:
         [InlineKeyboardButton("📱 شماره تماس", callback_data="profile_edit:phone")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
     ]
-    await query.edit_message_text(
-        "کدام مورد را می‌خواهید ویرایش کنید؟", reply_markup=_kb(rows)
-    )
+    await query.edit_message_text("کدام مورد را می‌خواهید ویرایش کنید؟", reply_markup=_kb(rows))
 
 
 async def edit_province(update: Update, context: Any) -> None:
@@ -43,10 +41,7 @@ async def edit_province(update: Update, context: Any) -> None:
         return
     await query.answer()
     # Show provinces with edit-specific callback
-    rows = [
-        [InlineKeyboardButton(p, callback_data=f"set_province:{p}")]
-        for p in config.provinces
-    ]
+    rows = [[InlineKeyboardButton(p, callback_data=f"set_province:{p}")] for p in config.provinces]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
     await query.edit_message_text("استان خود را انتخاب کنید:", reply_markup=_kb(rows))
 
@@ -59,11 +54,7 @@ async def set_province(update: Update, context: Any) -> None:
     province = query.data.split(":", 1)[1]
     user_id = update.effective_user.id
     with session_scope() as session:
-        db_user = (
-            session.query(DBUser)
-            .filter(DBUser.telegram_user_id == user_id)
-            .one_or_none()
-        )
+        db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
             audit_profile_change(
                 session,
@@ -92,11 +83,7 @@ async def edit_city(update: Update, context: Any) -> None:
     # Determine user's province
     user_id = update.effective_user.id
     with session_scope() as session:
-        db_user = (
-            session.query(DBUser)
-            .filter(DBUser.telegram_user_id == user_id)
-            .one_or_none()
-        )
+        db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
     province = db_user.province if db_user else None
     if not province:
         await query.edit_message_text(
@@ -120,22 +107,13 @@ async def set_city(update: Update, context: Any) -> None:
     city = query.data.split(":", 1)[1]
     user_id = update.effective_user.id
     with session_scope() as session:
-        db_user = (
-            session.query(DBUser)
-            .filter(DBUser.telegram_user_id == user_id)
-            .one_or_none()
-        )
+        db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         province = db_user.province if db_user else None
         valid_cities = config.cities_by_province.get(province or "", [])
         if city not in valid_cities:
             # Show valid list again
-            rows = [
-                [InlineKeyboardButton(c, callback_data=f"set_city:{c}")]
-                for c in valid_cities
-            ]
-            rows.append(
-                [InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]
-            )
+            rows = [[InlineKeyboardButton(c, callback_data=f"set_city:{c}")] for c in valid_cities]
+            rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
             await query.edit_message_text(
                 "❌ شهر نامعتبر است برای استان انتخاب‌شده. لطفاً از لیست انتخاب کنید:",
                 reply_markup=_kb(rows),
@@ -153,9 +131,7 @@ async def set_city(update: Update, context: Any) -> None:
         get_or_create_user(session, user_id, city=city)
     await query.edit_message_text(
         f"🏙 شهر {city} ثبت شد.",
-        reply_markup=_kb(
-            [[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]
-        ),
+        reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),
     )
 
 
@@ -164,9 +140,7 @@ async def edit_grade(update: Update, context: Any) -> None:
     if not query:
         return
     await query.answer()
-    rows = [
-        [InlineKeyboardButton(g, callback_data=f"set_grade:{g}")] for g in config.grades
-    ]
+    rows = [[InlineKeyboardButton(g, callback_data=f"set_grade:{g}")] for g in config.grades]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
     await query.edit_message_text("پایه تحصیلی را انتخاب کنید:", reply_markup=_kb(rows))
 
@@ -179,11 +153,7 @@ async def set_grade(update: Update, context: Any) -> None:
     grade = query.data.split(":", 1)[1]
     user_id = update.effective_user.id
     with session_scope() as session:
-        db_user = (
-            session.query(DBUser)
-            .filter(DBUser.telegram_user_id == user_id)
-            .one_or_none()
-        )
+        db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
             audit_profile_change(
                 session,
@@ -196,9 +166,7 @@ async def set_grade(update: Update, context: Any) -> None:
         get_or_create_user(session, user_id, grade=grade)
     await query.edit_message_text(
         f"📚 پایه {grade} ثبت شد.",
-        reply_markup=_kb(
-            [[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]
-        ),
+        reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),
     )
 
 
@@ -207,9 +175,7 @@ async def edit_major(update: Update, context: Any) -> None:
     if not query:
         return
     await query.answer()
-    rows = [
-        [InlineKeyboardButton(m, callback_data=f"set_major:{m}")] for m in config.majors
-    ]
+    rows = [[InlineKeyboardButton(m, callback_data=f"set_major:{m}")] for m in config.majors]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")])
     await query.edit_message_text("رشته تحصیلی را انتخاب کنید:", reply_markup=_kb(rows))
 
@@ -222,11 +188,7 @@ async def set_major(update: Update, context: Any) -> None:
     major = query.data.split(":", 1)[1]
     user_id = update.effective_user.id
     with session_scope() as session:
-        db_user = (
-            session.query(DBUser)
-            .filter(DBUser.telegram_user_id == user_id)
-            .one_or_none()
-        )
+        db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
             audit_profile_change(
                 session,
@@ -239,9 +201,7 @@ async def set_major(update: Update, context: Any) -> None:
         get_or_create_user(session, user_id, field_of_study=major)
     await query.edit_message_text(
         f"🎓 رشته {major} ثبت شد.",
-        reply_markup=_kb(
-            [[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]
-        ),
+        reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),
     )
 
 
@@ -264,9 +224,7 @@ def build_profile_edit_handlers() -> list:
             return
         await q.answer()
         context.user_data["profile_edit"] = "phone"
-        await q.edit_message_text(
-            "لطفاً شماره تماس خود را ارسال کنید (مثال: 09121234567)"
-        )
+        await q.edit_message_text("لطفاً شماره تماس خود را ارسال کنید (مثال: 09121234567)")
 
     async def handle_profile_text(update: Update, context: Any) -> None:
         # Decide based on context flag
@@ -287,16 +245,12 @@ def build_profile_edit_handlers() -> list:
             ok1, first_name_val = Validator.validate_name(first_name, "نام")
             ok2, last_name_val = Validator.validate_name(last_name, "نام خانوادگی")
             if not (ok1 and ok2):
-                await update.message.reply_text(
-                    (first_name_val if not ok1 else last_name_val)
-                )
+                await update.message.reply_text((first_name_val if not ok1 else last_name_val))
                 return
             # Audit and save
             with session_scope() as session:
                 db_user = (
-                    session.query(DBUser)
-                    .filter(DBUser.telegram_user_id == user_id)
-                    .one_or_none()
+                    session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
                 )
                 if db_user:
                     audit_profile_change(
@@ -331,9 +285,7 @@ def build_profile_edit_handlers() -> list:
                 return
             with session_scope() as session:
                 db_user = (
-                    session.query(DBUser)
-                    .filter(DBUser.telegram_user_id == user_id)
-                    .one_or_none()
+                    session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
                 )
                 if db_user:
                     audit_profile_change(

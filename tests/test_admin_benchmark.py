@@ -110,9 +110,7 @@ async def test_admin_benchmark_optional(monkeypatch):
                 with open(csv_path, "a", encoding="utf-8") as f:
                     f.write(row)
 
-        assert (
-            p95 < threshold
-        ), f"admin list p95 too slow: {p95:.3f}s >= {threshold:.3f}s"
+        assert p95 < threshold, f"admin list p95 too slow: {p95:.3f}s >= {threshold:.3f}s"
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):

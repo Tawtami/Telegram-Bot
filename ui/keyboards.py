@@ -19,35 +19,26 @@ def build_register_keyboard() -> InlineKeyboardMarkup:
 
 def build_back_keyboard(callback_data: str = "back_to_main") -> InlineKeyboardMarkup:
     """Get back button keyboard"""
-    return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("🔙 بازگشت", callback_data=callback_data)]]
-    )
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data=callback_data)]])
 
 
 def build_grades_keyboard(grades: List[str]) -> InlineKeyboardMarkup:
     """Get grade selection keyboard"""
-    rows = [
-        [InlineKeyboardButton(f"🎓 {g}", callback_data=f"grade:{g}")] for g in grades
-    ]
+    rows = [[InlineKeyboardButton(f"🎓 {g}", callback_data=f"grade:{g}")] for g in grades]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_city")])
     return InlineKeyboardMarkup(rows)
 
 
 def build_majors_keyboard(majors: List[str]) -> InlineKeyboardMarkup:
     """Get major selection keyboard"""
-    rows = [
-        [InlineKeyboardButton(f"📚 {m}", callback_data=f"major:{m}")] for m in majors
-    ]
+    rows = [[InlineKeyboardButton(f"📚 {m}", callback_data=f"major:{m}")] for m in majors]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_grade")])
     return InlineKeyboardMarkup(rows)
 
 
 def build_provinces_keyboard(provinces: List[str]) -> InlineKeyboardMarkup:
     """Get province selection keyboard"""
-    rows = [
-        [InlineKeyboardButton(f"🏛️ {p}", callback_data=f"province:{p}")]
-        for p in provinces
-    ]
+    rows = [[InlineKeyboardButton(f"🏛️ {p}", callback_data=f"province:{p}")] for p in provinces]
     # In registration flow, going back from province step returns to start/cancel
     # In registration flow, back from province cancels the flow
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="cancel_reg")])
@@ -66,11 +57,7 @@ def build_main_menu_keyboard() -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(text="🎓 دوره‌های رایگان", callback_data="courses_free")],
         [InlineKeyboardButton(text="💼 دوره‌های تخصصی", callback_data="courses_paid")],
-        [
-            InlineKeyboardButton(
-                text="🛒 سبد خرید من", callback_data="courses_purchased"
-            )
-        ],
+        [InlineKeyboardButton(text="🛒 سبد خرید من", callback_data="courses_purchased")],
         [InlineKeyboardButton(text="🧠 سوال روز", callback_data="daily_quiz")],
         [InlineKeyboardButton(text="📖 کتاب انفجار خلاقیت", callback_data="book_info")],
         [InlineKeyboardButton(text="🌐 شبکه‌های اجتماعی", callback_data="social_media")],

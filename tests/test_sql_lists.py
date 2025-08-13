@@ -19,9 +19,7 @@ async def test_get_approved_book_buyers(tmp_path):
         session.add(u)
         session.flush()
         session.add(
-            Purchase(
-                user_id=u.id, product_type="book", product_id="BookX", status="approved"
-            )
+            Purchase(user_id=u.id, product_type="book", product_id="BookX", status="approved")
         )
         session.flush()
 

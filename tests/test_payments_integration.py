@@ -17,9 +17,7 @@ async def test_orders_ui_filters():
     class DummyContext:
         args = ["0", "book"]
         bot_data = {
-            "config": types.SimpleNamespace(
-                bot=types.SimpleNamespace(admin_user_ids=[111])
-            ),
+            "config": types.SimpleNamespace(bot=types.SimpleNamespace(admin_user_ids=[111])),
             "payment_notifications": {
                 "t1": {
                     "processed": False,

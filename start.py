@@ -41,9 +41,7 @@ def _prepare_webhook_env() -> None:
         logger.info(f"🌐 Webhook URL set to: {webhook_url}")
 
     # Log important environment variables
-    logger.info(
-        f"🚀 Starting bot with environment: {os.environ.get('ENVIRONMENT', 'production')}"
-    )
+    logger.info(f"🚀 Starting bot with environment: {os.environ.get('ENVIRONMENT', 'production')}")
     logger.info(f"🔧 Force polling: {os.environ.get('FORCE_POLLING', 'false')}")
     logger.info(f"🌍 Port: {os.environ.get('PORT', 'not set')}")
 
@@ -58,9 +56,7 @@ def _validate_environment() -> bool:
             missing_vars.append(var)
 
     if missing_vars:
-        logger.error(
-            f"❌ Missing required environment variables: {', '.join(missing_vars)}"
-        )
+        logger.error(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
         return False
 
     return True

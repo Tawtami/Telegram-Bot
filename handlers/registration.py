@@ -205,9 +205,7 @@ async def province(update: Update, context: Any) -> int:
                 reply_markup=build_provinces_keyboard(config.provinces),
             )
         else:
-            await query.edit_message_text(
-                "❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:"
-            )
+            await query.edit_message_text("❌ استان نامعتبر است. لطفاً دوباره انتخاب کنید:")
         return RegistrationStates.PROVINCE
 
     context.user_data["province"] = province
@@ -217,9 +215,7 @@ async def province(update: Update, context: Any) -> int:
             reply_markup=build_cities_keyboard(config.cities_by_province[province]),
         )
     else:
-        await query.edit_message_text(
-            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:"
-        )
+        await query.edit_message_text(f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:")
     return RegistrationStates.CITY
 
 
@@ -239,9 +235,7 @@ async def city(update: Update, context: Any) -> int:
                 reply_markup=build_cities_keyboard(config.cities_by_province[province]),
             )
         else:
-            await query.edit_message_text(
-                "❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:"
-            )
+            await query.edit_message_text("❌ شهر نامعتبر است. لطفاً دوباره انتخاب کنید:")
         return RegistrationStates.CITY
 
     context.user_data["city"] = city
@@ -270,9 +264,7 @@ async def grade(update: Update, context: Any) -> int:
                 reply_markup=build_grades_keyboard(config.grades),
             )
         else:
-            await query.edit_message_text(
-                "❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:"
-            )
+            await query.edit_message_text("❌ پایه نامعتبر است. لطفاً دوباره انتخاب کنید:")
         return RegistrationStates.GRADE
 
     context.user_data["grade"] = grade
@@ -301,9 +293,7 @@ async def field(update: Update, context: Any) -> int:
                 reply_markup=build_majors_keyboard(config.majors),
             )
         else:
-            await query.edit_message_text(
-                "❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:"
-            )
+            await query.edit_message_text("❌ رشته نامعتبر است. لطفاً دوباره انتخاب کنید:")
         return RegistrationStates.FIELD
 
     context.user_data["field"] = field
@@ -372,9 +362,7 @@ async def back_to_city(update: Update, context: Any) -> int:
         if not province:
             # If province missing, go back to province step
             return await back_to_province(update, context)
-        await update.message.reply_text(
-            f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:"
-        )
+        await update.message.reply_text(f"استان {province}\n\nلطفاً شهر خود را انتخاب کنید:")
     # Clear dependent fields
     context.user_data.pop("grade", None)
     context.user_data.pop("field", None)
@@ -426,9 +414,7 @@ async def confirm(update: Update, context: Any) -> int:
             from database.models_sql import User as DBUser
 
             db_user = session.execute(
-                select(DBUser).where(
-                    DBUser.telegram_user_id == update.effective_user.id
-                )
+                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
             ).scalar_one_or_none()
             if db_user:
                 for field_name, key in (
@@ -484,9 +470,7 @@ async def confirm(update: Update, context: Any) -> int:
                 reply_markup=build_register_keyboard(),
             )
         else:
-            await update.message.reply_text(
-                "❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:"
-            )
+            await update.message.reply_text("❌ خطا در ذخیره اطلاعات. لطفاً دوباره تلاش کنید:")
         return ConversationHandler.END
 
     # Immediately show success + main menu and reset conversation state

@@ -5,14 +5,10 @@ from __future__ import annotations
 from typing import List, Optional
 
 
-async def notify_admins(
-    context, admin_ids: List[int], text: str, parse_mode: Optional[str] = None
-):
+async def notify_admins(context, admin_ids: List[int], text: str, parse_mode: Optional[str] = None):
     for admin_id in admin_ids or []:
         try:
-            await context.bot.send_message(
-                chat_id=admin_id, text=text, parse_mode=parse_mode
-            )
+            await context.bot.send_message(chat_id=admin_id, text=text, parse_mode=parse_mode)
         except Exception:
             continue
 

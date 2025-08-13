@@ -154,9 +154,7 @@ def _parse_admin_filters(request):
                 if len(to_str) > 10
                 else datetime.fromisoformat(to_str + "T00:00:00")
             )
-            dt_to = base + (
-                timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0)
-            )
+            dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
     except Exception:
         dt_from = None
         dt_to = None
@@ -177,9 +175,7 @@ def _parse_admin_filters(request):
     }
 
 
-def _build_admin_qs(
-    base_url, status, ptype, uid_str, product_q, from_str, to_str, page_size, page
-):
+def _build_admin_qs(base_url, status, ptype, uid_str, product_q, from_str, to_str, page_size, page):
     params = {
         "status": status,
         "type": ptype,
@@ -232,9 +228,7 @@ async def students_command(update: Update, context: Any) -> None:
     try:
         user_id = update.effective_user.id
         if user_id not in config.bot.admin_user_ids:
-            await update.message.reply_text(
-                "⛔️ این دستور فقط برای ادمین‌ها در دسترس است."
-            )
+            await update.message.reply_text("⛔️ این دستور فقط برای ادمین‌ها در دسترس است.")
             return
 
         # Export: basic CSV from DB users table
@@ -298,9 +292,7 @@ async def _ensure_admin(update: Update) -> bool:
     user_id = update.effective_user.id if update and update.effective_user else 0
     if not _is_admin(user_id):
         if update and update.effective_message:
-            await update.effective_message.reply_text(
-                "⛔️ این دستور فقط برای ادمین‌هاست."
-            )
+            await update.effective_message.reply_text("⛔️ این دستور فقط برای ادمین‌هاست.")
         return False
     return True
 
@@ -321,9 +313,7 @@ async def broadcast_command(update: Update, context: Any) -> None:
         students = [{"user_id": u.telegram_user_id} for u in rows]
 
         if not students:
-            await update.effective_message.reply_text(
-                "هیچ کاربری برای ارسال وجود ندارد."
-            )
+            await update.effective_message.reply_text("هیچ کاربری برای ارسال وجود ندارد.")
             return
 
         text = " ".join(context.args) if context.args else ""
@@ -344,9 +334,7 @@ async def broadcast_command(update: Update, context: Any) -> None:
         # Start background broadcast with progress
         manager: BroadcastManager = context.bot_data["broadcast_manager"]
         user_ids = [s.get("user_id") for s in students if s.get("user_id")]
-        await manager.start_broadcast(
-            context.application, update.effective_chat.id, user_ids, text
-        )
+        await manager.start_broadcast(context.application, update.effective_chat.id, user_ids, text)
 
     except Exception as e:
         logger.error(f"Error in broadcast_command: {e}")
@@ -361,9 +349,7 @@ async def broadcast_grade_command(update: Update, context: Any) -> None:
             return
 
         if not context.args or len(context.args) < 2:
-            await update.effective_message.reply_text(
-                "فرمت درست: /broadcast_grade دهم پیام شما"
-            )
+            await update.effective_message.reply_text("فرمت درست: /broadcast_grade دهم پیام شما")
             return
 
         target_grade = context.args[0]
@@ -377,9 +363,7 @@ async def broadcast_grade_command(update: Update, context: Any) -> None:
 
         with session_scope() as session:
             rows = list(
-                session.execute(
-                    select(DBUser).where(DBUser.grade == target_grade)
-                ).scalars()
+                session.execute(select(DBUser).where(DBUser.grade == target_grade)).scalars()
             )
         students = [{"user_id": u.telegram_user_id} for u in rows]
         if not students:
@@ -400,14 +384,10 @@ async def broadcast_grade_command(update: Update, context: Any) -> None:
                 failed += 1
                 continue
 
-        await update.effective_message.reply_text(
-            f"✅ ارسال شد: {sent} | ناموفق: {failed}"
-        )
+        await update.effective_message.reply_text(f"✅ ارسال شد: {sent} | ناموفق: {failed}")
     except Exception as e:
         logger.error(f"Error in broadcast_grade_command: {e}")
-        await update.effective_message.reply_text(
-            "❌ خطا در ارسال پیام گروهی بر اساس پایه."
-        )
+        await update.effective_message.reply_text("❌ خطا در ارسال پیام گروهی بر اساس پایه.")
 
 
 @rate_limit_handler("admin")
@@ -478,15 +458,12 @@ async def confirm_payment_command(update: Update, context: Any) -> None:
     try:
         user_id = update.effective_user.id
         if user_id not in config.bot.admin_user_ids:
-            await update.message.reply_text(
-                "⛔️ این دستور فقط برای ادمین‌ها در دسترس است."
-            )
+            await update.message.reply_text("⛔️ این دستور فقط برای ادمین‌ها در دسترس است.")
             return
 
         if not context.args:
             await update.message.reply_text(
-                "فرمت درست: /confirm_payment 123456789\n"
-                "لطفاً شناسه کاربری را وارد کنید."
+                "فرمت درست: /confirm_payment 123456789\n" "لطفاً شناسه کاربری را وارد کنید."
             )
             return
 
@@ -526,9 +503,7 @@ async def orders_command(update: Update, context: Any) -> None:
         status = (context.args[0] if context.args else "pending").lower()
         valid = {"pending": "در انتظار", "approved": "تایید", "rejected": "رد"}
         if status not in valid:
-            await update.effective_message.reply_text(
-                "فرمت: /orders [pending|approved|rejected]"
-            )
+            await update.effective_message.reply_text("فرمت: /orders [pending|approved|rejected]")
             return
 
         notifications = context.bot_data.get("payment_notifications", {})
@@ -540,8 +515,7 @@ async def orders_command(update: Update, context: Any) -> None:
                 or (
                     status != "pending"
                     and m.get("processed")
-                    and m.get("decision")
-                    == ("approve" if status == "approved" else "reject")
+                    and m.get("decision") == ("approve" if status == "approved" else "reject")
                 )
             )
         ]
@@ -561,9 +535,7 @@ async def orders_command(update: Update, context: Any) -> None:
 
             buf = io.StringIO()
             writer = csv.writer(buf)
-            writer.writerow(
-                ["token", "student_id", "item_type", "item_title", "status"]
-            )
+            writer.writerow(["token", "student_id", "item_type", "item_title", "status"])
             for token, meta in entries:
                 writer.writerow(
                     [
@@ -571,11 +543,7 @@ async def orders_command(update: Update, context: Any) -> None:
                         meta.get("student_id"),
                         meta.get("item_type"),
                         (meta.get("item_title") or ""),
-                        (
-                            "pending"
-                            if not meta.get("processed")
-                            else meta.get("decision")
-                        ),
+                        ("pending" if not meta.get("processed") else meta.get("decision")),
                     ]
                 )
             buf.seek(0)
@@ -661,14 +629,10 @@ async def orders_ui_command(update: Update, context: Any) -> None:
         if type_filter in ("book", "course"):
             pending = [(t, m) for t, m in pending if m.get("item_type") == type_filter]
         if user_filter is not None:
-            pending = [
-                (t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter
-            ]
+            pending = [(t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter]
 
         page_size = 5
-        ordered = list(
-            sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True)
-        )
+        ordered = list(sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True))
         start = page * page_size
         end = start + page_size
         slice_items = ordered[start:end]
@@ -685,9 +649,7 @@ async def orders_ui_command(update: Update, context: Any) -> None:
             )
             rows.append(
                 [
-                    InlineKeyboardButton(
-                        "✅ تایید", callback_data=f"pay:{token}:approve"
-                    ),
+                    InlineKeyboardButton("✅ تایید", callback_data=f"pay:{token}:approve"),
                     InlineKeyboardButton("❌ رد", callback_data=f"pay:{token}:reject"),
                 ]
             )
@@ -727,11 +689,7 @@ async def profile_command(update: Update, context: Any) -> None:
 
         user_id = update.effective_user.id
         with session_scope() as session:
-            db_user = (
-                session.query(DBUser)
-                .filter(DBUser.telegram_user_id == user_id)
-                .one_or_none()
-            )
+            db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
 
         if not db_user:
             await update.message.reply_text(
@@ -826,9 +784,7 @@ async def daily_command(update: Update, context: Any) -> None:
 
         with session_scope() as session:
             db_user = session.execute(
-                select(DBUser).where(
-                    DBUser.telegram_user_id == update.effective_user.id
-                )
+                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
             ).scalar_one_or_none()
         if not db_user:
             await update.effective_message.reply_text("❌ ابتدا ثبت‌نام کنید.")
@@ -837,9 +793,7 @@ async def daily_command(update: Update, context: Any) -> None:
         with session_scope() as session:
             q = get_daily_question(session, db_user.grade or "دهم")
         if not q:
-            await update.effective_message.reply_text(
-                "سوال روز موجود نیست. فردا دوباره تلاش کنید."
-            )
+            await update.effective_message.reply_text("سوال روز موجود نیست. فردا دوباره تلاش کنید.")
             return
         choices = (q.options or {}).get("choices", [])
         rows = [
@@ -866,9 +820,7 @@ async def progress_command(update: Update, context: Any) -> None:
 
         with session_scope() as session:
             u = session.execute(
-                select(DBUser).where(
-                    DBUser.telegram_user_id == update.effective_user.id
-                )
+                select(DBUser).where(DBUser.telegram_user_id == update.effective_user.id)
             ).scalar_one_or_none()
             if not u:
                 await update.message.reply_text("❌ ابتدا ثبت‌نام کنید.")
@@ -1011,9 +963,7 @@ async def status_command(update: Update, context: Any) -> None:
             from database.models_sql import User as DBUser
 
             with session_scope() as session:
-                total_students = (
-                    session.execute(select(func.count(DBUser.id))).scalar() or 0
-                )
+                total_students = session.execute(select(func.count(DBUser.id))).scalar() or 0
         except Exception:
             total_students = 0
 
@@ -1075,9 +1025,7 @@ async def payments_audit_command(update: Update, context: Any) -> None:
             reverse=True,
         )
         for token, meta in entries[:20]:
-            created = datetime.fromtimestamp(meta.get("created_at", 0)).strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            created = datetime.fromtimestamp(meta.get("created_at", 0)).strftime("%Y-%m-%d %H:%M")
             decided_at = (
                 datetime.fromtimestamp(meta["decided_at"]).strftime("%Y-%m-%d %H:%M")
                 if meta.get("decided_at")
@@ -1137,9 +1085,7 @@ async def metrics_command(update: Update, context: Any) -> None:
             for k, v in counters.items():
                 writer.writerow([k, v])
             writer.writerow([])
-            writer.writerow(
-                ["handler", "total_requests", "error_count", "avg_duration"]
-            )
+            writer.writerow(["handler", "total_requests", "error_count", "avg_duration"])
             for name, data in handlers.items():
                 writer.writerow(
                     [
@@ -1168,60 +1114,44 @@ async def setup_handlers(application: Application) -> None:
         # Add pre-check handlers for banned users
         async def block_banned_messages(update: Update, context: Any) -> None:
             try:
-                user_id = (
-                    update.effective_user.id if update and update.effective_user else 0
-                )
+                user_id = update.effective_user.id if update and update.effective_user else 0
                 with session_scope() as session:
                     banned = is_user_banned(session, user_id)
                 if banned:
                     if update.effective_message:
-                        await update.effective_message.reply_text(
-                            "⛔️ دسترسی شما محدود شده است."
-                        )
+                        await update.effective_message.reply_text("⛔️ دسترسی شما محدود شده است.")
                     # Stop further handler processing for this update
                     raise ApplicationHandlerStop()
             except Exception as e:
                 logger.error(f"Error in block_banned_messages: {e}")
 
-        application.add_handler(
-            MessageHandler(filters.ALL, block_banned_messages), group=0
-        )
+        application.add_handler(MessageHandler(filters.ALL, block_banned_messages), group=0)
         application.add_handler(CallbackQueryHandler(block_banned_messages), group=0)
 
         # Add command handlers
         application.add_handler(CommandHandler("start", start_command), group=1)
         application.add_handler(CommandHandler("students", students_command), group=1)
         application.add_handler(CommandHandler("broadcast", broadcast_command), group=1)
-        application.add_handler(
-            CommandHandler("broadcast_grade", broadcast_grade_command), group=1
-        )
+        application.add_handler(CommandHandler("broadcast_grade", broadcast_grade_command), group=1)
         application.add_handler(CommandHandler("ban", ban_command), group=1)
         application.add_handler(CommandHandler("unban", unban_command), group=1)
         application.add_handler(CommandHandler("profile", profile_command), group=1)
         application.add_handler(CommandHandler("help", help_command), group=1)
         application.add_handler(CommandHandler("daily", daily_command), group=1)
         application.add_handler(CommandHandler("progress", progress_command), group=1)
-        application.add_handler(
-            CommandHandler("leaderboard", leaderboard_command), group=1
-        )
+        application.add_handler(CommandHandler("leaderboard", leaderboard_command), group=1)
         application.add_handler(CommandHandler("courses", courses_command), group=1)
         application.add_handler(CommandHandler("mycourses", mycourses_command), group=1)
         application.add_handler(CommandHandler("book", book_command), group=1)
         application.add_handler(CommandHandler("contact", contact_command), group=1)
         application.add_handler(CommandHandler("social", social_command), group=1)
         application.add_handler(CommandHandler("about", about_command), group=1)
-        application.add_handler(
-            CommandHandler("confirm_payment", confirm_payment_command), group=1
-        )
+        application.add_handler(CommandHandler("confirm_payment", confirm_payment_command), group=1)
         application.add_handler(CommandHandler("status", status_command), group=1)
         application.add_handler(CommandHandler("metrics", metrics_command), group=1)
-        application.add_handler(
-            CommandHandler("payments_audit", payments_audit_command), group=1
-        )
+        application.add_handler(CommandHandler("payments_audit", payments_audit_command), group=1)
         application.add_handler(CommandHandler("orders", orders_command), group=1)
-        application.add_handler(
-            CommandHandler("user_search", user_search_command), group=1
-        )
+        application.add_handler(CommandHandler("user_search", user_search_command), group=1)
         application.add_handler(CommandHandler("orders_ui", orders_ui_command), group=1)
 
         # Add conversation handlers
@@ -1292,15 +1222,11 @@ async def setup_handlers(application: Application) -> None:
             CallbackQueryHandler(handle_paid_courses, pattern="^courses_paid$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(
-                handle_purchased_courses, pattern="^courses_purchased$"
-            ),
+            CallbackQueryHandler(handle_purchased_courses, pattern="^courses_purchased$"),
             group=1,
         )
         application.add_handler(
-            CallbackQueryHandler(
-                handle_course_registration, pattern="^register_course_"
-            ),
+            CallbackQueryHandler(handle_course_registration, pattern="^register_course_"),
             group=1,
         )
         # Learning: daily quiz
@@ -1355,9 +1281,7 @@ async def run_webhook_mode(application: Application) -> None:
                     resp.status == 200
                     and isinstance(resp, web.Response)
                     and "gzip" in (request.headers.get("Accept-Encoding", ""))
-                    and (resp.content_type or "").startswith(
-                        ("application/json", "text/")
-                    )
+                    and (resp.content_type or "").startswith(("application/json", "text/"))
                     and not resp.headers.get("Content-Encoding")
                     and resp.body is not None
                     and len(resp.body) > 256
@@ -1429,10 +1353,7 @@ async def run_webhook_mode(application: Application) -> None:
                         return web.Response(status=401)
 
                 # Validate request
-                if (
-                    not request.content_type
-                    or "application/json" not in request.content_type
-                ):
+                if not request.content_type or "application/json" not in request.content_type:
                     logger.warning(f"Invalid content type: {request.content_type}")
                     return web.Response(status=400)
 
@@ -1806,27 +1727,19 @@ async def run_webhook_mode(application: Application) -> None:
                     flash_msg = request.cookies.get("flash", "")
                     flash_type = request.cookies.get("flash_type", "success")
                     flash_html = (
-                        f"<div class='flash {flash_type}'>{flash_msg}</div>"
-                        if flash_msg
-                        else ""
+                        f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else ""
                     )
 
                     # Build dynamic payment method options from config
                     try:
-                        _methods = list(
-                            config.bot.payment_methods or ["card", "cash", "transfer"]
-                        )
+                        _methods = list(config.bot.payment_methods or ["card", "cash", "transfer"])
                     except Exception:
                         _methods = ["card", "cash", "transfer"]
-                    _default_pm = (
-                        (config.bot.default_payment_method or "").strip().lower()
-                    )
+                    _default_pm = (config.bot.default_payment_method or "").strip().lower()
                     # Optionally move default to the front
                     if _default_pm and config.bot.payment_default_first:
                         if _default_pm in _methods:
-                            _methods = [_default_pm] + [
-                                m for m in _methods if m != _default_pm
-                            ]
+                            _methods = [_default_pm] + [m for m in _methods if m != _default_pm]
 
                     # Localized labels for methods
                     _labels = {}
@@ -1840,9 +1753,7 @@ async def run_webhook_mode(application: Application) -> None:
 
                     # Placeholder text optionally shows default, using label
                     if config.bot.payment_placeholder_show_default and _default_pm:
-                        _placeholder = (
-                            f"انتخاب روش پرداخت (پیش‌فرض: {_label_for(_default_pm)})"
-                        )
+                        _placeholder = f"انتخاب روش پرداخت (پیش‌فرض: {_label_for(_default_pm)})"
                     else:
                         _placeholder = "انتخاب روش پرداخت"
 
@@ -1898,9 +1809,7 @@ async def run_webhook_mode(application: Application) -> None:
                     try:
                         with session_scope() as session:
                             stats = get_stats_summary(session)
-                            stale = list_stale_pending_purchases(
-                                session, older_than_days=14
-                            )
+                            stale = list_stale_pending_purchases(session, older_than_days=14)
                     except Exception:
                         stats = {
                             "users": 0,
@@ -2034,9 +1943,7 @@ async def run_webhook_mode(application: Application) -> None:
                       </script>
                     </body></html>
                     """
-                    resp = web.Response(
-                        text=body, content_type="text/html", charset="utf-8"
-                    )
+                    resp = web.Response(text=body, content_type="text/html", charset="utf-8")
                     try:
                         resp.set_cookie(
                             "csrf",
@@ -2093,13 +2000,9 @@ async def run_webhook_mode(application: Application) -> None:
                             select(Purchase).where(Purchase.id == pid)
                         ).scalar_one_or_none()
                         if not db_purchase or db_purchase.status != "pending":
-                            return web.Response(
-                                status=404, text="not found or already decided"
-                            )
+                            return web.Response(status=404, text="not found or already decided")
                         # Accept optional financial fields
-                        pm = (
-                            request.query.get("payment_method") or ""
-                        ).strip().lower() or None
+                        pm = (request.query.get("payment_method") or "").strip().lower() or None
                         tx = (request.query.get("transaction_id") or "").strip() or None
                         try:
                             dc = int(request.query.get("discount") or 0)
@@ -2127,9 +2030,7 @@ async def run_webhook_mode(application: Application) -> None:
                             return web.Response(status=409, text="conflict")
                 except Exception as e:
                     try:
-                        logger.warning(
-                            f"admin_act query failed, attempting DB init: {e}"
-                        )
+                        logger.warning(f"admin_act query failed, attempting DB init: {e}")
                         from database.migrate import init_db
 
                         init_db()
@@ -2138,9 +2039,7 @@ async def run_webhook_mode(application: Application) -> None:
                                 select(Purchase).where(Purchase.id == pid)
                             ).scalar_one_or_none()
                             if not db_purchase or db_purchase.status != "pending":
-                                return web.Response(
-                                    status=404, text="not found or already decided"
-                                )
+                                return web.Response(status=404, text="not found or already decided")
                             result = approve_or_reject_purchase(
                                 session, db_purchase.id, admin_id, action
                             )
@@ -2153,9 +2052,7 @@ async def run_webhook_mode(application: Application) -> None:
                 # Try to notify student and admins asynchronously (fire-and-forget)
                 try:
                     admin_ip = request.headers.get("X-Forwarded-For", request.remote)
-                    logger.info(
-                        f"Admin action via GET: id={pid} action={action} ip={admin_ip}"
-                    )
+                    logger.info(f"Admin action via GET: id={pid} action={action} ip={admin_ip}")
                     student_id = (
                         db_purchase.user_id
                     )  # DB user numeric id; need telegram id lookup if necessary
@@ -2173,9 +2070,7 @@ async def run_webhook_mode(application: Application) -> None:
                             else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
                         )
                         asyncio.create_task(
-                            application.bot.send_message(
-                                chat_id=u.telegram_user_id, text=text
-                            )
+                            application.bot.send_message(chat_id=u.telegram_user_id, text=text)
                         )
                 except Exception:
                     pass
@@ -2230,9 +2125,7 @@ async def run_webhook_mode(application: Application) -> None:
                             select(Purchase).where(Purchase.id == pid)
                         ).scalar_one_or_none()
                         if not db_purchase or db_purchase.status != "pending":
-                            return web.Response(
-                                status=404, text="not found or already decided"
-                            )
+                            return web.Response(status=404, text="not found or already decided")
                         # Accept optional financial fields from POST
                         pm = (data.get("payment_method") or "").strip().lower() or None
                         tx = (data.get("transaction_id") or "").strip() or None
@@ -2260,9 +2153,7 @@ async def run_webhook_mode(application: Application) -> None:
                             return web.Response(status=409, text="conflict")
                 except Exception as e:
                     try:
-                        logger.warning(
-                            f"admin_act_post query failed, attempting DB init: {e}"
-                        )
+                        logger.warning(f"admin_act_post query failed, attempting DB init: {e}")
                         from database.migrate import init_db
 
                         init_db()
@@ -2271,18 +2162,14 @@ async def run_webhook_mode(application: Application) -> None:
                                 select(Purchase).where(Purchase.id == pid)
                             ).scalar_one_or_none()
                             if not db_purchase or db_purchase.status != "pending":
-                                return web.Response(
-                                    status=404, text="not found or already decided"
-                                )
+                                return web.Response(status=404, text="not found or already decided")
                             result = approve_or_reject_purchase(
                                 session, db_purchase.id, admin_id, action
                             )
                             if not result:
                                 return web.Response(status=409, text="conflict")
                     except Exception as e2:
-                        logger.error(
-                            f"admin_act_post fatal DB error after init retry: {e2}"
-                        )
+                        logger.error(f"admin_act_post fatal DB error after init retry: {e2}")
                         # Redirect back with error if possible
                         if redirect_to:
                             resp = web.HTTPSeeOther(location=redirect_to)
@@ -2292,9 +2179,7 @@ async def run_webhook_mode(application: Application) -> None:
                                     _ui_t("flash_error", "خطا در انجام عملیات"),
                                     max_age=10,
                                     path="/",
-                                    secure=str(config.webhook.url).startswith(
-                                        "https://"
-                                    ),
+                                    secure=str(config.webhook.url).startswith("https://"),
                                     samesite="Strict",
                                 )
                                 resp.set_cookie(
@@ -2302,9 +2187,7 @@ async def run_webhook_mode(application: Application) -> None:
                                     "error",
                                     max_age=10,
                                     path="/",
-                                    secure=str(config.webhook.url).startswith(
-                                        "https://"
-                                    ),
+                                    secure=str(config.webhook.url).startswith("https://"),
                                     samesite="Strict",
                                 )
                             except Exception:
@@ -2325,9 +2208,7 @@ async def run_webhook_mode(application: Application) -> None:
                             else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
                         )
                         asyncio.create_task(
-                            application.bot.send_message(
-                                chat_id=u.telegram_user_id, text=text
-                            )
+                            application.bot.send_message(chat_id=u.telegram_user_id, text=text)
                         )
                     try:
                         logger.info(
@@ -2405,9 +2286,7 @@ async def run_webhook_mode(application: Application) -> None:
                     from database.migrate import init_db
 
                     init_db()
-                    return web.Response(
-                        text="ok", content_type="text/plain", charset="utf-8"
-                    )
+                    return web.Response(text="ok", content_type="text/plain", charset="utf-8")
                 except Exception as e:
                     logger.error(f"admin_init error: {e}")
                     return web.Response(status=500, text="init error")
@@ -2446,9 +2325,7 @@ async def run_webhook_mode(application: Application) -> None:
                     url=full_webhook_url,
                     drop_pending_updates=config.webhook.drop_pending_updates,
                     secret_token=(
-                        config.webhook.secret_token
-                        if config.webhook.secret_token
-                        else None
+                        config.webhook.secret_token if config.webhook.secret_token else None
                     ),
                     allowed_updates=[
                         "message",
@@ -2469,9 +2346,7 @@ async def run_webhook_mode(application: Application) -> None:
                     await asyncio.sleep(retry_delay)
                     retry_delay *= 2
                 else:
-                    logger.error(
-                        f"Failed to set webhook after {max_retries} attempts: {e}"
-                    )
+                    logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
                     raise
 
         logger.info(f"✅ Health check at: http://0.0.0.0:{config.webhook.port}/")
@@ -2484,9 +2359,7 @@ async def run_webhook_mode(application: Application) -> None:
 
         # 24/7 watchdog: periodically verify DB and webhook health and auto-heal
         async def _watchdog_task():
-            interval = max(
-                60, int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300") or 300)
-            )
+            interval = max(60, int(os.getenv("WATCHDOG_INTERVAL_SECONDS", "300") or 300))
             expected_webhook = config.webhook.url.rstrip("/") + config.webhook.path
             from database.db import ENGINE
             from sqlalchemy import text as _text
@@ -2498,9 +2371,7 @@ async def run_webhook_mode(application: Application) -> None:
                         with ENGINE.connect() as _conn:
                             _conn.execute(_text("SELECT 1"))
                     except Exception as de:
-                        logger.warning(
-                            f"Watchdog DB ping failed: {de}. Attempting init_db()."
-                        )
+                        logger.warning(f"Watchdog DB ping failed: {de}. Attempting init_db().")
                         try:
                             from database.migrate import init_db
 
@@ -2556,9 +2427,7 @@ async def run_webhook_mode(application: Application) -> None:
                 await application.bot.delete_webhook()
                 logger.info("✅ Webhook deleted successfully")
             except Exception as e:
-                logger.warning(
-                    f"Warning: Could not delete webhook during shutdown: {e}"
-                )
+                logger.warning(f"Warning: Could not delete webhook during shutdown: {e}")
 
             await application.stop()
             await application.shutdown()

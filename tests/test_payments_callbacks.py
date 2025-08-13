@@ -66,16 +66,12 @@ async def test_handle_payment_decision_approve_course(tmp_path):
     # Arrange storage with pending course
     user_id = 555
     with session_scope() as session:
-        get_or_create_user(
-            session, telegram_user_id=user_id, first_name="Ali", last_name="R"
-        )
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Ali", last_name="R")
 
     token = "abcdabcdabcdabcd"
     bot = DummyBot()
     bot_data = {
-        "config": types.SimpleNamespace(
-            bot=types.SimpleNamespace(admin_user_ids=[111])
-        ),
+        "config": types.SimpleNamespace(bot=types.SimpleNamespace(admin_user_ids=[111])),
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -111,16 +107,12 @@ async def test_handle_payment_decision_approve_book(tmp_path):
 
     user_id = 777
     with session_scope() as session:
-        get_or_create_user(
-            session, telegram_user_id=user_id, first_name="Sara", last_name="M"
-        )
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Sara", last_name="M")
 
     token = "eeeeffffaaaabbbb"
     bot = DummyBot()
     bot_data = {
-        "config": types.SimpleNamespace(
-            bot=types.SimpleNamespace(admin_user_ids=[111])
-        ),
+        "config": types.SimpleNamespace(bot=types.SimpleNamespace(admin_user_ids=[111])),
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -153,16 +145,12 @@ async def test_handle_payment_decision_reject_book(tmp_path):
 
     user_id = 888
     with session_scope() as session:
-        get_or_create_user(
-            session, telegram_user_id=user_id, first_name="Nima", last_name="T"
-        )
+        get_or_create_user(session, telegram_user_id=user_id, first_name="Nima", last_name="T")
 
     token = "1122334455667788"
     bot = DummyBot()
     bot_data = {
-        "config": types.SimpleNamespace(
-            bot=types.SimpleNamespace(admin_user_ids=[111])
-        ),
+        "config": types.SimpleNamespace(bot=types.SimpleNamespace(admin_user_ids=[111])),
         "payment_notifications": {
             token: {
                 "student_id": user_id,
@@ -185,6 +173,4 @@ async def test_handle_payment_decision_reject_book(tmp_path):
     assert meta["processed"] is True
     assert meta["decision"] == "reject"
     # Rejection message sent
-    assert any(
-        (m["chat_id"] == user_id and "ناموفق" in m["text"]) for m in bot.sent_messages
-    )
+    assert any((m["chat_id"] == user_id and "ناموفق" in m["text"]) for m in bot.sent_messages)

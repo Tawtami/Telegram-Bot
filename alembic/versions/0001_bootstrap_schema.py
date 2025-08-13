@@ -48,9 +48,7 @@ def upgrade() -> None:
         sa.Column("telegram_user_id", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=True),
     )
-    op.create_unique_constraint(
-        "uq_banned_telegram", "banned_users", ["telegram_user_id"]
-    )
+    op.create_unique_constraint("uq_banned_telegram", "banned_users", ["telegram_user_id"])
     op.create_index("ix_banned_telegram", "banned_users", ["telegram_user_id"])
 
     # profile_changes
@@ -112,9 +110,7 @@ def upgrade() -> None:
         sa.Column("action", sa.String(length=16), nullable=False),
         sa.Column("timestamp", sa.DateTime(), nullable=True),
     )
-    op.create_index(
-        "ix_purchase_audits_purchase_id", "purchase_audits", ["purchase_id"]
-    )
+    op.create_index("ix_purchase_audits_purchase_id", "purchase_audits", ["purchase_id"])
 
     # quiz_questions
     op.create_table(
@@ -139,9 +135,7 @@ def upgrade() -> None:
         sa.Column("correct", sa.Integer(), nullable=True),
         sa.Column("created_at", sa.DateTime(), nullable=True),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(
-            ["question_id"], ["quiz_questions.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["question_id"], ["quiz_questions.id"], ondelete="CASCADE"),
     )
     op.create_index("ix_quiz_attempts_user", "quiz_attempts", ["user_id"])
     op.create_index("ix_quiz_attempts_question", "quiz_attempts", ["question_id"])

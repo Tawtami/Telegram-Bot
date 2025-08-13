@@ -48,10 +48,7 @@ class CryptoManager:
         try:
             from config import config as app_config
 
-            if (
-                app_config.webhook.enabled
-                or os.getenv("ENVIRONMENT", "").lower() == "production"
-            ):
+            if app_config.webhook.enabled or os.getenv("ENVIRONMENT", "").lower() == "production":
                 raise ValueError(
                     "ENCRYPTION_KEY is required in production/webhook mode (no fallback allowed)"
                 )
@@ -69,9 +66,7 @@ class CryptoManager:
 
         return hashlib.sha256(token).digest()
 
-    def encrypt_text(
-        self, plaintext: str, associated_data: Optional[bytes] = None
-    ) -> str:
+    def encrypt_text(self, plaintext: str, associated_data: Optional[bytes] = None) -> str:
         if plaintext is None:
             plaintext = ""
         if not isinstance(plaintext, (str, bytes)):
@@ -89,9 +84,7 @@ class CryptoManager:
         # Store as urlsafe base64: nonce || ct
         return base64.urlsafe_b64encode(nonce + ct).decode("utf-8")
 
-    def decrypt_text(
-        self, ciphertext_b64: str, associated_data: Optional[bytes] = None
-    ) -> str:
+    def decrypt_text(self, ciphertext_b64: str, associated_data: Optional[bytes] = None) -> str:
         if not ciphertext_b64:
             return ""
         data = base64.urlsafe_b64decode(ciphertext_b64.encode("utf-8"))

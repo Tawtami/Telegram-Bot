@@ -52,9 +52,7 @@ class ProfileChange(Base):
     old_value_enc: Mapped[str] = mapped_column(String(1024))
     new_value_enc: Mapped[str] = mapped_column(String(1024))
     changed_by: Mapped[int] = mapped_column(Integer)
-    timestamp: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, index=True
-    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
 class Course(Base):
@@ -71,14 +69,10 @@ class Course(Base):
 class Purchase(Base):
     __tablename__ = "purchases"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     product_type: Mapped[str] = mapped_column(String(16))  # book|course
     product_id: Mapped[str] = mapped_column(String(128))
-    status: Mapped[str] = mapped_column(
-        String(16), index=True
-    )  # pending|approved|rejected
+    status: Mapped[str] = mapped_column(String(16), index=True)  # pending|approved|rejected
     amount: Mapped[int] = mapped_column(Integer, nullable=True)
     discount: Mapped[int] = mapped_column(Integer, nullable=True)
     payment_method: Mapped[str] = mapped_column(String(32), nullable=True)
@@ -86,17 +80,13 @@ class Purchase(Base):
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
     __table_args__ = (
         # Prevent duplicate product entries per user (single row updates status)
-        UniqueConstraint(
-            "user_id", "product_type", "product_id", name="uq_user_product"
-        ),
+        UniqueConstraint("user_id", "product_type", "product_id", name="uq_user_product"),
         # Speed up common filters
         Index("ix_purchases_user_status", "user_id", "status"),
         Index("ix_purchases_created_at", "created_at"),
@@ -113,9 +103,7 @@ class Receipt(Base):
     )
     telegram_file_id: Mapped[str] = mapped_column(String(256))
     file_unique_id: Mapped[str] = mapped_column(String(128))
-    submitted_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, index=True
-    )
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
     __table_args__ = (UniqueConstraint("file_unique_id", name="uq_file_unique_id"),)
 
@@ -149,17 +137,13 @@ class QuizQuestion(Base):
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), index=True
-    )
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     question_id: Mapped[int] = mapped_column(
         ForeignKey("quiz_questions.id", ondelete="CASCADE"), index=True
     )
     selected_index: Mapped[int] = mapped_column(Integer)
     correct: Mapped[int] = mapped_column(Integer, default=0)  # 0/1
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, index=True
-    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
 class UserStats(Base):
@@ -171,9 +155,7 @@ class UserStats(Base):
     total_attempts: Mapped[int] = mapped_column(Integer, default=0)
     total_correct: Mapped[int] = mapped_column(Integer, default=0)
     streak_days: Mapped[int] = mapped_column(Integer, default=0)
-    last_attempt_date: Mapped[str] = mapped_column(
-        String(10), nullable=True
-    )  # YYYY-MM-DD
+    last_attempt_date: Mapped[str] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
     points: Mapped[int] = mapped_column(Integer, default=0, index=True)
     last_daily_award_date: Mapped[str] = mapped_column(String(10), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(

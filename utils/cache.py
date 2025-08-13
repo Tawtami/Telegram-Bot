@@ -118,9 +118,7 @@ class SimpleCache:
     async def clear_expired(self) -> int:
         """Clear expired entries and return count of cleared entries"""
         async with self._lock:
-            expired_keys = [
-                key for key, entry in self.cache.items() if entry.is_expired()
-            ]
+            expired_keys = [key for key, entry in self.cache.items() if entry.is_expired()]
 
             for key in expired_keys:
                 del self.cache[key]
@@ -132,9 +130,7 @@ class SimpleCache:
         """Get cache statistics"""
         async with self._lock:
             total_requests = self.stats["hits"] + self.stats["misses"]
-            hit_rate = (
-                (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
-            )
+            hit_rate = (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
 
             return {
                 "size": len(self.cache),

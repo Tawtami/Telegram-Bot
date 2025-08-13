@@ -55,9 +55,7 @@ else:
         max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "30")),
         pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),
     )
-SessionLocal = sessionmaker(
-    bind=ENGINE, autoflush=False, autocommit=False, expire_on_commit=False
-)
+SessionLocal = sessionmaker(bind=ENGINE, autoflush=False, autocommit=False, expire_on_commit=False)
 
 # Lazy, idempotent schema initialization for test and script contexts
 # Avoids circular imports by importing migrate only on demand.

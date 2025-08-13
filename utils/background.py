@@ -36,9 +36,7 @@ class BroadcastManager:
     def __init__(self):
         self.jobs: Dict[str, BroadcastJob] = {}
 
-    async def start_broadcast(
-        self, app, admin_chat_id: int, user_ids: List[int], text: str
-    ) -> str:
+    async def start_broadcast(self, app, admin_chat_id: int, user_ids: List[int], text: str) -> str:
         job_id = str(int(asyncio.get_running_loop().time() * 1000))
         job = BroadcastJob(job_id, admin_chat_id, user_ids, text)
         self.jobs[job_id] = job

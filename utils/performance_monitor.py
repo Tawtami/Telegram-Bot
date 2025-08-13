@@ -129,15 +129,11 @@ class PerformanceMonitor:
     """Enhanced performance monitoring with alerts and detailed metrics"""
 
     def __init__(self):
-        self.metrics: Dict[str, PerformanceMetrics] = defaultdict(
-            lambda: PerformanceMetrics("")
-        )
+        self.metrics: Dict[str, PerformanceMetrics] = defaultdict(lambda: PerformanceMetrics(""))
         self.user_activity: Dict[int, Dict[str, Any]] = defaultdict(dict)
         self.system_metrics: Dict[str, Any] = {}
         self.counters: Dict[str, int] = defaultdict(int)
-        self.hourly_counters: Dict[str, Dict[int, int]] = defaultdict(
-            lambda: defaultdict(int)
-        )
+        self.hourly_counters: Dict[str, Dict[int, int]] = defaultdict(lambda: defaultdict(int))
         self.alerts: List[Dict[str, Any]] = []
         self.alert_handlers: List[Callable] = []
         self._lock = asyncio.Lock()
@@ -153,9 +149,7 @@ class PerformanceMonitor:
                 "Average response time exceeded 2 seconds",
             ),
             AlertThreshold("error_rate", 5.0, "gt", 300, "Error rate exceeded 5%"),
-            AlertThreshold(
-                "requests_per_minute", 100, "gt", 60, "High request rate detected"
-            ),
+            AlertThreshold("requests_per_minute", 100, "gt", 60, "High request rate detected"),
         ]
 
     async def log_request_time(
@@ -241,12 +235,8 @@ class PerformanceMonitor:
             total_duration = sum(m.total_duration for m in self.metrics.values())
 
             # Calculate averages
-            avg_response_time = (
-                total_duration / total_requests if total_requests > 0 else 0
-            )
-            error_rate = (
-                (total_errors / total_requests * 100) if total_requests > 0 else 0
-            )
+            avg_response_time = total_duration / total_requests if total_requests > 0 else 0
+            error_rate = (total_errors / total_requests * 100) if total_requests > 0 else 0
 
             # Get uptime
             uptime_seconds = time.time() - self._start_time
@@ -278,9 +268,7 @@ class PerformanceMonitor:
                     "total_users": len(self.user_activity),
                 },
                 "counters": dict(self.counters),
-                "handlers": {
-                    name: metrics.to_dict() for name, metrics in self.metrics.items()
-                },
+                "handlers": {name: metrics.to_dict() for name, metrics in self.metrics.items()},
                 "hourly": hourly_summary,
                 "alerts": self.alerts[-10:],  # Last 10 alerts
                 "timestamp": time.time(),
@@ -370,9 +358,7 @@ class PerformanceMonitor:
                 del self.user_activity[user_id]
 
             # Clear old alerts
-            self.alerts = [
-                alert for alert in self.alerts if alert["timestamp"] > cutoff_time
-            ]
+            self.alerts = [alert for alert in self.alerts if alert["timestamp"] > cutoff_time]
 
     async def reset_stats(self):
         """Reset all performance statistics"""

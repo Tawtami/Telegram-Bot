@@ -31,9 +31,7 @@ class SecurityUtils:
     ]
 
     _xss_patterns = [
-        re.compile(
-            r"(<script|javascript:|vbscript:|onload=|onerror=|onclick=)", re.IGNORECASE
-        ),
+        re.compile(r"(<script|javascript:|vbscript:|onload=|onerror=|onclick=)", re.IGNORECASE),
         re.compile(r"(<iframe|<object|<embed)", re.IGNORECASE),
         re.compile(r"(data:text/html|data:application/x-javascript)", re.IGNORECASE),
     ]
@@ -117,9 +115,7 @@ class SecurityUtils:
         return secrets.token_urlsafe(length)
 
     @classmethod
-    def hash_password(
-        cls, password: str, salt: Optional[str] = None
-    ) -> tuple[str, str]:
+    def hash_password(cls, password: str, salt: Optional[str] = None) -> tuple[str, str]:
         """Hash password with salt"""
         if salt is None:
             salt = secrets.token_hex(16)
@@ -150,9 +146,7 @@ class SecurityUtils:
     @classmethod
     def generate_hmac(cls, data: str, secret: str) -> str:
         """Generate HMAC for data integrity"""
-        return hmac.new(
-            secret.encode("utf-8"), data.encode("utf-8"), hashlib.sha256
-        ).hexdigest()
+        return hmac.new(secret.encode("utf-8"), data.encode("utf-8"), hashlib.sha256).hexdigest()
 
     @classmethod
     def verify_hmac(cls, data: str, signature: str, secret: str) -> bool:
@@ -166,9 +160,7 @@ class SecurityUtils:
         return f"rate_limit:{user_id}:{action}"
 
     @classmethod
-    def validate_json_structure(
-        cls, data: Dict[str, Any], required_fields: List[str]
-    ) -> bool:
+    def validate_json_structure(cls, data: Dict[str, Any], required_fields: List[str]) -> bool:
         """Validate JSON structure for required fields"""
         if not isinstance(data, dict):
             return False
@@ -245,9 +237,7 @@ class SecurityUtils:
         return True
 
     @classmethod
-    def create_secure_session_token(
-        cls, user_id: int, expires_in_hours: int = 24
-    ) -> str:
+    def create_secure_session_token(cls, user_id: int, expires_in_hours: int = 24) -> str:
         """Create a secure session token"""
         timestamp = datetime.utcnow().timestamp()
         expires_at = timestamp + (expires_in_hours * 3600)
@@ -310,9 +300,7 @@ class SecurityUtils:
         logger.warning(f"Security event: {log_data}")
 
     @classmethod
-    def check_suspicious_activity(
-        cls, user_id: int, action: str, context: Dict[str, Any]
-    ) -> bool:
+    def check_suspicious_activity(cls, user_id: int, action: str, context: Dict[str, Any]) -> bool:
         """Check for suspicious user activity"""
         # This is a basic implementation - could be enhanced with ML or more sophisticated rules
 

@@ -47,9 +47,7 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
         # Allow server to start
         await asyncio.sleep(0.8)
         # CSV export (enriched columns)
-        status_csv, body_csv, headers_csv = await _call_admin_list_csv(
-            app, "test-token"
-        )
+        status_csv, body_csv, headers_csv = await _call_admin_list_csv(app, "test-token")
         assert status_csv == 200
         assert (
             b"id,user_id,telegram_user_id,product_type,product_id,status,admin_action_by,admin_action_at,created_at"
@@ -58,9 +56,7 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
         assert "text/csv" in headers_csv.get("Content-Type", "")
 
         # XLSX export
-        status_xlsx, body_xlsx, headers_xlsx = await _call_admin_list_xlsx(
-            app, "test-token"
-        )
+        status_xlsx, body_xlsx, headers_xlsx = await _call_admin_list_xlsx(app, "test-token")
         assert status_xlsx == 200
         assert headers_xlsx.get("Content-Type", "").startswith(
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

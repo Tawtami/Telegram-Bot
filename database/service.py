@@ -191,9 +191,7 @@ def approve_or_reject_purchase(
         return None
 
     # Write audit record
-    session.add(
-        PurchaseAudit(purchase_id=purchase_id, admin_id=admin_id, action=decision)
-    )
+    session.add(PurchaseAudit(purchase_id=purchase_id, admin_id=admin_id, action=decision))
     session.flush()
     # Build lightweight object
     p = Purchase(
@@ -219,8 +217,7 @@ def get_approved_book_buyers(session: Session, limit: int = 100) -> List[Dict]:
         .limit(limit)
     )
     return [
-        {"user_id": r.user_id, "product_id": r.product_id, "created_at": r.created_at}
-        for r in q
+        {"user_id": r.user_id, "product_id": r.product_id, "created_at": r.created_at} for r in q
     ]
 
 
@@ -293,9 +290,7 @@ def is_user_banned(session: Session, telegram_user_id: int) -> bool:
     try:
         return (
             session.execute(
-                select(BannedUser).where(
-                    BannedUser.telegram_user_id == telegram_user_id
-                )
+                select(BannedUser).where(BannedUser.telegram_user_id == telegram_user_id)
             ).scalar_one_or_none()
             is not None
         )
@@ -310,9 +305,7 @@ def is_user_banned(session: Session, telegram_user_id: int) -> bool:
         try:
             return (
                 session.execute(
-                    select(BannedUser).where(
-                        BannedUser.telegram_user_id == telegram_user_id
-                    )
+                    select(BannedUser).where(BannedUser.telegram_user_id == telegram_user_id)
                 ).scalar_one_or_none()
                 is not None
             )
@@ -404,9 +397,7 @@ def get_stats_summary(session: Session) -> Dict:
     }
 
 
-def list_stale_pending_purchases(
-    session: Session, older_than_days: int = 14
-) -> List[Dict]:
+def list_stale_pending_purchases(session: Session, older_than_days: int = 14) -> List[Dict]:
     cutoff = dt.datetime.utcnow() - dt.timedelta(days=max(1, older_than_days))
     q = session.execute(
         select(
@@ -440,9 +431,7 @@ def list_stale_pending_purchases(
 def upsert_user_stats(session: Session, user_db_id: int, correct: bool) -> None:
     today = dt.datetime.utcnow().date().isoformat()
     stats = (
-        session.execute(select(UserStats).where(UserStats.user_id == user_db_id))
-        .scalars()
-        .first()
+        session.execute(select(UserStats).where(UserStats.user_id == user_db_id)).scalars().first()
     )
     if stats is None:
         stats = UserStats(
@@ -504,9 +493,7 @@ def get_daily_question(session: Session, grade: str) -> QuizQuestion | None:
         return None
 
 
-def submit_answer(
-    session: Session, user_db_id: int, question_id: int, selected_index: int
-) -> bool:
+def submit_answer(session: Session, user_db_id: int, question_id: int, selected_index: int) -> bool:
     question = (
         session.execute(select(QuizQuestion).where(QuizQuestion.id == question_id))
         .scalars()
@@ -564,9 +551,7 @@ def get_leaderboard_top(session: Session, limit: int = 10) -> List[Dict]:
             return []
         # Map user_id -> telegram id
         m = {}
-        rows = session.execute(
-            select(User.id, User.telegram_user_id).where(User.id.in_(user_ids))
-        )
+        rows = session.execute(select(User.id, User.telegram_user_id).where(User.id.in_(user_ids)))
         for r in rows:
             m[int(r.id)] = int(r.telegram_user_id)
         q2 = session.execute(

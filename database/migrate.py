@@ -44,9 +44,7 @@ def init_db():
             try:
                 Base.metadata.create_all(bind=conn)
             except Exception as e:
-                logger.warning(
-                    f"create_all failed, falling back to per-table creation: {e}"
-                )
+                logger.warning(f"create_all failed, falling back to per-table creation: {e}")
                 _create_tables_individually(conn)
 
             # Run idempotent upgrades after ensuring tables exist
@@ -116,9 +114,7 @@ def _upgrade_schema_if_needed(conn):
             except Exception as e:
                 logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
     except Exception as e:
-        logger.warning(
-            f"Could not read/upgrade users.telegram_user_id column type: {e}"
-        )
+        logger.warning(f"Could not read/upgrade users.telegram_user_id column type: {e}")
 
     try:
         dt_row = conn.execute(
@@ -136,31 +132,21 @@ def _upgrade_schema_if_needed(conn):
                 )
                 logger.info("Upgraded purchases.admin_action_by to BIGINT")
             except Exception as e:
-                logger.warning(
-                    f"Could not alter purchases.admin_action_by to BIGINT: {e}"
-                )
+                logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
     except Exception as e:
-        logger.warning(
-            f"Could not read/upgrade purchases.admin_action_by column type: {e}"
-        )
+        logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
 
     # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
     try:
         if ENGINE.dialect.name.startswith("postgresql"):
             # Add financial columns to purchases if missing
             try:
-                conn.execute(
-                    text(
-                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"
-                    )
-                )
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
             except Exception:
                 pass
             try:
                 conn.execute(
-                    text(
-                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER"
-                    )
+                    text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER")
                 )
             except Exception:
                 pass
@@ -235,20 +221,10 @@ def _upgrade_schema_if_needed(conn):
     try:
         if ENGINE.dialect.name.startswith("postgresql"):
             # Users demography indexes
-            conn.execute(
-                text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)")
-            )
-            conn.execute(
-                text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)")
-            )
-            conn.execute(
-                text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)")
-            )
-            conn.execute(
-                text(
-                    "CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"
-                )
-            )
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
     except Exception as e:
         logger.warning(f"Creating optional indexes failed: {e}")
 

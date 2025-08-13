@@ -25,9 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @rate_limit_handler("default")
-async def handle_free_courses(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_free_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle free courses menu"""
     query = update.callback_query
     if not query:
@@ -76,9 +74,7 @@ async def handle_free_courses(
             schedule_info += f" | 👥 حداکثر {course['max_students']} نفر"
 
         message_text += (
-            f"📚 {course['title']}\n"
-            f"📝 {course['description']}\n"
-            f"{schedule_info}\n\n"
+            f"📚 {course['title']}\n" f"📝 {course['description']}\n" f"{schedule_info}\n\n"
         )
 
         keyboard.append(
@@ -91,7 +87,9 @@ async def handle_free_courses(
         )
 
     message_text += "🎓 **دوره‌های رایگان نیازی به پرداخت ندارند!**\n\n"
-    message_text += "📩 برای ثبت‌نام سریع:\n👉 @ostad_hatami\n\n✏️ فقط بنویس: اسمت + پایه + کلاس + شهر"
+    message_text += (
+        "📩 برای ثبت‌نام سریع:\n👉 @ostad_hatami\n\n✏️ فقط بنویس: اسمت + پایه + کلاس + شهر"
+    )
 
     keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
 
@@ -103,9 +101,7 @@ async def handle_free_courses(
 
 
 @rate_limit_handler("default")
-async def handle_paid_courses(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle paid courses menu"""
     query = update.callback_query
     if not query:
@@ -199,9 +195,7 @@ async def handle_paid_courses(
 
 
 @rate_limit_handler("default")
-async def handle_purchased_courses(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_purchased_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle purchased courses menu"""
     query = update.callback_query
     if not query:
@@ -226,20 +220,14 @@ async def handle_purchased_courses(
             )
             return
         rows = list(
-            session.execute(
-                select(Purchase).where(Purchase.user_id == db_user.id)
-            ).scalars()
+            session.execute(select(Purchase).where(Purchase.user_id == db_user.id)).scalars()
         )
     user_courses = {
         "free_courses": [
-            p.product_id
-            for p in rows
-            if p.product_type == "course" and p.status == "approved"
+            p.product_id for p in rows if p.product_type == "course" and p.status == "approved"
         ],
         "purchased_courses": [
-            p.product_id
-            for p in rows
-            if p.product_type == "course" and p.status != "approved"
+            p.product_id for p in rows if p.product_type == "course" and p.status != "approved"
         ],
     }
 
@@ -271,9 +259,7 @@ async def handle_purchased_courses(
             all_courses = []
         c._set_sync("all_courses", all_courses, ttl=600)
     course_details = {
-        c["course_id"]: c
-        for c in all_courses
-        if isinstance(c, dict) and c.get("course_id")
+        c["course_id"]: c for c in all_courses if isinstance(c, dict) and c.get("course_id")
     }
 
     # Build courses list
@@ -328,9 +314,7 @@ async def handle_purchased_courses(
 
 
 @rate_limit_handler("default")
-async def handle_course_registration(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_course_registration(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle course registration"""
     query = update.callback_query
     if not query:
@@ -364,11 +348,7 @@ async def handle_course_registration(
             all_courses = []
         c._set_sync("all_courses", all_courses, ttl=600)
     course = next(
-        (
-            c
-            for c in all_courses
-            if isinstance(c, dict) and c.get("course_id") == course_id
-        ),
+        (c for c in all_courses if isinstance(c, dict) and c.get("course_id") == course_id),
         None,
     )
 
@@ -398,9 +378,7 @@ async def handle_course_registration(
                 from config import config as app_config
 
                 with session_scope() as session:
-                    uids = get_course_participants_by_slug(
-                        session, course_id, status="approved"
-                    )
+                    uids = get_course_participants_by_slug(session, course_id, status="approved")
                 lines = [str(uid) for uid in uids]
                 from utils.performance_monitor import monitor
 

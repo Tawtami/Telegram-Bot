@@ -78,12 +78,7 @@ async def test_admin_combined_filters(monkeypatch):
                 assert r.status == 200
                 html = await r.text()
                 # Header labels present
-                assert (
-                    "وضعیت:" in html
-                    and "نوع:" in html
-                    and "از:" in html
-                    and "تا:" in html
-                )
+                assert "وضعیت:" in html and "نوع:" in html and "از:" in html and "تا:" in html
                 # Only approved books within date range (bk1, bk2)
                 assert "bk1" in html and "bk2" in html
                 assert "bk3" not in html and "c1" not in html

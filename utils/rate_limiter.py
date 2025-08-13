@@ -114,11 +114,7 @@ class RateLimitEntry:
             "blocked_until": self.blocked_until,
             "time_until_reset": max(
                 0,
-                (
-                    self.config.window_seconds - (now - self.requests[0])
-                    if self.requests
-                    else 0
-                ),
+                (self.config.window_seconds - (now - self.requests[0]) if self.requests else 0),
             ),
         }
 
@@ -142,9 +138,7 @@ class RateLimiter:
         self._lock = asyncio.Lock()
         self._cleanup_task: Optional[asyncio.Task] = None
 
-    async def is_allowed(
-        self, user_id: str, config: Optional[RateLimitConfig] = None
-    ) -> bool:
+    async def is_allowed(self, user_id: str, config: Optional[RateLimitConfig] = None) -> bool:
         """Check if user is allowed to make a request"""
         try:
             return self._is_allowed_sync(user_id, config)
@@ -153,9 +147,7 @@ class RateLimiter:
             # In case of error, allow the request to prevent blocking users
             return True
 
-    def _is_allowed_sync(
-        self, user_id: str, config: Optional[RateLimitConfig] = None
-    ) -> bool:
+    def _is_allowed_sync(self, user_id: str, config: Optional[RateLimitConfig] = None) -> bool:
         """Synchronous version of is_allowed for internal use"""
         if not user_id:
             return False
@@ -193,11 +185,7 @@ class RateLimiter:
                 "active_limits": len(self.limits),
                 "block_rate_percent": round(
                     (
-                        (
-                            self.stats["blocked_requests"]
-                            / self.stats["total_requests"]
-                            * 100
-                        )
+                        (self.stats["blocked_requests"] / self.stats["total_requests"] * 100)
                         if self.stats["total_requests"] > 0
                         else 0
                     ),
@@ -287,9 +275,7 @@ class MultiLevelRateLimiter:
             )
         )
         self.limiters["admin"] = RateLimiter(
-            RateLimitConfig(
-                max_requests=100, window_seconds=60  # 100 admin requests per minute
-            )
+            RateLimitConfig(max_requests=100, window_seconds=60)  # 100 admin requests per minute
         )
 
     async def is_allowed(self, user_id: str, level: str = "default") -> bool:

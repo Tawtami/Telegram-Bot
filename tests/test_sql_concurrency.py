@@ -12,9 +12,7 @@ def _seed_purchase(session, crypto_manager):
     )
     session.add(u)
     session.flush()
-    p = Purchase(
-        user_id=u.id, product_type="course", product_id="slug-1", status="pending"
-    )
+    p = Purchase(user_id=u.id, product_type="course", product_id="slug-1", status="pending")
     session.add(p)
     session.flush()
     return u, p

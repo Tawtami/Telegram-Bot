@@ -139,9 +139,7 @@ class StudentStorage:
             if crypto_manager is not None:
                 for field in sensitive_fields:
                     if field in student_data and student_data[field]:
-                        student_data[field] = crypto_manager.encrypt_text(
-                            str(student_data[field])
-                        )
+                        student_data[field] = crypto_manager.encrypt_text(str(student_data[field]))
 
             # Add timestamp
             student_data["last_updated"] = datetime.now().isoformat()
@@ -171,9 +169,7 @@ class StudentStorage:
                         for field in ("first_name", "last_name", "phone_number"):
                             if field in student and student[field]:
                                 try:
-                                    student[field] = crypto_manager.decrypt_text(
-                                        student[field]
-                                    )
+                                    student[field] = crypto_manager.decrypt_text(student[field])
                                 except Exception:
                                     # If not encrypted (legacy), leave as is
                                     pass
@@ -203,9 +199,7 @@ class StudentStorage:
             logger.error(f"Error getting all students: {e}")
             return []
 
-    def save_course_registration(
-        self, user_id: int, course_id: str, is_paid: bool = False
-    ) -> bool:
+    def save_course_registration(self, user_id: int, course_id: str, is_paid: bool = False) -> bool:
         """Save course registration"""
         try:
             student = self.get_student(user_id)

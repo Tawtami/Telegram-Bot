@@ -27,9 +27,7 @@ from utils.performance_monitor import monitor
 
 
 @rate_limit_handler("default")
-async def handle_payment_receipt(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle incoming payment receipt photo for courses or books.
 
     - If context.user_data["pending_course"] is set: treat as course payment → add pending, forward to admin
@@ -86,12 +84,8 @@ async def handle_payment_receipt(
         return InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton(
-                        "✅ تأیید پرداخت", callback_data=f"{data_prefix}:approve"
-                    ),
-                    InlineKeyboardButton(
-                        "❌ رد پرداخت", callback_data=f"{data_prefix}:reject"
-                    ),
+                    InlineKeyboardButton("✅ تأیید پرداخت", callback_data=f"{data_prefix}:approve"),
+                    InlineKeyboardButton("❌ رد پرداخت", callback_data=f"{data_prefix}:reject"),
                 ]
             ]
         )
@@ -154,9 +148,7 @@ async def handle_payment_receipt(
         try:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
-            course = next(
-                (c for c in all_courses if c.get("course_id") == course_id), None
-            )
+            course = next((c for c in all_courses if c.get("course_id") == course_id), None)
             course_title = course.get("title") if course else course_id
         except Exception:
             course_title = course_id
@@ -286,8 +278,7 @@ async def handle_payment_receipt(
     recent_tokens = [
         t
         for t, meta in notifications.items()
-        if meta.get("student_id") == update.effective_user.id
-        and not meta.get("processed")
+        if meta.get("student_id") == update.effective_user.id and not meta.get("processed")
     ]
     # If there is a very recent open token for same type+id, reject to prevent spam/dupes
     for t in recent_tokens:
@@ -332,9 +323,7 @@ async def handle_payment_receipt(
                 from_chat_id=update.effective_chat.id,
                 message_id=update.message.message_id,
             )
-            sent = await context.bot.send_message(
-                chat_id=admin_id, text=caption, reply_markup=kb
-            )
+            sent = await context.bot.send_message(chat_id=admin_id, text=caption, reply_markup=kb)
             notifications[token]["messages"].append((admin_id, sent.message_id))
         except Exception:
             continue
@@ -349,16 +338,12 @@ async def handle_payment_receipt(
     if context.user_data.get("book_purchase"):
         del context.user_data["book_purchase"]
 
-    await update.message.reply_text(
-        success_message, reply_markup=build_main_menu_keyboard()
-    )
+    await update.message.reply_text(success_message, reply_markup=build_main_menu_keyboard())
 
 
 # Callback handlers for admin approval/rejection
 @rate_limit_handler("admin")
-async def handle_payment_decision(
-    update: Update, context: ContextTypes.DEFAULT_TYPE
-) -> None:
+async def handle_payment_decision(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if not query:
         return
@@ -408,8 +393,7 @@ async def handle_payment_decision(
                 select(DBPurchase)
                 .where(
                     DBPurchase.user_id == (db_user.id if db_user else -1),
-                    DBPurchase.product_type
-                    == ("book" if item_type == "book" else "course"),
+                    DBPurchase.product_type == ("book" if item_type == "book" else "course"),
                     DBPurchase.product_id == item_id,
                     DBPurchase.status == "pending",
                 )
@@ -454,9 +438,7 @@ async def handle_payment_decision(
                 from database.service import get_course_participants_by_slug
 
                 with session_scope() as session:
-                    uids = get_course_participants_by_slug(
-                        session, item_id, status="approved"
-                    )
+                    uids = get_course_participants_by_slug(session, item_id, status="approved")
                 lines = [str(uid) for uid in uids]
                 from utils.performance_monitor import monitor
 
@@ -516,10 +498,7 @@ async def _orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not query:
         return
     await query.answer()
-    if (
-        update.effective_user.id
-        not in context.bot_data.get("config").bot.admin_user_ids
-    ):
+    if update.effective_user.id not in context.bot_data.get("config").bot.admin_user_ids:
         await query.edit_message_text("⛔️ مجاز نیست.")
         return
     try:
@@ -536,17 +515,13 @@ async def _orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if type_filter in ("book", "course"):
         pending = [(t, m) for t, m in pending if m.get("item_type") == type_filter]
     if user_filter is not None:
-        pending = [
-            (t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter
-        ]
+        pending = [(t, m) for t, m in pending if int(m.get("student_id", 0)) == user_filter]
     if not pending:
         await query.edit_message_text("مورد در انتظاری وجود ندارد.")
         return
 
     page_size = 5
-    ordered = list(
-        sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True)
-    )
+    ordered = list(sorted(pending, key=lambda kv: kv[1].get("created_at", 0), reverse=True))
     start = page * page_size
     end = start + page_size
     slice_items = ordered[start:end]
@@ -558,9 +533,7 @@ async def _orders_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for token, meta in slice_items:
         title = meta.get("item_title", "")
         student_id = meta.get("student_id")
-        lines.append(
-            f"• {meta.get('item_type')} «{title}» | کاربر {student_id} | توکن: {token}"
-        )
+        lines.append(f"• {meta.get('item_type')} «{title}» | کاربر {student_id} | توکن: {token}")
         rows.append(
             [
                 InlineKeyboardButton("✅ تایید", callback_data=f"pay:{token}:approve"),
