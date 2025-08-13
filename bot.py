@@ -2366,16 +2366,12 @@ async def run_webhook_mode(application: Application) -> None:
         except Exception:
             _env_port = 0
         bind_port = _env_port or int(config.webhook.port or 0) or 8080
-        logger.info(
-            f"✅ Health check at: http://{bind_host}:{bind_port}/"  # nosec B104
-        )
+        logger.info(f"✅ Health check at: http://{bind_host}:{bind_port}/")  # nosec B104
 
         # Start web server EARLY so tests can connect immediately
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(
-            runner, bind_host, bind_port
-        )  # nosec B104: container/webhook bind
+        site = web.TCPSite(runner, bind_host, bind_port)  # nosec B104: container/webhook bind
         await site.start()
 
         logger.info(f"🚀 Web server started on http://{bind_host}:{bind_port}")
