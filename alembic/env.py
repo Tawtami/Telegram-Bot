@@ -10,6 +10,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import project metadata
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database import alembic_metadata
 
 target_metadata = alembic_metadata()
