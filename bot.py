@@ -2289,7 +2289,7 @@ async def run_webhook_mode(application: Application) -> None:
                             try:
                                 resp.set_cookie(
                                     "flash",
-                                    _ui_t('flash_error','خطا در انجام عملیات'),
+                                    _ui_t("flash_error", "خطا در انجام عملیات"),
                                     max_age=10,
                                     path="/",
                                     secure=str(config.webhook.url).startswith(
