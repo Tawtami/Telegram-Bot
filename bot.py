@@ -2431,6 +2431,8 @@ async def run_webhook_mode(application: Application) -> None:
                 await asyncio.sleep(3600)  # Check every hour
         except asyncio.CancelledError:
             logger.info("🛑 Webhook mode cancelled, shutting down...")
+            # Re-raise so test harness awaiting this task observes cancellation
+            raise
         finally:
             # Cleanup
             try:
