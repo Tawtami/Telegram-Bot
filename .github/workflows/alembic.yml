@@ -52,6 +52,10 @@ jobs:
         run: |
           mypy .
 
+      - name: Security scan (bandit)
+        run: |
+          bandit -q -r . || true
+
       - name: Run tests (pytest with coverage)
         env:
           PYTHONUNBUFFERED: "1"
