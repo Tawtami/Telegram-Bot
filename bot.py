@@ -124,6 +124,7 @@ except Exception as _e:
 # Helpers to reduce handler complexity
 # ---------------------
 
+
 def _parse_admin_filters(request):
     from datetime import datetime, timedelta
 
@@ -153,7 +154,9 @@ def _parse_admin_filters(request):
                 if len(to_str) > 10
                 else datetime.fromisoformat(to_str + "T00:00:00")
             )
-            dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
+            dt_to = base + (
+                timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0)
+            )
     except Exception:
         dt_from = None
         dt_to = None
@@ -174,7 +177,9 @@ def _parse_admin_filters(request):
     }
 
 
-def _build_admin_qs(base_url, status, ptype, uid_str, product_q, from_str, to_str, page_size, page):
+def _build_admin_qs(
+    base_url, status, ptype, uid_str, product_q, from_str, to_str, page_size, page
+):
     params = {
         "status": status,
         "type": ptype,
@@ -1566,7 +1571,7 @@ async def run_webhook_mode(application: Application) -> None:
                         body=csv_bytes,
                         content_type="text/csv",
                         headers={
-                            "Content-Disposition": f"attachment; filename=orders_{status or 'all'}.csv"
+                        "Content-Disposition": f"attachment; filename=orders_{f['status'] or 'all'}.csv"
                         },
                         charset="utf-8",
                     )
@@ -1605,7 +1610,7 @@ async def run_webhook_mode(application: Application) -> None:
                             body=bio.getvalue(),
                             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                             headers={
-                                "Content-Disposition": f"attachment; filename=orders_{status or 'all'}.xlsx"
+                                "Content-Disposition": f"attachment; filename=orders_{f['status'] or 'all'}.xlsx"
                             },
                         )
                     except Exception as e:
@@ -1723,38 +1728,38 @@ async def run_webhook_mode(application: Application) -> None:
                     <body>
                       <div class='panel'>
                         {flash_html}
-                        <h3>سفارش‌ها ({status})</h3>
+                        <h3>سفارش‌ها ({f['status']})</h3>
                         {stats_html}
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
                           <label>وضعیت:
                             <select name='status'>
-                              <option value='pending' {'selected' if status=='pending' else ''}>pending</option>
-                              <option value='approved' {'selected' if status=='approved' else ''}>approved</option>
-                              <option value='rejected' {'selected' if status=='rejected' else ''}>rejected</option>
+                              <option value='pending' {'selected' if f['status']=='pending' else ''}>pending</option>
+                              <option value='approved' {'selected' if f['status']=='approved' else ''}>approved</option>
+                              <option value='rejected' {'selected' if f['status']=='rejected' else ''}>rejected</option>
                             </select>
                           </label>
                           <label>نوع:
                             <select name='type'>
-                              <option value='' {'selected' if not ptype else ''}>همه</option>
-                              <option value='course' {'selected' if ptype=='course' else ''}>course</option>
-                              <option value='book' {'selected' if ptype=='book' else ''}>book</option>
+                              <option value='' {'selected' if not f['ptype'] else ''}>همه</option>
+                              <option value='course' {'selected' if f['ptype']=='course' else ''}>course</option>
+                              <option value='book' {'selected' if f['ptype']=='book' else ''}>book</option>
                             </select>
                           </label>
                           <label>UID:
-                            <input id='uid' name='uid' value='{uid_str}' placeholder='telegram id' />
+                            <input id='uid' name='uid' value='{f['uid_str']}' placeholder='telegram id' />
                           </label>
                           <label>محصول:
-                            <input id='product' name='product' value='{product_q}' placeholder='عنوان/شناسه' />
+                            <input id='product' name='product' value='{f['product_q']}' placeholder='عنوان/شناسه' />
                           </label>
                           <label>از:
-                            <input type='date' name='from' value='{from_str}' />
+                            <input type='date' name='from' value='{f['from_str']}' />
                           </label>
                           <label>تا:
-                            <input type='date' name='to' value='{to_str}' />
+                            <input type='date' name='to' value='{f['to_str']}' />
                           </label>
                           <label>سایز صفحه:
-                            <input type='number' min='1' max='100' name='size' value='{page_size}' />
+                            <input type='number' min='1' max='100' name='size' value='{f['page_size']}' />
                           </label>
                           <button class='btn filter' type='submit'>فیلتر</button>
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
@@ -1769,9 +1774,9 @@ async def run_webhook_mode(application: Application) -> None:
                           <tbody>{html_rows or '<tr><td colspan=6>موردی یافت نشد</td></tr>'}</tbody>
                         </table>
                         <div class='pager'>
-                          <a href='{_qs(page=max(0, page-1))}'>&laquo; قبلی</a>
+                          <a href='{_qs(page=max(0, f['page']-1))}'>&laquo; قبلی</a>
                           |
-                          <a href='{_qs(page=page+1)}'>بعدی &raquo;</a>
+                          <a href='{_qs(page=f['page']+1)}'>بعدی &raquo;</a>
                         </div>
                         <div class='controls' style='margin-top:10px;'>
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
@@ -1808,14 +1813,14 @@ async def run_webhook_mode(application: Application) -> None:
 
                 return web.json_response(
                     {
-                        "status": status,
-                        "type": ptype,
-                        "uid": uid,
-                        "product": product_q,
-                        "from": from_str,
-                        "to": to_str,
-                        "page": page,
-                        "page_size": page_size,
+                        "status": f['status'],
+                        "type": f['ptype'],
+                        "uid": f['uid'],
+                        "product": f['product_q'],
+                        "from": f['from_str'],
+                        "to": f['to_str'],
+                        "page": f['page'],
+                        "page_size": f['page_size'],
                         "total": total,
                         "items": rows,
                     }
