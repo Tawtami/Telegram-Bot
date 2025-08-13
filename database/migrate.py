@@ -47,6 +47,7 @@ def init_db():
                 try:
                     conn.rollback()
                 except Exception:
+                    # ignore advisory unlock error
                     pass
                 logger.warning(f"create_all failed, falling back to per-table creation: {e}")
                 _create_tables_individually(conn)

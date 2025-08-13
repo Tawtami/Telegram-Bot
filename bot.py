@@ -101,14 +101,14 @@ try:
                 if red != msg:
                     record.msg = red
                     record.args = ()
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.debug(f"RedactFilter failed: {_e}")
             return True
 
     for lname in ("httpx", "bot", "aiohttp.access"):
         logging.getLogger(lname).addFilter(_RedactFilter())
-except Exception:
-    pass
+except Exception as _e:
+    logger.debug(f"Log filter setup failed: {_e}")
 
 # Initialize Sentry if DSN is provided
 try:
@@ -1292,8 +1292,8 @@ async def run_webhook_mode(application: Application) -> None:
                     resp.body = compressed
                     resp.headers["Content-Encoding"] = "gzip"
                     resp.headers["Vary"] = "Accept-Encoding"
-            except Exception:
-                pass
+            except Exception as _e:
+                logger.debug(f"gzip middleware error: {_e}")
             # Add cache and security headers
             resp.headers.setdefault("X-Content-Type-Options", "nosniff")
             resp.headers.setdefault("X-Frame-Options", "DENY")

@@ -74,6 +74,7 @@ def _ensure_schema_initialized() -> None:
                 if is_postgres:
                     conn.execute(text("SET statement_timeout TO 8000"))
             except Exception:
+                # best-effort; ignore if not supported
                 pass
             try:
                 # Core tables must exist; if any probe fails we will run init_db()
