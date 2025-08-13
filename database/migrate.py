@@ -200,51 +200,59 @@ def _upgrade_schema_if_needed(conn):
                     pass
             conn.execute(
                 text(
-                    "CREATE TABLE IF NOT EXISTS banned_users (\n"
-                    "  id SERIAL PRIMARY KEY,\n"
-                    "  telegram_user_id BIGINT UNIQUE,\n"
-                    "  created_at TIMESTAMP DEFAULT NOW()\n"
-                    ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS banned_users (
+                      id SERIAL PRIMARY KEY,
+                      telegram_user_id BIGINT UNIQUE,
+                      created_at TIMESTAMP DEFAULT NOW()
+                    )
+                    """
                 )
             )
             conn.execute(
                 text(
-                    "CREATE TABLE IF NOT EXISTS quiz_questions (\n"
-                    "  id SERIAL PRIMARY KEY,\n"
-                    "  grade VARCHAR(32),\n"
-                    "  difficulty INTEGER DEFAULT 1,\n"
-                    "  question_text VARCHAR(2048),\n"
-                    "  options JSON,\n"
-                    "  correct_index INTEGER,\n"
-                    "  created_at TIMESTAMP DEFAULT NOW()\n"
-                    ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS quiz_questions (
+                      id SERIAL PRIMARY KEY,
+                      grade VARCHAR(32),
+                      difficulty INTEGER DEFAULT 1,
+                      question_text VARCHAR(2048),
+                      options JSON,
+                      correct_index INTEGER,
+                      created_at TIMESTAMP DEFAULT NOW()
+                    )
+                    """
                 )
             )
             conn.execute(
                 text(
-                    "CREATE TABLE IF NOT EXISTS quiz_attempts (\n"
-                    "  id SERIAL PRIMARY KEY,\n"
-                    "  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,\n"
-                    "  question_id INTEGER REFERENCES quiz_questions(id) ON DELETE CASCADE,\n"
-                    "  selected_index INTEGER,\n"
-                    "  correct INTEGER DEFAULT 0,\n"
-                    "  created_at TIMESTAMP DEFAULT NOW()\n"
-                    ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS quiz_attempts (
+                      id SERIAL PRIMARY KEY,
+                      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                      question_id INTEGER REFERENCES quiz_questions(id) ON DELETE CASCADE,
+                      selected_index INTEGER,
+                      correct INTEGER DEFAULT 0,
+                      created_at TIMESTAMP DEFAULT NOW()
+                    )
+                    """
                 )
             )
             conn.execute(
                 text(
-                    "CREATE TABLE IF NOT EXISTS user_stats (\n"
-                    "  id SERIAL PRIMARY KEY,\n"
-                    "  user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,\n"
-                    "  total_attempts INTEGER DEFAULT 0,\n"
-                    "  total_correct INTEGER DEFAULT 0,\n"
-                    "  streak_days INTEGER DEFAULT 0,\n"
-                    "  last_attempt_date VARCHAR(10),\n"
-                    "  points INTEGER DEFAULT 0,\n"
-                    "  last_daily_award_date VARCHAR(10),\n"
-                    "  updated_at TIMESTAMP DEFAULT NOW()\n"
-                    ")"
+                    """
+                    CREATE TABLE IF NOT EXISTS user_stats (
+                      id SERIAL PRIMARY KEY,
+                      user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+                      total_attempts INTEGER DEFAULT 0,
+                      total_correct INTEGER DEFAULT 0,
+                      streak_days INTEGER DEFAULT 0,
+                      last_attempt_date VARCHAR(10),
+                      points INTEGER DEFAULT 0,
+                      last_daily_award_date VARCHAR(10),
+                      updated_at TIMESTAMP DEFAULT NOW()
+                    )
+                    """
                 )
             )
     except Exception as e:
