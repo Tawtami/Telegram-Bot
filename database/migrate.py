@@ -161,7 +161,9 @@ def _upgrade_schema_if_needed(conn):
         if ENGINE.dialect.name.startswith("postgresql"):
             # Add financial columns to purchases if missing
             try:
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
+                conn.execute(
+                    text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER")
+                )
             except Exception:
                 try:
                     conn.rollback()
