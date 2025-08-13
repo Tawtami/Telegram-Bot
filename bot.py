@@ -2363,6 +2363,17 @@ async def run_webhook_mode(application: Application) -> None:
             f"✅ Health check at: http://{'127.0.0.1' if skip_webhook else '0.0.0.0'}:{config.webhook.port}/"
         )
 
+        # Start web server EARLY so tests can connect immediately
+        runner = web.AppRunner(app)
+        await runner.setup()
+        bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"  # nosec B104
+        site = web.TCPSite(
+            runner, bind_host, config.webhook.port
+        )  # nosec B104: container/webhook bind
+        await site.start()
+
+        logger.info(f"🚀 Web server started on http://{bind_host}:{config.webhook.port}")
+
         # Start background maintenance tasks (rate limiter cleanup)
         try:
             await multi_rate_limiter.start_cleanup_tasks()
@@ -2419,17 +2430,6 @@ async def run_webhook_mode(application: Application) -> None:
 
         watchdog_handle = asyncio.create_task(_watchdog_task())
         application.bot_data["watchdog"] = watchdog_handle
-
-        # Start web server (bind to localhost in test/dev to avoid CI restrictions)
-        runner = web.AppRunner(app)
-        await runner.setup()
-        bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"  # nosec B104
-        site = web.TCPSite(
-            runner, bind_host, config.webhook.port
-        )  # nosec B104: container/webhook bind
-        await site.start()
-
-        logger.info(f"🚀 Web server started on http://{bind_host}:{config.webhook.port}")
 
         # Keep running with proper shutdown handling
         try:

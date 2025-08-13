@@ -48,9 +48,9 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
     # Use aiohttp client with cookie jar to get csrf and post
     from aiohttp import ClientSession
 
-    task = asyncio.create_task(run_webhook_mode(app))
+        task = asyncio.create_task(run_webhook_mode(app))
     try:
-        await asyncio.sleep(0.8)
+            await asyncio.sleep(1.5)
         base = "http://127.0.0.1:8083"
 
         async with ClientSession() as sess:
