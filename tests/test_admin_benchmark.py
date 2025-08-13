@@ -5,6 +5,7 @@ import os
 import time
 import statistics
 import json
+from datetime import datetime
 import pytest
 
 
@@ -82,6 +83,7 @@ async def test_admin_benchmark_optional(monkeypatch):
                 "p95_sec": p95,
                 "max_sec": max(runs),
                 "threshold_sec": threshold,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
                 "config": {
                     "sizes": [10, 25, 50],
                     "pages": [0, 5, 10],
@@ -91,7 +93,30 @@ async def test_admin_benchmark_optional(monkeypatch):
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump(summary, f, ensure_ascii=False, indent=2)
 
-        assert p95 < threshold, f"admin list p95 too slow: {p95:.3f}s >= {threshold:.3f}s"
+        csv_path = os.getenv("BENCH_CSV_OUTPUT_PATH", "").strip()
+        if csv_path:
+            ts = datetime.utcnow().isoformat() + "Z"
+            mean_v = statistics.mean(runs)
+            median_v = statistics.median(runs)
+            row = (
+                f"{ts},{len(runs)},{mean_v:.6f},{median_v:.6f},{p95:.6f},{max(runs):.6f},{threshold:.6f}\n"
+            )
+            header = (
+                "timestamp,runs_count,mean_sec,median_sec,p95_sec,max_sec,threshold_sec\n"
+            )
+            # Write header if file does not exist
+            if not os.path.exists(csv_path):
+                os.makedirs(os.path.dirname(csv_path), exist_ok=True)
+                with open(csv_path, "w", encoding="utf-8") as f:
+                    f.write(header)
+                    f.write(row)
+            else:
+                with open(csv_path, "a", encoding="utf-8") as f:
+                    f.write(row)
+
+        assert (
+            p95 < threshold
+        ), f"admin list p95 too slow: {p95:.3f}s >= {threshold:.3f}s"
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):

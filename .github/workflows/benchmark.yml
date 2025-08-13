@@ -47,6 +47,7 @@ jobs:
           RUN_BENCHMARKS: "true"
           BENCH_P95_THRESHOLD_SEC: ${{ env.BENCH_P95_THRESHOLD_SEC || '1.5' }}
           BENCH_OUTPUT_PATH: "benchmarks/admin_list.json"
+          BENCH_CSV_OUTPUT_PATH: "benchmarks/timeseries.csv"
         run: |
           mkdir -p benchmarks
           pytest -q tests/test_admin_benchmark.py | tee benchmarks/pytest.log
@@ -78,3 +79,13 @@ jobs:
                 body
               });
             }
+      - name: Notify Slack on threshold failure
+        if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "Benchmarks failed on ${{ github.ref }} (p95 exceeded threshold). See artifacts: admin-benchmark. PR: ${{ github.event.pull_request.html_url || github.server_url + '/' + github.repository + '/actions/runs/' + github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
