@@ -1858,6 +1858,16 @@ async def run_webhook_mode(application: Application) -> None:
                         ]
                     )
 
+                    # Admin UI i18n dictionary (for button labels, etc.)
+                    _ui = {}
+                    try:
+                        _ui = dict(config.bot.admin_ui_labels or {})
+                    except Exception:
+                        _ui = {}
+
+                    def _ui_t(key: str, default: str) -> str:
+                        return _ui.get(key, default)
+
                     html_rows = "".join(
                         f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r.get('created_at','')}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
@@ -1870,7 +1880,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<select name='payment_method' title='روش پرداخت را انتخاب کنید' style='width:140px;margin-inline:4px'>{_method_opts}</select>"
                         f"<input type='text' name='transaction_id' placeholder='شناسه تراکنش' title='شناسه تراکنش (در صورت وجود)' style='width:140px;margin-inline:4px'/>"
                         f"<input type='number' name='discount' placeholder='تخفیف' title='مبلغ تخفیف (اختیاری)' style='width:100px;margin-inline:4px'/>"
-                        f"<button class='btn approve' type='submit'>تایید</button>"
+                        f"<button class='btn approve' type='submit'>{_ui_t('approve_button','تایید')}</button>"
                         f"</form> "
                         f"<form method='POST' action='/admin/act' style='display:inline'>"
                         f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
@@ -1878,7 +1888,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='action' value='reject'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
-                        f"<button class='btn reject' type='submit'>رد</button>"
+                        f"<button class='btn reject' type='submit'>{_ui_t('reject_button','رد')}</button>"
                         f"</form>"
                         f"</td></tr>"
                         for r in rows
@@ -1958,7 +1968,7 @@ async def run_webhook_mode(application: Application) -> None:
                     <body>
                       <div class='panel'>
                         {flash_html}
-                        <h3>{_ui_t('orders','سفارش‌ها')} ({f['status']})</h3>
+                         <h3>{_ui_t('orders','سفارش‌ها')} ({f['status']})</h3>
                         {stats_html}
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
