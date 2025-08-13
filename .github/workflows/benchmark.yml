@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'bot.py'
-      - 'config.py'
-      - 'tests/**'
-      - '.github/workflows/benchmark.yml'
+      - "bot.py"
+      - "config.py"
+      - "tests/**"
+      - ".github/workflows/benchmark.yml"
+  schedule:
+    - cron: "0 2 * * *" # every day at 02:00 UTC
+    - cron: "0 3 * * 0" # every Sunday at 03:00 UTC
 
 permissions:
   contents: read
@@ -24,18 +27,26 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Set P95 threshold by branch
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "BENCH_P95_THRESHOLD_SEC=1.2" >> $GITHUB_ENV
+          else
+            echo "BENCH_P95_THRESHOLD_SEC=1.6" >> $GITHUB_ENV
+          fi
+
       - name: Run benchmark tests
         env:
-          RUN_BENCHMARKS: 'true'
-          BENCH_P95_THRESHOLD_SEC: '1.5'
-          BENCH_OUTPUT_PATH: 'benchmarks/admin_list.json'
+          RUN_BENCHMARKS: "true"
+          BENCH_P95_THRESHOLD_SEC: ${{ env.BENCH_P95_THRESHOLD_SEC || '1.5' }}
+          BENCH_OUTPUT_PATH: "benchmarks/admin_list.json"
         run: |
           mkdir -p benchmarks
           pytest -q tests/test_admin_benchmark.py | tee benchmarks/pytest.log
@@ -67,5 +78,3 @@ jobs:
                 body
               });
             }
-
-
