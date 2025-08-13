@@ -1824,11 +1824,23 @@ async def run_webhook_mode(application: Application) -> None:
                     # Optionally move default to the front
                     if _default_pm and config.bot.payment_default_first:
                         if _default_pm in _methods:
-                            _methods = [_default_pm] + [m for m in _methods if m != _default_pm]
+                            _methods = [_default_pm] + [
+                                m for m in _methods if m != _default_pm
+                            ]
 
-                    # Placeholder text optionally shows default
+                    # Localized labels for methods
+                    _labels = {}
+                    try:
+                        _labels = dict(config.bot.payment_method_labels or {})
+                    except Exception:
+                        _labels = {}
+
+                    def _label_for(m: str) -> str:
+                        return _labels.get(m, m)
+
+                    # Placeholder text optionally shows default, using label
                     if config.bot.payment_placeholder_show_default and _default_pm:
-                        _placeholder = f"انتخاب روش پرداخت (پیش‌فرض: {_default_pm})"
+                        _placeholder = f"انتخاب روش پرداخت (پیش‌فرض: {_label_for(_default_pm)})"
                     else:
                         _placeholder = "انتخاب روش پرداخت"
 
@@ -1836,9 +1848,9 @@ async def run_webhook_mode(application: Application) -> None:
                         [f"<option value='' selected>{_placeholder}</option>"]
                         + [
                             (
-                                f"<option value='{m}' selected>{m}</option>"
+                                f"<option value='{m}' selected>{_label_for(m)}</option>"
                                 if m == _default_pm
-                                else f"<option value='{m}'>{m}</option>"
+                                else f"<option value='{m}'>{_label_for(m)}</option>"
                             )
                             for m in _methods
                         ]

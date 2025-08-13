@@ -8,6 +8,7 @@ Centralized settings with environment variable support
 import os
 from typing import Dict, List, Any
 from dataclasses import dataclass
+import json
 
 # Try to load dotenv, but don't fail if it's not available
 try:
@@ -100,6 +101,7 @@ class BotConfig:
     default_payment_method: str | None = None
     payment_placeholder_show_default: bool = False
     payment_default_first: bool = False
+    payment_method_labels: Dict[str, str] | None = None
 
     def __post_init__(self):
         if self.admin_user_ids is None:
@@ -243,6 +245,11 @@ class Config:
             == "true",
             payment_default_first=os.getenv("PAYMENT_DEFAULT_FIRST", "false").lower()
             == "true",
+            payment_method_labels=(
+                (lambda v: (json.loads(v) if v else None))(
+                    os.getenv("PAYMENT_METHOD_LABELS_JSON", "")
+                )
+            ),
         )
 
         # Educational data
