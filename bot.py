@@ -1714,8 +1714,8 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(f"xlsx export failed: {e}")
                         return web.Response(status=500, text="xlsx error")
 
-                if "text/html" in accept or not accept:
-                    qbase = f"/admin?token={config.bot.admin_dashboard_token}"
+                if f["fmt"] == "html" or "text/html" in accept or not accept:
+                    qbase = f"/admin?token={os.getenv('ADMIN_DASHBOARD_TOKEN', config.bot.admin_dashboard_token)}"
 
                     def _qs(**kw):
                         return _build_admin_qs(
@@ -1968,20 +1968,22 @@ async def run_webhook_mode(application: Application) -> None:
                         pass
                     return resp
 
-                return web.json_response(
-                    {
-                        "status": f["status"],
-                        "type": f["ptype"],
-                        "uid": f["uid"],
-                        "product": f["product_q"],
-                        "from": f["from_str"],
-                        "to": f["to_str"],
-                        "page": f["page"],
-                        "page_size": f["page_size"],
-                        "total": total,
-                        "items": rows,
-                    }
-                )
+                # Default to JSON when explicitly requested
+                if f["fmt"] == "json" or "application/json" in accept:
+                    return web.json_response(
+                        {
+                            "status": f["status"],
+                            "type": f["ptype"],
+                            "uid": f["uid"],
+                            "product": f["product_q"],
+                            "from": f["from_str"],
+                            "to": f["to_str"],
+                            "page": f["page"],
+                            "page_size": f["page_size"],
+                            "total": total,
+                            "items": rows,
+                        }
+                    )
             except Exception as e:
                 logger.error(f"admin_list error: {e}")
                 return web.Response(status=500, text="server error")
