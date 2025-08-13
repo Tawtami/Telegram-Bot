@@ -2359,20 +2359,26 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
                         raise
 
+        # Determine bind host and port (PORT env overrides config for tests)
+        bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"  # nosec B104
+        try:
+            _env_port = int(os.getenv("PORT", "0") or 0)
+        except Exception:
+            _env_port = 0
+        bind_port = _env_port or int(config.webhook.port or 0) or 8080
         logger.info(
-            f"✅ Health check at: http://{'127.0.0.1' if skip_webhook else '0.0.0.0'}:{config.webhook.port}/"
+            f"✅ Health check at: http://{bind_host}:{bind_port}/"  # nosec B104
         )
 
         # Start web server EARLY so tests can connect immediately
         runner = web.AppRunner(app)
         await runner.setup()
-        bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"  # nosec B104
         site = web.TCPSite(
-            runner, bind_host, config.webhook.port
+            runner, bind_host, bind_port
         )  # nosec B104: container/webhook bind
         await site.start()
 
-        logger.info(f"🚀 Web server started on http://{bind_host}:{config.webhook.port}")
+        logger.info(f"🚀 Web server started on http://{bind_host}:{bind_port}")
 
         # Start background maintenance tasks (rate limiter cleanup)
         try:
