@@ -67,7 +67,7 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
                 "token": "test-token",
                 "id": str(pid),
                 "action": "approve",
-                "csrf": (sess.cookie_jar.filter_cookies(base).get("csrf") or {}).get("value",""),
+                "csrf": (sess.cookie_jar.filter_cookies(base).get("csrf") or {}).get("value", ""),
                 "payment_method": "card",
                 "transaction_id": "TXN-123456",
                 "discount": "5000",
