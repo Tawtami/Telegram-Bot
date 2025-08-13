@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
@@ -11,7 +12,8 @@ if config.config_file_name is not None:
 
 # Import project metadata
 import sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from database import alembic_metadata
 
 target_metadata = alembic_metadata()
