@@ -94,6 +94,12 @@ def _ensure_schema_initialized() -> None:
         except Exception:
             # Best-effort: leave to caller if initialization fails here
             pass
+        # Safety net for SQLite in tests: ensure all tables are created
+        try:
+            if ENGINE.dialect.name == "sqlite":
+                Base.metadata.create_all(bind=ENGINE)
+        except Exception:
+            pass
         _SCHEMA_INIT_DONE = True
     except Exception:
         # As a last resort, mark as done to prevent infinite attempts
