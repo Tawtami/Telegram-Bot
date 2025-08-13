@@ -2279,7 +2279,7 @@ async def run_webhook_mode(application: Application) -> None:
                             try:
                                 resp.set_cookie(
                                     "flash",
-                                    "خطا در انجام عملیات",
+                                    _ui_t('flash_error','خطا در انجام عملیات'),
                                     max_age=10,
                                     path="/",
                                     secure=str(config.webhook.url).startswith(
@@ -2328,12 +2328,12 @@ async def run_webhook_mode(application: Application) -> None:
                 except Exception:
                     pass
 
-                if redirect_to:
+                    if redirect_to:
                     # Set flash message for one redirect
                     msg = (
-                        "با موفقیت تایید شد."
+                        _ui_t('flash_approve_success','با موفقیت تایید شد.')
                         if action == "approve"
-                        else "با موفقیت رد شد."
+                        else _ui_t('flash_reject_success','با موفقیت رد شد.')
                     )
                     resp = web.HTTPSeeOther(location=redirect_to)
                     try:
@@ -2364,15 +2364,15 @@ async def run_webhook_mode(application: Application) -> None:
                 # Redirect back with error flash if we already parsed body
                 if redirect_to:
                     resp = web.HTTPSeeOther(location=redirect_to)
-                    try:
-                        resp.set_cookie(
-                            "flash",
-                            "خطا در انجام عملیات",
-                            max_age=10,
-                            path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
-                            samesite="Lax",
-                        )
+                        try:
+                            resp.set_cookie(
+                                "flash",
+                                _ui_t('flash_error','خطا در انجام عملیات'),
+                                max_age=10,
+                                path="/",
+                                secure=str(config.webhook.url).startswith("https://"),
+                                samesite="Lax",
+                            )
                         resp.set_cookie(
                             "flash_type",
                             "error",
