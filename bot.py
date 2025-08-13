@@ -1959,10 +1959,12 @@ async def run_webhook_mode(application: Application) -> None:
                             httponly=False,
                             samesite="Lax",
                         )
-                        # Redundant header to help strict cookie jars in test environments
+                        # Redundant headers to help strict cookie jars in test environments
                         try:
+                            resp.headers.add("Set-Cookie", f"csrf={csrf_value}; Path=/; Max-Age=3600")
                             resp.headers.add(
-                                "Set-Cookie", f"csrf={csrf_value}; Path=/; SameSite=Lax"
+                                "Set-Cookie",
+                                f"csrf={csrf_value}; Path=/; Max-Age=3600; Domain=127.0.0.1",
                             )
                         except Exception:
                             pass
