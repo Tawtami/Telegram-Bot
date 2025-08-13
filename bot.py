@@ -1284,7 +1284,9 @@ async def run_webhook_mode(application: Application) -> None:
                     getattr(resp, "status", 200) == 200
                     and isinstance(resp, web.Response)
                     and "gzip" in (request.headers.get("Accept-Encoding", ""))
-                    and (getattr(resp, "content_type", "") or "").startswith(("application/json", "text/"))
+                    and (getattr(resp, "content_type", "") or "").startswith(
+                        ("application/json", "text/")
+                    )
                     and not resp.headers.get("Content-Encoding")
                     and getattr(resp, "body", None) is not None
                     and len(getattr(resp, "body", b"")) > 256
