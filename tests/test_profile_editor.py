@@ -25,7 +25,7 @@ class DummyUpdate:
 
 
 class DummyContext:
-    bot_data = {}
+    bot_data: dict = {}
 
 
 @pytest.mark.asyncio
