@@ -1365,6 +1365,7 @@ async def run_webhook_mode(application: Application) -> None:
                 # Process update (ensure DB schema at start of bursts)
                 try:
                     from database.migrate import init_db
+
                     init_db()
                 except Exception as _e:
                     logger.debug(f"init_db() best-effort failed: {_e}")
@@ -2409,7 +2410,9 @@ async def run_webhook_mode(application: Application) -> None:
         # Start web server
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, "0.0.0.0", config.webhook.port)  # nosec B104: container/webhook bind
+        site = web.TCPSite(
+            runner, "0.0.0.0", config.webhook.port
+        )  # nosec B104: container/webhook bind
         await site.start()
 
         logger.info(f"🚀 Web server started on port {config.webhook.port}")
