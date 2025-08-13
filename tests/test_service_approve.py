@@ -32,4 +32,3 @@ def test_stats_summary_counts():
         stats = get_stats_summary(s)
         assert stats["users"] >= 1
         assert stats["purchases"]["total"] >= 1
-
