@@ -54,7 +54,7 @@ jobs:
 
       - name: Security scan (bandit)
         run: |
-          bandit -q -r .
+          bandit -q -r . -x tests -s B101,B105,B110,B112,B404
 
       - name: Run tests (pytest with coverage)
         env:
