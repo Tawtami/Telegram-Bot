@@ -69,22 +69,22 @@ def _ensure_schema_initialized() -> None:
             except Exception:
                 pass
             try:
+                # Core tables must exist; if any probe fails we will run init_db()
                 conn.exec_driver_sql("SELECT 1 FROM users LIMIT 1")
-                try:
-                    conn.exec_driver_sql("SELECT 1 FROM banned_users LIMIT 1")
-                except Exception:
-                    # missing banned_users: run init
-                    raise
+                conn.exec_driver_sql("SELECT 1 FROM purchases LIMIT 1")
+                conn.exec_driver_sql("SELECT 1 FROM receipts LIMIT 1")
+                conn.exec_driver_sql("SELECT 1 FROM purchase_audits LIMIT 1")
+                conn.exec_driver_sql("SELECT 1 FROM profile_changes LIMIT 1")
+                # Optional but critical ops tables
+                conn.exec_driver_sql("SELECT 1 FROM banned_users LIMIT 1")
                 # Probe learning tables (if any missing, trigger init)
-                try:
-                    conn.exec_driver_sql("SELECT 1 FROM quiz_questions LIMIT 1")
-                    conn.exec_driver_sql("SELECT 1 FROM quiz_attempts LIMIT 1")
-                    conn.exec_driver_sql("SELECT 1 FROM user_stats LIMIT 1")
-                except Exception:
-                    raise
+                conn.exec_driver_sql("SELECT 1 FROM quiz_questions LIMIT 1")
+                conn.exec_driver_sql("SELECT 1 FROM quiz_attempts LIMIT 1")
+                conn.exec_driver_sql("SELECT 1 FROM user_stats LIMIT 1")
                 _SCHEMA_INIT_DONE = True
                 return
             except Exception:
+                # Any missing table -> initialize
                 pass
         # Run initializer (idempotent and concurrency-safe on Postgres)
         try:
