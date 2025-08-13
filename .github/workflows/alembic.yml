@@ -54,11 +54,14 @@ jobs:
 
       - name: Security scan (bandit)
         run: |
-          bandit -q -r . || true
+          bandit -q -r .
 
       - name: Run tests (pytest with coverage)
         env:
           PYTHONUNBUFFERED: "1"
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          ADMIN_USER_IDS: ${{ secrets.ADMIN_USER_IDS }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
         run: |
           pytest -q --maxfail=1 --disable-warnings --cov=. --cov-report=xml --cov-report=term
 
