@@ -74,7 +74,7 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
     try:
         await asyncio.sleep(0.8)
 
-        base = "http://0.0.0.0:8082/admin?token=test-token"
+        base = "http://127.0.0.1:8082/admin?token=test-token"
 
         # 1) Filter by status=pending
         st, js = await _http_json(base + "&status=pending")

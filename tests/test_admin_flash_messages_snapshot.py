@@ -61,7 +61,7 @@ async def test_admin_flash_messages_i18n(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8086"
+        base = "http://127.0.0.1:8086"
         async with ClientSession() as sess:
             # First GET to set csrf
             async with sess.get(f"{base}/admin?token=test-token") as r:
@@ -145,7 +145,7 @@ async def test_admin_flash_messages_reject_i18n(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8087"
+        base = "http://127.0.0.1:8087"
         async with ClientSession() as sess:
             # First GET to set csrf
             async with sess.get(f"{base}/admin?token=test-token") as r:

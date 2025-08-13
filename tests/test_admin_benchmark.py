@@ -57,7 +57,7 @@ async def test_admin_benchmark_optional(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8096"
+        base = "http://127.0.0.1:8096"
         runs = []
         async with ClientSession() as sess:
             for size in (10, 25, 50):

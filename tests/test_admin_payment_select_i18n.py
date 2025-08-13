@@ -70,7 +70,7 @@ async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8084"
+        base = "http://127.0.0.1:8084"
         async with ClientSession() as sess:
             async with sess.get(f"{base}/admin?token=test-token") as r:
                 assert r.status == 200

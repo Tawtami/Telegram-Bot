@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def _call_admin_list_csv(aiohttp_app, token):
     from aiohttp import ClientSession
 
-    url = f"http://0.0.0.0:8081/admin?token={token}&format=csv"
+    url = f"http://127.0.0.1:8081/admin?token={token}&format=csv"
     async with ClientSession() as s:
         async with s.get(url, headers={"Accept": "text/csv"}) as r:
             return r.status, await r.read(), r.headers
@@ -21,7 +21,7 @@ async def _call_admin_list_csv(aiohttp_app, token):
 async def _call_admin_list_xlsx(aiohttp_app, token):
     from aiohttp import ClientSession
 
-    url = f"http://0.0.0.0:8081/admin?token={token}&format=xlsx"
+    url = f"http://127.0.0.1:8081/admin?token={token}&format=xlsx"
     async with ClientSession() as s:
         async with s.get(url) as r:
             return r.status, await r.read(), r.headers

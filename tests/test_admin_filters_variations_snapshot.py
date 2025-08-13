@@ -70,7 +70,7 @@ async def test_admin_filters_status_and_type(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8088"
+        base = "http://127.0.0.1:8088"
         async with ClientSession() as sess:
             # Filter approved
             async with sess.get(f"{base}/admin?token=test-token&status=approved") as r:

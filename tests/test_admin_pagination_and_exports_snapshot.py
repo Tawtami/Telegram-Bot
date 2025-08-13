@@ -63,7 +63,7 @@ async def test_admin_pagination_labels_and_links(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8089"
+        base = "http://127.0.0.1:8089"
         async with ClientSession() as sess:
             async with sess.get(f"{base}/admin?token=test-token&size=5&page=0") as r:
                 assert r.status == 200
@@ -110,7 +110,7 @@ async def test_admin_export_links_with_filters(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8090"
+        base = "http://127.0.0.1:8090"
         async with ClientSession() as sess:
             async with sess.get(
                 f"{base}/admin?token=test-token&status=approved&type=book&size=7&page=0"

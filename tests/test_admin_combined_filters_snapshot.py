@@ -68,7 +68,7 @@ async def test_admin_combined_filters(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8092"
+        base = "http://127.0.0.1:8092"
         async with ClientSession() as sess:
             qs = "status=approved&type=book&from={}&to={}".format(
                 (now - timedelta(days=4)).date().isoformat(),

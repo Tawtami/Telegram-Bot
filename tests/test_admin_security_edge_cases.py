@@ -22,7 +22,7 @@ async def test_admin_requires_valid_token(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8093"
+        base = "http://127.0.0.1:8093"
         async with ClientSession() as sess:
             async with sess.get(f"{base}/admin?token=wrong") as r:
                 assert r.status == 401
@@ -47,7 +47,7 @@ async def test_admin_act_post_bad_request(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8094"
+        base = "http://127.0.0.1:8094"
         async with ClientSession() as sess:
             # First GET to set csrf
             async with sess.get(f"{base}/admin?token=tkn") as r:
@@ -110,7 +110,7 @@ async def test_admin_act_post_csrf_mismatch(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://0.0.0.0:8095"
+        base = "http://127.0.0.1:8095"
         async with ClientSession() as sess:
             # GET to set csrf cookie, but then use a wrong csrf on purpose
             async with sess.get(f"{base}/admin?token=tkn") as r:
