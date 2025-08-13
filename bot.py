@@ -1273,8 +1273,16 @@ async def run_webhook_mode(application: Application) -> None:
 
         # Create web application with gzip compression
         @web.middleware
-        async def gzip_middleware(request, handler):
-            resp = await handler(request)
+        async def safe_middleware(request, handler):
+            try:
+                resp = await handler(request)
+            except web.HTTPException as http_err:
+                # Let aiohttp handle HTTP exceptions as proper responses
+                resp = http_err
+            except Exception as e:
+                logger.error(f"Unhandled error in request handler: {e}")
+                resp = web.Response(status=500, text="server error")
+
             # If handler returned a non-response (e.g., None), do not touch
             if not isinstance(resp, web.StreamResponse):
                 return resp
@@ -1305,7 +1313,7 @@ async def run_webhook_mode(application: Application) -> None:
             resp.headers.setdefault("Cache-Control", "private, max-age=60")
             return resp
 
-        app = web.Application(middlewares=[gzip_middleware])
+        app = web.Application(middlewares=[safe_middleware])
 
         # Health check endpoint
         async def health_check(request):
