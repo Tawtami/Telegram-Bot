@@ -1392,6 +1392,12 @@ async def run_webhook_mode(application: Application) -> None:
                 return web.Response(status=500)
 
         # Admin dashboard (token-protected) - minimal HTML/JSON
+        def _cookie_secure(request) -> bool:
+            try:
+                # Only mark cookies secure when the actual request is over HTTPS
+                return getattr(request.url, "scheme", "http") == "https"
+            except Exception:
+                return False
         async def _require_token(request):
             token = request.query.get("token", "").strip()
             if not token and request.method.upper() == "POST":
@@ -1953,7 +1959,7 @@ async def run_webhook_mode(application: Application) -> None:
                             csrf_value,
                             max_age=3600,
                             path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
+                            secure=_cookie_secure(request),
                             httponly=True,
                             samesite="Lax",
                         )
@@ -2236,7 +2242,7 @@ async def run_webhook_mode(application: Application) -> None:
                             msg,
                             max_age=10,
                             path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
+                            secure=_cookie_secure(request),
                             samesite="Lax",
                         )
                         resp.set_cookie(
@@ -2244,7 +2250,7 @@ async def run_webhook_mode(application: Application) -> None:
                             "success",
                             max_age=10,
                             path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
+                            secure=_cookie_secure(request),
                             samesite="Lax",
                         )
                     except Exception as _e:
@@ -2264,7 +2270,7 @@ async def run_webhook_mode(application: Application) -> None:
                             _ui_t("flash_error", "خطا در انجام عملیات"),
                             max_age=10,
                             path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
+                            secure=_cookie_secure(request),
                             samesite="Lax",
                         )
                         resp.set_cookie(
@@ -2272,7 +2278,7 @@ async def run_webhook_mode(application: Application) -> None:
                             "error",
                             max_age=10,
                             path="/",
-                            secure=str(config.webhook.url).startswith("https://"),
+                            secure=_cookie_secure(request),
                             samesite="Lax",
                         )
                     except Exception:

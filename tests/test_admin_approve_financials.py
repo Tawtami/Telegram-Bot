@@ -46,6 +46,7 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
     await setup_handlers(app)
 
     # Use aiohttp client with cookie jar to get csrf and post
+    import aiohttp
     from aiohttp import ClientSession
 
     task = asyncio.create_task(run_webhook_mode(app))
@@ -53,7 +54,7 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
         await asyncio.sleep(1.5)
         base = "http://127.0.0.1:8083"
 
-        async with ClientSession() as sess:
+        async with ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as sess:
             # GET admin list to receive csrf cookie
             async with sess.get(f"{base}/admin?token=test-token") as r:
                 assert r.status == 200
