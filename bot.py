@@ -1915,7 +1915,15 @@ async def run_webhook_mode(application: Application) -> None:
                         </div>
                         <table>
                           <thead>
-                            <tr><th>{_ui_t('th_id','ID')}</th><th>{_ui_t('th_user','User')}</th><th>{_ui_t('th_type','Type')}</th><th>{_ui_t('th_product','Product')}</th><th>{_ui_t('th_created','Created')}</th><th>{_ui_t('th_status','Status')}</th><th>{_ui_t('th_action','Action')}</th></tr>
+                            <tr>
+                              <th>{_ui_t('th_id','شناسه')}</th>
+                              <th>{_ui_t('th_user','کاربر')}</th>
+                              <th>{_ui_t('th_type','نوع')}</th>
+                              <th>{_ui_t('th_product','محصول')}</th>
+                              <th>{_ui_t('th_created','ایجاد')}</th>
+                              <th>{_ui_t('th_status','وضعیت')}</th>
+                              <th>{_ui_t('th_action','اقدام')}</th>
+                            </tr>
                           </thead>
                           <tbody>{html_rows or f"<tr><td colspan=6>{_ui_t('not_found','موردی یافت نشد')}</td></tr>"}</tbody>
                         </table>
