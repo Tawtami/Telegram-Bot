@@ -1888,8 +1888,8 @@ async def run_webhook_mode(application: Application) -> None:
                           <label>{_ui_t('type_label','نوع:')}
                             <select name='type'>
                               <option value='' {'selected' if not f['ptype'] else ''}>{_ui_t('type_all','همه')}</option>
-                              <option value='course' {'selected' if f['ptype']=='course' else ''}>{_ui_t('type_course','course')}</option>
-                              <option value='book' {'selected' if f['ptype']=='book' else ''}>{_ui_t('type_book','book')}</option>
+                              <option value='course' {'selected' if f['ptype']=='course' else ''}>{_ui_t('type_course','دوره')}</option>
+                              <option value='book' {'selected' if f['ptype']=='book' else ''}>{_ui_t('type_book','کتاب')}</option>
                             </select>
                           </label>
                           <label>{_ui_t('uid_label','UID:')}
