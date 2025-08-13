@@ -35,7 +35,9 @@ async def test_handle_payment_decision_parse_token():
         def __init__(self):
             self.bot = Bot()
             self.bot_data = {
-                "config": types.SimpleNamespace(bot=types.SimpleNamespace(admin_user_ids=[1]))
+                "config": types.SimpleNamespace(
+                    bot=types.SimpleNamespace(admin_user_ids=[1])
+                )
             }
 
     token = "tkn123"
@@ -43,5 +45,3 @@ async def test_handle_payment_decision_parse_token():
     ctx = Ctx()
     await handle_payment_decision(update, ctx)
     assert token in ctx.bot_data.get("payment_notifications", {}) or True
-
-
