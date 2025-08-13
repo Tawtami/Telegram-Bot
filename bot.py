@@ -1813,13 +1813,13 @@ async def run_webhook_mode(application: Application) -> None:
 
                     # Build dynamic payment method options from config
                     try:
-                        _methods = list(config.bot.payment_methods or ["card", "cash", "transfer"])
+                        _methods = list(
+                            config.bot.payment_methods or ["card", "cash", "transfer"]
+                        )
                     except Exception:
                         _methods = ["card", "cash", "transfer"]
                     _method_opts = "".join(
-                        [
-                            f"<option value=''>{'method'}</option>"
-                        ]
+                        [f"<option value=''>{'method'}</option>"]
                         + [f"<option value='{m}'>{m}</option>" for m in _methods]
                     )
 
@@ -1832,9 +1832,9 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
-                        f"<select name='payment_method' style='width:120px;margin-inline:4px'>{_method_opts}</select>"
-                        f"<input type='text' name='transaction_id' placeholder='txn' style='width:120px;margin-inline:4px'/>"
-                        f"<input type='number' name='discount' placeholder='discount' style='width:80px;margin-inline:4px'/>"
+                        f"<select name='payment_method' title='روش پرداخت را انتخاب کنید' style='width:140px;margin-inline:4px'>{_method_opts}</select>"
+                        f"<input type='text' name='transaction_id' placeholder='شناسه تراکنش' title='شناسه تراکنش (در صورت وجود)' style='width:140px;margin-inline:4px'/>"
+                        f"<input type='number' name='discount' placeholder='تخفیف' title='مبلغ تخفیف (اختیاری)' style='width:100px;margin-inline:4px'/>"
                         f"<button class='btn approve' type='submit'>تایید</button>"
                         f"</form> "
                         f"<form method='POST' action='/admin/act' style='display:inline'>"
