@@ -2309,9 +2309,8 @@ async def run_webhook_mode(application: Application) -> None:
 
         # In test/dev environments we may not want to call Telegram set_webhook at all.
         # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
-        skip_webhook = (
-            os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true"
-            or "example.org" in str(config.webhook.url or "")
+        skip_webhook = os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true" or "example.org" in str(
+            config.webhook.url or ""
         )
 
         if not skip_webhook:
