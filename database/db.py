@@ -97,6 +97,7 @@ def _ensure_schema_initialized() -> None:
                 pass
         # Run initializer (idempotent and concurrency-safe on Postgres)
         from database.migrate import init_db  # local import to avoid cycles
+
         try:
             init_db()
         except Exception:
