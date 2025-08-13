@@ -1820,7 +1820,12 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
-                        f"<input type='text' name='payment_method' placeholder='method' style='width:80px;margin-inline:4px'/>"
+                        f"<select name='payment_method' style='width:110px;margin-inline:4px'>"
+                        f"<option value='' selected>method</option>"
+                        f"<option value='card'>card</option>"
+                        f"<option value='cash'>cash</option>"
+                        f"<option value='transfer'>transfer</option>"
+                        f"</select>"
                         f"<input type='text' name='transaction_id' placeholder='txn' style='width:120px;margin-inline:4px'/>"
                         f"<input type='number' name='discount' placeholder='discount' style='width:80px;margin-inline:4px'/>"
                         f"<button class='btn approve' type='submit'>تایید</button>"
@@ -2026,12 +2031,21 @@ async def run_webhook_mode(application: Application) -> None:
                                 status=404, text="not found or already decided"
                             )
                         # Accept optional financial fields
-                        pm = (request.query.get("payment_method") or "").strip() or None
+                        pm = (
+                            request.query.get("payment_method") or ""
+                        ).strip().lower() or None
                         tx = (request.query.get("transaction_id") or "").strip() or None
                         try:
                             dc = int(request.query.get("discount") or 0)
                         except Exception:
                             dc = None
+                        # Validate payment method
+                        _allowed_pm = set(config.bot.payment_methods or ["card", "cash", "transfer"])
+                        if pm not in _allowed_pm:
+                            pm = None
+                        # Validate transaction id (basic)
+                        if tx and not (4 <= len(tx) <= 64):
+                            tx = None
                         if pm:
                             db_purchase.payment_method = pm
                         if tx:
@@ -2142,12 +2156,17 @@ async def run_webhook_mode(application: Application) -> None:
                                 status=404, text="not found or already decided"
                             )
                         # Accept optional financial fields from POST
-                        pm = (data.get("payment_method") or "").strip() or None
+                        pm = (data.get("payment_method") or "").strip().lower() or None
                         tx = (data.get("transaction_id") or "").strip() or None
                         try:
                             dc = int(data.get("discount") or 0)
                         except Exception:
                             dc = None
+                        _allowed_pm = set(config.bot.payment_methods or ["card", "cash", "transfer"])
+                        if pm not in _allowed_pm:
+                            pm = None
+                        if tx and not (4 <= len(tx) <= 64):
+                            tx = None
                         if pm:
                             db_purchase.payment_method = pm
                         if tx:

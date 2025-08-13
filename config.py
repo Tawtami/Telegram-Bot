@@ -96,6 +96,7 @@ class BotConfig:
     support_contact: str = "@Ostad_Hatami"
     payment_card_number: str = "5022-2910-8723-9446"
     payment_payee_name: str = "استاد محسن حاتمی"
+    payment_methods: List[str] = None
 
     def __post_init__(self):
         if self.admin_user_ids is None:
@@ -120,6 +121,15 @@ class BotConfig:
 
 برای استفاده از خدمات، لطفاً اطلاعات خود را وارد کنید.
 دقت فرمایید اطلاعات به‌درستی وارد شود."""
+        if self.payment_methods is None:
+            self.payment_methods = ["card", "cash", "transfer"]
+        else:
+            normalized: List[str] = []
+            for m in self.payment_methods:
+                v = (m or "").strip().lower()
+                if v and v not in normalized:
+                    normalized.append(v)
+            self.payment_methods = normalized
 
 
 @dataclass
@@ -210,6 +220,9 @@ class Config:
             maintenance_mode=os.getenv("MAINTENANCE_MODE", "false").lower() == "true",
             payment_card_number=os.getenv("PAYMENT_CARD_NUMBER", "6037-9974-1234-5678"),
             payment_payee_name=os.getenv("PAYMENT_PAYEE_NAME", "استاد حاتمی"),
+            payment_methods=[
+                pm.strip() for pm in os.getenv("PAYMENT_METHODS", "").split(",") if pm.strip()
+            ] or None,
         )
 
         # Educational data
