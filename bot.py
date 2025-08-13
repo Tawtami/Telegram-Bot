@@ -2307,47 +2307,55 @@ async def run_webhook_mode(application: Application) -> None:
         await application.initialize()
         await application.start()
 
-        # Delete any existing webhook first to prevent 409 errors
-        try:
-            await application.bot.delete_webhook(drop_pending_updates=True)
-            logger.info("✅ Existing webhook deleted successfully")
-        except Exception as e:
-            logger.warning(f"Warning: Could not delete existing webhook: {e}")
+        # In test/dev environments we may not want to call Telegram set_webhook at all.
+        # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
+        skip_webhook = (
+            os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true"
+            or "example.org" in str(config.webhook.url or "")
+        )
 
-        # Set webhook with retry logic
-        max_retries = 3
-        retry_delay = 2
-
-        for attempt in range(max_retries):
+        if not skip_webhook:
+            # Delete any existing webhook first to prevent 409 errors
             try:
-                full_webhook_url = config.webhook.url.rstrip("/") + config.webhook.path
-                await application.bot.set_webhook(
-                    url=full_webhook_url,
-                    drop_pending_updates=config.webhook.drop_pending_updates,
-                    secret_token=(
-                        config.webhook.secret_token if config.webhook.secret_token else None
-                    ),
-                    allowed_updates=[
-                        "message",
-                        "edited_message",
-                        "callback_query",
-                        "channel_post",
-                        "edited_channel_post",
-                    ],
-                    max_connections=40,
-                )
-                logger.info(f"🌐 Webhook set successfully to: {full_webhook_url}")
-                break
+                await application.bot.delete_webhook(drop_pending_updates=True)
+                logger.info("✅ Existing webhook deleted successfully")
             except Exception as e:
-                if attempt < max_retries - 1:
-                    logger.warning(
-                        f"Webhook setup attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s..."
+                logger.warning(f"Warning: Could not delete existing webhook: {e}")
+
+            # Set webhook with retry logic
+            max_retries = 3
+            retry_delay = 2
+
+            for attempt in range(max_retries):
+                try:
+                    full_webhook_url = config.webhook.url.rstrip("/") + config.webhook.path
+                    await application.bot.set_webhook(
+                        url=full_webhook_url,
+                        drop_pending_updates=config.webhook.drop_pending_updates,
+                        secret_token=(
+                            config.webhook.secret_token if config.webhook.secret_token else None
+                        ),
+                        allowed_updates=[
+                            "message",
+                            "edited_message",
+                            "callback_query",
+                            "channel_post",
+                            "edited_channel_post",
+                        ],
+                        max_connections=40,
                     )
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
-                    raise
+                    logger.info(f"🌐 Webhook set successfully to: {full_webhook_url}")
+                    break
+                except Exception as e:
+                    if attempt < max_retries - 1:
+                        logger.warning(
+                            f"Webhook setup attempt {attempt + 1} failed: {e}. Retrying in {retry_delay}s..."
+                        )
+                        await asyncio.sleep(retry_delay)
+                        retry_delay *= 2
+                    else:
+                        logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
+                        raise
 
         logger.info(f"✅ Health check at: http://0.0.0.0:{config.webhook.port}/")
 
@@ -2379,27 +2387,28 @@ async def run_webhook_mode(application: Application) -> None:
                         except Exception as ie:
                             logger.error(f"Watchdog init_db failed: {ie}")
 
-                    # Webhook verification
-                    try:
-                        info = await application.bot.get_webhook_info()
-                        if (
-                            not info
-                            or str(info.url or "") != expected_webhook
-                            or getattr(info, "last_error_date", None)
-                        ):
-                            await application.bot.set_webhook(
-                                url=expected_webhook,
-                                drop_pending_updates=False,
-                                secret_token=(
-                                    config.webhook.secret_token
-                                    if config.webhook.secret_token
-                                    else None
-                                ),
-                                max_connections=40,
-                            )
-                            logger.info("Watchdog reset webhook to expected URL")
-                    except Exception as we:
-                        logger.warning(f"Watchdog webhook check failed: {we}")
+                    # Webhook verification (skip in test/dev if configured)
+                    if not skip_webhook:
+                        try:
+                            info = await application.bot.get_webhook_info()
+                            if (
+                                not info
+                                or str(info.url or "") != expected_webhook
+                                or getattr(info, "last_error_date", None)
+                            ):
+                                await application.bot.set_webhook(
+                                    url=expected_webhook,
+                                    drop_pending_updates=False,
+                                    secret_token=(
+                                        config.webhook.secret_token
+                                        if config.webhook.secret_token
+                                        else None
+                                    ),
+                                    max_connections=40,
+                                )
+                                logger.info("Watchdog reset webhook to expected URL")
+                        except Exception as we:
+                            logger.warning(f"Watchdog webhook check failed: {we}")
                 except Exception as e:
                     logger.warning(f"Watchdog unexpected error: {e}")
                 await asyncio.sleep(interval)

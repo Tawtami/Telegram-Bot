@@ -12,6 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_combined_filters(monkeypatch):
     monkeypatch.setenv("PORT", "8092")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",

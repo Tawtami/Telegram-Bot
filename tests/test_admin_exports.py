@@ -35,6 +35,7 @@ async def test_admin_exports_csv_xlsx(monkeypatch):
     # Force webhook mode on a test port
     monkeypatch.setenv("PORT", "8081")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     # Provide an admin dashboard token
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
 

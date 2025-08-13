@@ -12,6 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_filters_i18n_labels(monkeypatch):
     monkeypatch.setenv("PORT", "8085")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",

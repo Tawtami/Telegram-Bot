@@ -10,6 +10,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_requires_valid_token(monkeypatch):
     monkeypatch.setenv("PORT", "8093")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "valid-token")
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
@@ -35,6 +36,7 @@ async def test_admin_requires_valid_token(monkeypatch):
 async def test_admin_act_post_bad_request(monkeypatch):
     monkeypatch.setenv("PORT", "8094")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "tkn")
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
@@ -72,6 +74,7 @@ async def test_admin_act_post_bad_request(monkeypatch):
 async def test_admin_act_post_csrf_mismatch(monkeypatch):
     monkeypatch.setenv("PORT", "8095")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "tkn")
 
     # Seed a pending purchase

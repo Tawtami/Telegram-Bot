@@ -20,6 +20,7 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
     # Configure test port and token
     monkeypatch.setenv("PORT", "8082")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
 
     # Seed DB

@@ -11,6 +11,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_flash_messages_i18n(monkeypatch):
     monkeypatch.setenv("PORT", "8086")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",
@@ -95,6 +96,7 @@ async def test_admin_flash_messages_i18n(monkeypatch):
 async def test_admin_flash_messages_reject_i18n(monkeypatch):
     monkeypatch.setenv("PORT", "8087")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",

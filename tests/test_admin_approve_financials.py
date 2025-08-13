@@ -11,6 +11,7 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
     # Configure test webhook and admin token
     monkeypatch.setenv("PORT", "8083")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
 
     # Seed DB with a pending purchase

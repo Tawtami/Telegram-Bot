@@ -12,6 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
     monkeypatch.setenv("PORT", "8084")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv("PAYMENT_METHODS", "card,cash,transfer")
     monkeypatch.setenv("DEFAULT_PAYMENT_METHOD", "transfer")

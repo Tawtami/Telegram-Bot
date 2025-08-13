@@ -12,6 +12,7 @@ pytestmark = pytest.mark.asyncio
 async def test_admin_pagination_labels_and_links(monkeypatch):
     monkeypatch.setenv("PORT", "8089")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",
@@ -88,6 +89,7 @@ async def test_admin_pagination_labels_and_links(monkeypatch):
 async def test_admin_export_links_with_filters(monkeypatch):
     monkeypatch.setenv("PORT", "8090")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
+    monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
     monkeypatch.setenv(
         "ADMIN_UI_LABELS_JSON",
