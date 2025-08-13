@@ -1820,6 +1820,9 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
+                        f"<input type='text' name='payment_method' placeholder='method' style='width:80px;margin-inline:4px'/>"
+                        f"<input type='text' name='transaction_id' placeholder='txn' style='width:120px;margin-inline:4px'/>"
+                        f"<input type='number' name='discount' placeholder='discount' style='width:80px;margin-inline:4px'/>"
                         f"<button class='btn approve' type='submit'>تایید</button>"
                         f"</form> "
                         f"<form method='POST' action='/admin/act' style='display:inline'>"
@@ -2022,6 +2025,19 @@ async def run_webhook_mode(application: Application) -> None:
                             return web.Response(
                                 status=404, text="not found or already decided"
                             )
+                        # Accept optional financial fields
+                        pm = (request.query.get("payment_method") or "").strip() or None
+                        tx = (request.query.get("transaction_id") or "").strip() or None
+                        try:
+                            dc = int(request.query.get("discount") or 0)
+                        except Exception:
+                            dc = None
+                        if pm:
+                            db_purchase.payment_method = pm
+                        if tx:
+                            db_purchase.transaction_id = tx
+                        if dc is not None:
+                            db_purchase.discount = dc
                         result = approve_or_reject_purchase(
                             session, db_purchase.id, admin_id, action
                         )
@@ -2125,6 +2141,19 @@ async def run_webhook_mode(application: Application) -> None:
                             return web.Response(
                                 status=404, text="not found or already decided"
                             )
+                        # Accept optional financial fields from POST
+                        pm = (data.get("payment_method") or "").strip() or None
+                        tx = (data.get("transaction_id") or "").strip() or None
+                        try:
+                            dc = int(data.get("discount") or 0)
+                        except Exception:
+                            dc = None
+                        if pm:
+                            db_purchase.payment_method = pm
+                        if tx:
+                            db_purchase.transaction_id = tx
+                        if dc is not None:
+                            db_purchase.discount = dc
                         result = approve_or_reject_purchase(
                             session, db_purchase.id, admin_id, action
                         )
