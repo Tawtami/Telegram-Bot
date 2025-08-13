@@ -19,7 +19,17 @@ async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
     monkeypatch.setenv("PAYMENT_DEFAULT_FIRST", "true")
     monkeypatch.setenv(
         "PAYMENT_METHOD_LABELS_JSON",
-        json.dumps({"card": "کارت بانکی", "cash": "نقدی", "transfer": "کارت به کارت"}, ensure_ascii=False),
+        json.dumps(
+            {"card": "کارت بانکی", "cash": "نقدی", "transfer": "کارت به کارت"},
+            ensure_ascii=False,
+        ),
+    )
+    monkeypatch.setenv(
+        "ADMIN_UI_LABELS_JSON",
+        json.dumps(
+            {"admin_title": "مدیریت سفارش‌ها", "orders": "سفارش‌ها", "not_found": "موردی یافت نشد"},
+            ensure_ascii=False,
+        ),
     )
 
     from database.db import session_scope
@@ -27,7 +37,12 @@ async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
     from datetime import datetime
 
     with session_scope() as s:
-        u = User(telegram_user_id=111222, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=111222,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         p = Purchase(
@@ -77,5 +92,3 @@ async def test_admin_payment_select_with_i18n_and_order(monkeypatch):
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-

@@ -102,6 +102,7 @@ class BotConfig:
     payment_placeholder_show_default: bool = False
     payment_default_first: bool = False
     payment_method_labels: Dict[str, str] | None = None
+    admin_ui_labels: Dict[str, str] | None = None
 
     def __post_init__(self):
         if self.admin_user_ids is None:
@@ -248,6 +249,11 @@ class Config:
             payment_method_labels=(
                 (lambda v: (json.loads(v) if v else None))(
                     os.getenv("PAYMENT_METHOD_LABELS_JSON", "")
+                )
+            ),
+            admin_ui_labels=(
+                (lambda v: (json.loads(v) if v else None))(
+                    os.getenv("ADMIN_UI_LABELS_JSON", "")
                 )
             ),
         )

@@ -1840,7 +1840,9 @@ async def run_webhook_mode(application: Application) -> None:
 
                     # Placeholder text optionally shows default, using label
                     if config.bot.payment_placeholder_show_default and _default_pm:
-                        _placeholder = f"انتخاب روش پرداخت (پیش‌فرض: {_label_for(_default_pm)})"
+                        _placeholder = (
+                            f"انتخاب روش پرداخت (پیش‌فرض: {_label_for(_default_pm)})"
+                        )
                     else:
                         _placeholder = "انتخاب روش پرداخت"
 
@@ -1897,11 +1899,25 @@ async def run_webhook_mode(application: Application) -> None:
                             "cities_top": [],
                         }
                         stale = []
-                    stats_html = f"<div class='meta'>کاربران: {stats.get('users',0)} | سفارش‌ها: کل {stats.get('purchases',{}).get('total',0)}، در انتظار {stats.get('purchases',{}).get('pending',0)}</div>"
+                    # i18n for admin UI labels
+                    _ui = {}
+                    try:
+                        _ui = dict(config.bot.admin_ui_labels or {})
+                    except Exception:
+                        _ui = {}
+
+                    def _ui_t(key: str, default: str) -> str:
+                        return _ui.get(key, default)
+
+                    stats_html = (
+                        f"<div class='meta'>{_ui_t('users','کاربران')}: {stats.get('users',0)} | "
+                        f"{_ui_t('orders','سفارش‌ها')}: {_ui_t('total','کل')} {stats.get('purchases',{}).get('total',0)}، "
+                        f"{_ui_t('pending','در انتظار')} {stats.get('purchases',{}).get('pending',0)}</div>"
+                    )
                     stale_html = ""
                     if stale:
                         stale_html = (
-                            "<details><summary>در انتظارهای قدیمی (14+ روز)</summary><ul>"
+                            f"<details><summary>{_ui_t('stale_pending','در انتظارهای قدیمی')} (14+ روز)</summary><ul>"
                             + "".join(
                                 f"<li>#{s['purchase_id']} | u={s['user_id']} | {s['product_type']}:{s['product_id']} | {s['created_at']}</li>"
                                 for s in stale[:20]
@@ -1912,7 +1928,7 @@ async def run_webhook_mode(application: Application) -> None:
                     <html>
                     <head>
                       <meta charset='utf-8'>
-                      <title>مدیریت سفارش‌ها</title>
+                      <title>{_ui_t('admin_title','مدیریت سفارش‌ها')}</title>
                        <style>
                         body {{ font-family: Vazirmatn, tahoma, sans-serif; margin: 24px; background:#f8fafc; color:#0f172a; }}
                         h3 {{ margin-top:0; }}
@@ -1942,7 +1958,7 @@ async def run_webhook_mode(application: Application) -> None:
                     <body>
                       <div class='panel'>
                         {flash_html}
-                        <h3>سفارش‌ها ({f['status']})</h3>
+                        <h3>{_ui_t('orders','سفارش‌ها')} ({f['status']})</h3>
                         {stats_html}
                         <form method='GET' action='/admin' class='controls'>
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
@@ -1985,7 +2001,7 @@ async def run_webhook_mode(application: Application) -> None:
                           <thead>
                             <tr><th>ID</th><th>User</th><th>Type</th><th>Product</th><th>Created</th><th>Status</th><th>Action</th></tr>
                           </thead>
-                          <tbody>{html_rows or '<tr><td colspan=6>موردی یافت نشد</td></tr>'}</tbody>
+                          <tbody>{html_rows or f"<tr><td colspan=6>{_ui_t('not_found','موردی یافت نشد')}</td></tr>"}</tbody>
                         </table>
                         <div class='pager'>
                           <a href='{_qs(page=max(0, f['page']-1))}'>&laquo; قبلی</a>
