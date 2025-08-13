@@ -48,9 +48,7 @@ def init_db():
                     conn.rollback()
                 except Exception:
                     pass
-                logger.warning(
-                    f"create_all failed, falling back to per-table creation: {e}"
-                )
+                logger.warning(f"create_all failed, falling back to per-table creation: {e}")
                 _create_tables_individually(conn)
 
             # Run idempotent upgrades after ensuring tables exist
@@ -154,9 +152,7 @@ def _upgrade_schema_if_needed(conn):
                     conn.rollback()
                 except Exception:
                     pass
-                logger.warning(
-                    f"Could not alter purchases.admin_action_by to BIGINT: {e}"
-                )
+                logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
     except Exception as e:
         logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
 
