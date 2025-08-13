@@ -1907,7 +1907,7 @@ async def run_webhook_mode(application: Application) -> None:
                           <label>{_ui_t('page_size_label','سایز صفحه:')}
                             <input type='number' min='1' max='100' name='size' value='{f['page_size']}' />
                           </label>
-                          <button class='btn filter' type='submit'>{_ui_t('filter_button','فیلتر')}</button>
+                          <button class='btn filter' type='submit'>{_ui_t('filter_button','اعمال فیلتر')}</button>
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>{_ui_t('csv_button_label','CSV')}</a>
                         </form>
                         <div class='meta'>
