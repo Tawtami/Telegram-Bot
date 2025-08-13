@@ -157,8 +157,8 @@ def _upgrade_schema_if_needed(conn):
         logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
 
     # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
-            try:
-                if ENGINE.dialect.name.startswith("postgresql"):
+    try:
+        if ENGINE.dialect.name.startswith("postgresql"):
                     # Add financial columns to purchases if missing
                     try:
                         conn.execute(
