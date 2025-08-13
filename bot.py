@@ -1892,8 +1892,8 @@ async def run_webhook_mode(application: Application) -> None:
                               <option value='book' {'selected' if f['ptype']=='book' else ''}>{_ui_t('type_book','کتاب')}</option>
                             </select>
                           </label>
-                          <label>{_ui_t('uid_label','UID:')}
-                            <input id='uid' name='uid' value='{f['uid_str']}' placeholder='{_ui_t('uid_placeholder','telegram id')}' />
+                          <label>{_ui_t('uid_label','شناسه کاربر:')}
+                            <input id='uid' name='uid' value='{f['uid_str']}' placeholder='{_ui_t('uid_placeholder','شناسه تلگرام')}' />
                           </label>
                           <label>{_ui_t('product_label','محصول:')}
                             <input id='product' name='product' value='{f['product_q']}' placeholder='{_ui_t('product_placeholder','عنوان/شناسه')}' />
