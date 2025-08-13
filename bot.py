@@ -2303,18 +2303,18 @@ async def run_webhook_mode(application: Application) -> None:
         app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
 
+        # In test/dev environments we may not want to call Telegram set_webhook at all.
+        # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
+        skip_webhook = os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true" or "example.org" in str(
+            config.webhook.url or ""
+        )
+
         # Setup webhook with proper error handling
         # In test/dev (skip_webhook), avoid starting the Telegram application to prevent
         # network calls and speed up local server startup for admin endpoints.
         if not skip_webhook:
             await application.initialize()
             await application.start()
-
-        # In test/dev environments we may not want to call Telegram set_webhook at all.
-        # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
-        skip_webhook = os.getenv("SKIP_WEBHOOK_REG", "").lower() == "true" or "example.org" in str(
-            config.webhook.url or ""
-        )
 
         if not skip_webhook:
             # Delete any existing webhook first to prevent 409 errors
@@ -2359,7 +2359,9 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
                         raise
 
-        logger.info(f"✅ Health check at: http://0.0.0.1:{config.webhook.port}/")
+        logger.info(
+            f"✅ Health check at: http://{'127.0.0.1' if skip_webhook else '0.0.0.0'}:{config.webhook.port}/"
+        )
 
         # Start background maintenance tasks (rate limiter cleanup)
         try:
