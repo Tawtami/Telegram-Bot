@@ -4,6 +4,7 @@ import asyncio
 import os
 import time
 import statistics
+import json
 import pytest
 
 
@@ -25,7 +26,12 @@ async def test_admin_benchmark_optional(monkeypatch):
 
     # Seed large-ish dataset
     with session_scope() as s:
-        u = User(telegram_user_id=445566, first_name_enc="x", last_name_enc="y", phone_enc="z")
+        u = User(
+            telegram_user_id=445566,
+            first_name_enc="x",
+            last_name_enc="y",
+            phone_enc="z",
+        )
         s.add(u)
         s.flush()
         now = datetime.utcnow()
@@ -63,12 +69,30 @@ async def test_admin_benchmark_optional(monkeypatch):
                         await r.text()
                     runs.append(time.perf_counter() - t0)
 
-        # Basic sanity thresholds (tunable). We just assert no huge outliers.
+        # Thresholds configurable via env
+        threshold = float(os.getenv("BENCH_P95_THRESHOLD_SEC", "1.5"))
         p95 = statistics.quantiles(runs, n=20)[18]
-        assert p95 < 1.5, f"admin list p95 too slow: {p95:.3f}s"
+        # Optional artifact output
+        out_path = os.getenv("BENCH_OUTPUT_PATH", "").strip()
+        if out_path:
+            summary = {
+                "runs_count": len(runs),
+                "mean_sec": statistics.mean(runs),
+                "median_sec": statistics.median(runs),
+                "p95_sec": p95,
+                "max_sec": max(runs),
+                "threshold_sec": threshold,
+                "config": {
+                    "sizes": [10, 25, 50],
+                    "pages": [0, 5, 10],
+                    "filters": {"status": "pending", "type": "book"},
+                },
+            }
+            with open(out_path, "w", encoding="utf-8") as f:
+                json.dump(summary, f, ensure_ascii=False, indent=2)
+
+        assert p95 < threshold, f"admin list p95 too slow: {p95:.3f}s >= {threshold:.3f}s"
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
-
-
