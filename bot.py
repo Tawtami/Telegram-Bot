@@ -2415,15 +2415,18 @@ async def run_webhook_mode(application: Application) -> None:
         watchdog_handle = asyncio.create_task(_watchdog_task())
         application.bot_data["watchdog"] = watchdog_handle
 
-        # Start web server
+        # Start web server (bind to localhost in test/dev to avoid CI restrictions)
         runner = web.AppRunner(app)
         await runner.setup()
+        bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"
         site = web.TCPSite(
-            runner, "0.0.0.0", config.webhook.port
+            runner, bind_host, config.webhook.port
         )  # nosec B104: container/webhook bind
         await site.start()
 
-        logger.info(f"🚀 Web server started on port {config.webhook.port}")
+        logger.info(
+            f"🚀 Web server started on http://{bind_host}:{config.webhook.port}"
+        )
 
         # Keep running with proper shutdown handling
         try:
