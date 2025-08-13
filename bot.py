@@ -1578,6 +1578,7 @@ async def run_webhook_mode(application: Application) -> None:
                     course_price = {}
                     try:
                         import json as _json
+
                         with open("data/courses.json", "r", encoding="utf-8") as _f:
                             _all = _json.load(_f)
                         for c in _all or []:
@@ -1602,6 +1603,8 @@ async def run_webhook_mode(application: Application) -> None:
                             "payment_status",
                             "amount",
                             "discount",
+                            "payment_method",
+                            "transaction_id",
                             "admin_action_by",
                             "admin_action_at",
                             "created_at",
@@ -1616,6 +1619,8 @@ async def run_webhook_mode(application: Application) -> None:
                         if getattr(p, "product_type", None) == "course":
                             _amount = course_price.get(getattr(p, "product_id", ""))
                         _payment_status = getattr(p, "status", None)
+                        _payment_method = None
+                        _transaction_id = None
                         writer.writerow(
                             [
                                 getattr(p, "id", None),
@@ -1629,6 +1634,8 @@ async def run_webhook_mode(application: Application) -> None:
                                 _payment_status,
                                 _amount,
                                 _discount,
+                                _payment_method,
+                                _transaction_id,
                                 getattr(p, "admin_action_by", None),
                                 (
                                     p.admin_action_at.isoformat()
@@ -1690,6 +1697,7 @@ async def run_webhook_mode(application: Application) -> None:
                         course_price = {}
                         try:
                             import json as _json
+
                             with open("data/courses.json", "r", encoding="utf-8") as _f:
                                 _all = _json.load(_f)
                             for c in _all or []:
@@ -1715,6 +1723,8 @@ async def run_webhook_mode(application: Application) -> None:
                                 "payment_status",
                                 "amount",
                                 "discount",
+                                "payment_method",
+                                "transaction_id",
                                 "admin_action_by",
                                 "admin_action_at",
                                 "created_at",
@@ -1729,6 +1739,8 @@ async def run_webhook_mode(application: Application) -> None:
                             if getattr(p, "product_type", None) == "course":
                                 _amount = course_price.get(getattr(p, "product_id", ""))
                             _payment_status = getattr(p, "status", None)
+                            _payment_method = None
+                            _transaction_id = None
                             ws.append(
                                 [
                                     getattr(p, "id", None),
@@ -1742,6 +1754,8 @@ async def run_webhook_mode(application: Application) -> None:
                                     _payment_status,
                                     _amount,
                                     _discount,
+                                    _payment_method,
+                                    _transaction_id,
                                     getattr(p, "admin_action_by", None),
                                     (
                                         p.admin_action_at.isoformat()
