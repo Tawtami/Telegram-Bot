@@ -77,7 +77,8 @@ class BroadcastManager:
                                 message_id=job.message_id,
                                 text=f"📤 در حال ارسال... {pct}% | موفق: {job.sent} | ناموفق: {job.failed}",
                             )
-                    except Exception:
+                    except Exception as _e:
+                        # Non-fatal; UI updater best-effort
                         pass
                     await asyncio.sleep(1.0)
             except asyncio.CancelledError:
@@ -93,7 +94,8 @@ class BroadcastManager:
             updater_task.cancel()
             try:
                 await updater_task
-            except Exception:
+            except Exception as _e:
+                # Ignore cancellation/cleanup errors
                 pass
             # Final status
             try:
@@ -103,5 +105,6 @@ class BroadcastManager:
                         message_id=job.message_id,
                         text=f"✅ پایان ارسال | موفق: {job.sent} | ناموفق: {job.failed}",
                     )
-            except Exception:
+            except Exception as _e:
+                # Ignore if message edit fails
                 pass

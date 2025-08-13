@@ -13,8 +13,8 @@ from utils.crypto import crypto_manager
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-import hashlib
 import time
+import secrets
 import asyncio
 from database.db import session_scope
 from database.service import (
@@ -295,8 +295,8 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             return
 
     # Generate token to correlate notifications across admins
-    token_source = f"{update.effective_user.id}:{payment_meta.get('item_type')}:{payment_meta.get('item_id')}:{time.time()}"
-    token = hashlib.sha1(token_source.encode()).hexdigest()[:16]
+    # Use strong, unpredictable token for approval flow
+    token = secrets.token_urlsafe(12)
 
     # Track admin messages for this token
     notifications[token] = {
@@ -483,7 +483,7 @@ def build_payment_handlers():
         MessageHandler(filters.PHOTO, handle_payment_receipt),
         CallbackQueryHandler(
             handle_payment_decision,
-            pattern=r"^pay:[a-f0-9]{16}:(approve|reject)$",
+            pattern=r"^pay:[A-Za-z0-9_\-]{8,}:(approve|reject)$",
         ),
         # Pagination handler for orders_ui
         CallbackQueryHandler(

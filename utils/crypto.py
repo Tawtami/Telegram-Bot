@@ -42,6 +42,7 @@ class CryptoManager:
                     pass
                 return key_env.encode("utf-8")
             except Exception:
+                # If key parsing fails, return empty to trigger production check below
                 pass
 
         # If we're in production/webhook mode, do NOT fallback – require ENCRYPTION_KEY

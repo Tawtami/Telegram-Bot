@@ -4,3 +4,8 @@ target-version = ["py311"]
 skip-string-normalization = true
 
 
+[tool.bandit]
+exclude = ["tests"]
+skips = ["B101"]
+
+

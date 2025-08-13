@@ -1365,10 +1365,9 @@ async def run_webhook_mode(application: Application) -> None:
                 # Process update (ensure DB schema at start of bursts)
                 try:
                     from database.migrate import init_db
-
                     init_db()
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.debug(f"init_db() best-effort failed: {_e}")
                 update = Update.de_json(data, application.bot)
                 # Avoid logging raw user content to protect sensitive data
                 try:
@@ -1380,8 +1379,8 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.info(
                             f"Update callback from user_id={getattr(update.effective_user,'id',0)}"
                         )
-                except Exception:
-                    pass
+                except Exception as _e:
+                    logger.debug(f"log update meta failed: {_e}")
                 await application.process_update(update)
                 return web.json_response({"ok": True})
             except json.JSONDecodeError as e:
@@ -2214,10 +2213,10 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.info(
                             f"Admin action via POST: id={pid} action={action} ip={admin_ip}"
                         )
-                    except Exception:
-                        pass
-                except Exception:
-                    pass
+                    except Exception as _e:
+                        logger.debug(f"admin POST log failed: {_e}")
+                except Exception as _e:
+                    logger.debug(f"admin notifications failed: {_e}")
 
                 if redirect_to:
                     # Set flash message for one redirect
@@ -2244,8 +2243,8 @@ async def run_webhook_mode(application: Application) -> None:
                             secure=str(config.webhook.url).startswith("https://"),
                             samesite="Lax",
                         )
-                    except Exception:
-                        pass
+                    except Exception as _e:
+                        logger.debug(f"set flash cookies failed: {_e}")
                     raise resp
                 return web.json_response({"ok": True, "id": pid, "action": action})
             except web.HTTPException:
@@ -2410,7 +2409,7 @@ async def run_webhook_mode(application: Application) -> None:
         # Start web server
         runner = web.AppRunner(app)
         await runner.setup()
-        site = web.TCPSite(runner, "0.0.0.0", config.webhook.port)
+        site = web.TCPSite(runner, "0.0.0.0", config.webhook.port)  # nosec B104: container/webhook bind
         await site.start()
 
         logger.info(f"🚀 Web server started on port {config.webhook.port}")

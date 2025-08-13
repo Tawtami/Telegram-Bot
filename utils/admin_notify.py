@@ -9,7 +9,8 @@ async def notify_admins(context, admin_ids: List[int], text: str, parse_mode: Op
     for admin_id in admin_ids or []:
         try:
             await context.bot.send_message(chat_id=admin_id, text=text, parse_mode=parse_mode)
-        except Exception:
+        except Exception as _e:
+            # skip unreachable admin, continue others
             continue
 
 
