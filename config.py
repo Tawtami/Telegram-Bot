@@ -97,6 +97,7 @@ class BotConfig:
     payment_card_number: str = "5022-2910-8723-9446"
     payment_payee_name: str = "استاد محسن حاتمی"
     payment_methods: List[str] = None
+    default_payment_method: str | None = None
 
     def __post_init__(self):
         if self.admin_user_ids is None:
@@ -130,6 +131,10 @@ class BotConfig:
                 if v and v not in normalized:
                     normalized.append(v)
             self.payment_methods = normalized
+        # Normalize default_payment_method and ensure it's allowed
+        if self.default_payment_method:
+            d = (self.default_payment_method or "").strip().lower()
+            self.default_payment_method = d if d in (self.payment_methods or []) else None
 
 
 @dataclass
@@ -221,8 +226,13 @@ class Config:
             payment_card_number=os.getenv("PAYMENT_CARD_NUMBER", "6037-9974-1234-5678"),
             payment_payee_name=os.getenv("PAYMENT_PAYEE_NAME", "استاد حاتمی"),
             payment_methods=[
-                pm.strip() for pm in os.getenv("PAYMENT_METHODS", "").split(",") if pm.strip()
-            ] or None,
+                pm.strip()
+                for pm in os.getenv("PAYMENT_METHODS", "").split(",")
+                if pm.strip()
+            ]
+            or None,
+            default_payment_method=os.getenv("DEFAULT_PAYMENT_METHOD", "").strip()
+            or None,
         )
 
         # Educational data
