@@ -150,12 +150,12 @@ def _parse_admin_filters(request):
                 else datetime.fromisoformat(from_str + "T00:00:00")
             )
         if to_str:
-            base = (
+            # 'to' is exclusive. For day-based input, use start of that day (00:00) without adding a day
+            dt_to = (
                 datetime.fromisoformat(to_str)
                 if len(to_str) > 10
                 else datetime.fromisoformat(to_str + "T00:00:00")
             )
-            dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
     except Exception:
         dt_from = None
         dt_to = None
