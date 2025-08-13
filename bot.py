@@ -1501,7 +1501,7 @@ async def run_webhook_mode(application: Application) -> None:
                     for p in slice_items
                 ]
 
-                accept = request.headers.get("Accept", "")
+                accept = request.headers.get("Accept", "").lower()
                 wants_csv = f["fmt"] == "csv" or ("text/csv" in accept)
                 if wants_csv:
                     import csv, io
@@ -1743,8 +1743,8 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(f"xlsx export failed: {e}")
                         return web.Response(status=500, text="xlsx error")
 
-                if f["fmt"] == "html" or "text/html" in accept or not accept:
-                    qbase = f"/admin?token={os.getenv('ADMIN_DASHBOARD_TOKEN', config.bot.admin_dashboard_token)}"
+                if f["fmt"] == "html" or "text/html" in accept or accept in ("", "*/*"):
+                    qbase = f"/admin?token={(os.getenv('ADMIN_DASHBOARD_TOKEN') or config.bot.admin_dashboard_token)}"
 
                     def _qs(**kw):
                         return _build_admin_qs(
