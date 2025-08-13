@@ -14,7 +14,6 @@ from config import config
 from database.db import session_scope
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
-from database.db import session_scope
 from database.service import get_or_create_user, create_purchase
 from utils.admin_notify import send_paginated_list
 from database.service import get_course_participants_by_slug

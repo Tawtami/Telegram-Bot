@@ -120,6 +120,94 @@ except Exception as _e:
     logger.warning(f"Sentry init failed: {_e}")
 
 
+# ---------------------
+# Helpers to reduce handler complexity
+# ---------------------
+
+def _parse_admin_filters(request):
+    from datetime import datetime, timedelta
+
+    status = request.query.get("status", "pending").lower()
+    ptype = request.query.get("type", "").lower()
+    uid_str = request.query.get("uid", "").strip()
+    product_q = request.query.get("product", "").strip()
+    from_str = request.query.get("from", "").strip()
+    to_str = request.query.get("to", "").strip()
+    fmt = request.query.get("format", "").lower()
+    page = max(0, int(request.query.get("page", "0") or 0))
+    page_size = max(1, min(100, int(request.query.get("size", "20") or 20)))
+
+    uid = int(uid_str) if uid_str.isdigit() else None
+    dt_from = None
+    dt_to = None
+    try:
+        if from_str:
+            dt_from = (
+                datetime.fromisoformat(from_str)
+                if len(from_str) > 10
+                else datetime.fromisoformat(from_str + "T00:00:00")
+            )
+        if to_str:
+            base = (
+                datetime.fromisoformat(to_str)
+                if len(to_str) > 10
+                else datetime.fromisoformat(to_str + "T00:00:00")
+            )
+            dt_to = base + (timedelta(days=1) if len(to_str) <= 10 else timedelta(seconds=0))
+    except Exception:
+        dt_from = None
+        dt_to = None
+
+    return {
+        "status": status,
+        "ptype": ptype,
+        "uid": uid,
+        "uid_str": uid_str,
+        "product_q": product_q,
+        "dt_from": dt_from,
+        "dt_to": dt_to,
+        "from_str": from_str,
+        "to_str": to_str,
+        "fmt": fmt,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+def _build_admin_qs(base_url, status, ptype, uid_str, product_q, from_str, to_str, page_size, page):
+    params = {
+        "status": status,
+        "type": ptype,
+        "uid": uid_str,
+        "product": product_q,
+        "from": from_str,
+        "to": to_str,
+        "size": str(page_size),
+        "page": str(page),
+    }
+    parts = [f"{k}={v}" for k, v in params.items() if v not in (None, "")]
+    return base_url + "&" + "&".join(parts)
+
+
+def _query_purchases_filtered(stmt):
+    from database.db import session_scope
+
+    try:
+        with session_scope() as session:
+            return list(session.execute(stmt).scalars())
+    except Exception as e:
+        try:
+            logger.warning(f"purchase query failed, attempting DB init: {e}")
+            from database.migrate import init_db
+
+            init_db()
+            with session_scope() as session:
+                return list(session.execute(stmt).scalars())
+        except Exception as e2:
+            logger.error(f"fatal DB error after init retry: {e2}")
+            raise
+
+
 # Command handlers
 @rate_limit_handler("registration")
 async def start_command(update: Update, context: Any) -> None:
@@ -1217,7 +1305,7 @@ async def setup_handlers(application: Application) -> None:
             CallbackQueryHandler(handle_daily_quiz, pattern="^daily_quiz$"), group=1
         )
         application.add_handler(
-            CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\\d+:\\d+$"),
+            CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
             group=1,
         )
         # Payment receipt handler is provided by build_payment_handlers()
@@ -1403,84 +1491,35 @@ async def run_webhook_mode(application: Application) -> None:
                     get_stats_summary,
                     list_stale_pending_purchases,
                 )
-                from datetime import datetime, timedelta
                 import secrets
 
-                status = request.query.get("status", "pending").lower()
-                ptype = request.query.get("type", "").lower()
-                uid_str = request.query.get("uid", "").strip()
-                product_q = request.query.get("product", "").strip()
-                from_str = request.query.get("from", "").strip()
-                to_str = request.query.get("to", "").strip()
-                fmt = request.query.get("format", "").lower()
-                page = max(0, int(request.query.get("page", "0") or 0))
-                page_size = max(1, min(100, int(request.query.get("size", "20") or 20)))
-
-                uid = int(uid_str) if uid_str.isdigit() else None
-                dt_from = None
-                dt_to = None
-                try:
-                    if from_str:
-                        dt_from = (
-                            datetime.fromisoformat(from_str)
-                            if len(from_str) > 10
-                            else datetime.fromisoformat(from_str + "T00:00:00")
-                        )
-                    if to_str:
-                        base = (
-                            datetime.fromisoformat(to_str)
-                            if len(to_str) > 10
-                            else datetime.fromisoformat(to_str + "T00:00:00")
-                        )
-                        dt_to = base + (
-                            timedelta(days=1)
-                            if len(to_str) <= 10
-                            else timedelta(seconds=0)
-                        )
-                except Exception:
-                    dt_from = None
-                    dt_to = None
+                f = _parse_admin_filters(request)
 
                 stmt = select(Purchase)
-                if status:
-                    stmt = stmt.where(Purchase.status == status)
-                if ptype in ("book", "course"):
-                    stmt = stmt.where(Purchase.product_type == ptype)
-                if product_q:
-                    stmt = stmt.where(Purchase.product_id.like(f"%{product_q}%"))
-                if dt_from is not None:
-                    stmt = stmt.where(Purchase.created_at >= dt_from)
-                if dt_to is not None:
-                    stmt = stmt.where(Purchase.created_at < dt_to)
-                if uid is not None:
+                if f["status"]:
+                    stmt = stmt.where(Purchase.status == f["status"])
+                if f["ptype"] in ("book", "course"):
+                    stmt = stmt.where(Purchase.product_type == f["ptype"])
+                if f["product_q"]:
+                    stmt = stmt.where(Purchase.product_id.like(f"%{f['product_q']}%"))
+                if f["dt_from"] is not None:
+                    stmt = stmt.where(Purchase.created_at >= f["dt_from"])
+                if f["dt_to"] is not None:
+                    stmt = stmt.where(Purchase.created_at < f["dt_to"])
+                if f["uid"] is not None:
                     stmt = stmt.join(DBUser, DBUser.id == Purchase.user_id).where(
-                        DBUser.telegram_user_id == uid
+                        DBUser.telegram_user_id == f["uid"]
                     )
                 stmt = stmt.order_by(Purchase.created_at.desc())
 
-                # Execute query with one-time auto-init retry if schema is missing
                 try:
-                    with session_scope() as session:
-                        items = list(session.execute(stmt).scalars())
-                except Exception as e:
-                    try:
-                        logger.warning(
-                            f"admin_list query failed, attempting DB init: {e}"
-                        )
-                        from database.migrate import init_db
-
-                        init_db()
-                        with session_scope() as session:
-                            items = list(session.execute(stmt).scalars())
-                    except Exception as e2:
-                        logger.error(
-                            f"admin_list fatal DB error after init retry: {e2}"
-                        )
-                        return web.Response(status=500, text="server error")
+                    items = _query_purchases_filtered(stmt)
+                except Exception:
+                    return web.Response(status=500, text="server error")
 
                 total = len(items)
-                start = page * page_size
-                slice_items = items[start : start + page_size]
+                start = f["page"] * f["page_size"]
+                slice_items = items[start : start + f["page_size"]]
                 rows = [
                     {
                         "id": p.id,
@@ -1498,7 +1537,7 @@ async def run_webhook_mode(application: Application) -> None:
                 ]
 
                 accept = request.headers.get("Accept", "")
-                wants_csv = fmt == "csv" or ("text/csv" in accept)
+                wants_csv = f["fmt"] == "csv" or ("text/csv" in accept)
                 if wants_csv:
                     import csv, io
 
@@ -1533,7 +1572,7 @@ async def run_webhook_mode(application: Application) -> None:
                     )
 
                 # XLSX export
-                if fmt == "xlsx":
+                if f["fmt"] == "xlsx":
                     try:
                         import io
                         from openpyxl import Workbook
@@ -1577,20 +1616,17 @@ async def run_webhook_mode(application: Application) -> None:
                     qbase = f"/admin?token={config.bot.admin_dashboard_token}"
 
                     def _qs(**kw):
-                        params = {
-                            "status": status,
-                            "type": ptype,
-                            "uid": uid_str,
-                            "product": product_q,
-                            "from": from_str,
-                            "to": to_str,
-                            "size": str(page_size),
-                            "page": str(kw.get("page", page)),
-                        }
-                        parts = [
-                            f"{k}={v}" for k, v in params.items() if v not in (None, "")
-                        ]
-                        return qbase + "&" + "&".join(parts)
+                        return _build_admin_qs(
+                            qbase,
+                            f["status"],
+                            f["ptype"],
+                            f["uid_str"],
+                            f["product_q"],
+                            f["from_str"],
+                            f["to_str"],
+                            f["page_size"],
+                            kw.get("page", f["page"]),
+                        )
 
                     csrf_value = request.cookies.get("csrf")
                     if not csrf_value or len(csrf_value) < 16:
@@ -1724,7 +1760,7 @@ async def run_webhook_mode(application: Application) -> None:
                           <a class='btn csv' href='{_qs(page=0)}&format=csv'>CSV</a>
                         </form>
                         <div class='meta'>
-                          مجموع نتایج: {total} | صفحه: {page+1}
+                           مجموع نتایج: {total} | صفحه: {f['page']+1}
                         </div>
                         <table>
                           <thead>
