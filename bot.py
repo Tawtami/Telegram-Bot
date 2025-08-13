@@ -1318,7 +1318,18 @@ async def run_webhook_mode(application: Application) -> None:
             resp.headers.setdefault("Cache-Control", "private, max-age=60")
             return resp
 
-        app = web.Application(middlewares=[] if skip_webhook else [safe_middleware])
+        @web.middleware
+        async def error_middleware(request, handler):
+            try:
+                resp = await handler(request)
+                return resp if isinstance(resp, web.StreamResponse) else web.Response(text="")
+            except web.HTTPException as http_err:
+                return http_err
+            except Exception as e:
+                logger.error(f"Unhandled request error: {e}")
+                return web.Response(status=500, text="server error")
+
+        app = web.Application(middlewares=[error_middleware] if skip_webhook else [safe_middleware])
 
         # Health check endpoint
         async def health_check(request):
