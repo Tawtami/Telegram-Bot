@@ -98,6 +98,8 @@ class BotConfig:
     payment_payee_name: str = "استاد محسن حاتمی"
     payment_methods: List[str] = None
     default_payment_method: str | None = None
+    payment_placeholder_show_default: bool = False
+    payment_default_first: bool = False
 
     def __post_init__(self):
         if self.admin_user_ids is None:
@@ -134,7 +136,9 @@ class BotConfig:
         # Normalize default_payment_method and ensure it's allowed
         if self.default_payment_method:
             d = (self.default_payment_method or "").strip().lower()
-            self.default_payment_method = d if d in (self.payment_methods or []) else None
+            self.default_payment_method = (
+                d if d in (self.payment_methods or []) else None
+            )
 
 
 @dataclass
@@ -233,6 +237,12 @@ class Config:
             or None,
             default_payment_method=os.getenv("DEFAULT_PAYMENT_METHOD", "").strip()
             or None,
+            payment_placeholder_show_default=os.getenv(
+                "PAYMENT_PLACEHOLDER_SHOW_DEFAULT", "false"
+            ).lower()
+            == "true",
+            payment_default_first=os.getenv("PAYMENT_DEFAULT_FIRST", "false").lower()
+            == "true",
         )
 
         # Educational data

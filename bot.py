@@ -1818,11 +1818,28 @@ async def run_webhook_mode(application: Application) -> None:
                         )
                     except Exception:
                         _methods = ["card", "cash", "transfer"]
-                    _default_pm = (config.bot.default_payment_method or "").strip().lower()
+                    _default_pm = (
+                        (config.bot.default_payment_method or "").strip().lower()
+                    )
+                    # Optionally move default to the front
+                    if _default_pm and config.bot.payment_default_first:
+                        if _default_pm in _methods:
+                            _methods = [_default_pm] + [m for m in _methods if m != _default_pm]
+
+                    # Placeholder text optionally shows default
+                    if config.bot.payment_placeholder_show_default and _default_pm:
+                        _placeholder = f"انتخاب روش پرداخت (پیش‌فرض: {_default_pm})"
+                    else:
+                        _placeholder = "انتخاب روش پرداخت"
+
                     _method_opts = "".join(
-                        ["<option value='' selected>انتخاب روش پرداخت</option>"]
+                        [f"<option value='' selected>{_placeholder}</option>"]
                         + [
-                            (f"<option value='{m}' selected>{m}</option>" if m == _default_pm else f"<option value='{m}'>{m}</option>")
+                            (
+                                f"<option value='{m}' selected>{m}</option>"
+                                if m == _default_pm
+                                else f"<option value='{m}'>{m}</option>"
+                            )
                             for m in _methods
                         ]
                     )
