@@ -1275,16 +1275,19 @@ async def run_webhook_mode(application: Application) -> None:
         @web.middleware
         async def gzip_middleware(request, handler):
             resp = await handler(request)
+            # If handler returned a non-response (e.g., None), do not touch
+            if not isinstance(resp, web.StreamResponse):
+                return resp
             try:
                 # Only compress JSON/text and when client accepts gzip
                 if (
-                    resp.status == 200
+                    getattr(resp, "status", 200) == 200
                     and isinstance(resp, web.Response)
                     and "gzip" in (request.headers.get("Accept-Encoding", ""))
-                    and (resp.content_type or "").startswith(("application/json", "text/"))
+                    and (getattr(resp, "content_type", "") or "").startswith(("application/json", "text/"))
                     and not resp.headers.get("Content-Encoding")
-                    and resp.body is not None
-                    and len(resp.body) > 256
+                    and getattr(resp, "body", None) is not None
+                    and len(getattr(resp, "body", b"")) > 256
                 ):
                     import gzip
 
