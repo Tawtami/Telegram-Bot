@@ -2199,6 +2199,16 @@ async def run_webhook_mode(application: Application) -> None:
                 if not csrf_cookie or not csrf_form or csrf_cookie != csrf_form:
                     return web.Response(status=403, text="forbidden")
 
+                # Admin UI i18n labels for flash messages
+                _ui = {}
+                try:
+                    _ui = dict(config.bot.admin_ui_labels or {})
+                except Exception:
+                    _ui = {}
+
+                def _ui_t(key: str, default: str) -> str:
+                    return _ui.get(key, default)
+
                 from sqlalchemy import select
                 from database.db import session_scope
                 from database.models_sql import Purchase, User as DBUser
@@ -2328,12 +2338,12 @@ async def run_webhook_mode(application: Application) -> None:
                 except Exception:
                     pass
 
-                    if redirect_to:
+                if redirect_to:
                     # Set flash message for one redirect
                     msg = (
-                        _ui_t('flash_approve_success','با موفقیت تایید شد.')
+                        _ui_t("flash_approve_success", "با موفقیت تایید شد.")
                         if action == "approve"
-                        else _ui_t('flash_reject_success','با موفقیت رد شد.')
+                        else _ui_t("flash_reject_success", "با موفقیت رد شد.")
                     )
                     resp = web.HTTPSeeOther(location=redirect_to)
                     try:
@@ -2364,15 +2374,15 @@ async def run_webhook_mode(application: Application) -> None:
                 # Redirect back with error flash if we already parsed body
                 if redirect_to:
                     resp = web.HTTPSeeOther(location=redirect_to)
-                        try:
-                            resp.set_cookie(
-                                "flash",
-                                _ui_t('flash_error','خطا در انجام عملیات'),
-                                max_age=10,
-                                path="/",
-                                secure=str(config.webhook.url).startswith("https://"),
-                                samesite="Lax",
-                            )
+                    try:
+                        resp.set_cookie(
+                            "flash",
+                            _ui_t("flash_error", "خطا در انجام عملیات"),
+                            max_age=10,
+                            path="/",
+                            secure=str(config.webhook.url).startswith("https://"),
+                            samesite="Lax",
+                        )
                         resp.set_cookie(
                             "flash_type",
                             "error",
