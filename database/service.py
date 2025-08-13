@@ -292,11 +292,22 @@ def is_user_banned(session: Session, telegram_user_id: int) -> bool:
             is not None
         )
     except Exception:
-        # Table may be missing on first boot → attempt init once and treat as not banned
+        # Table may be missing on first boot → attempt init once
         try:
             from database.migrate import init_db
 
             init_db()
+        except Exception:
+            pass
+        try:
+            return (
+                session.execute(
+                    select(BannedUser).where(
+                        BannedUser.telegram_user_id == telegram_user_id
+                    )
+                ).scalar_one_or_none()
+                is not None
+            )
         except Exception:
             pass
         return False

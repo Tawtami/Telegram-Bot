@@ -96,9 +96,8 @@ def _ensure_schema_initialized() -> None:
                 # Any missing table -> initialize
                 pass
         # Run initializer (idempotent and concurrency-safe on Postgres)
+        from database.migrate import init_db  # local import to avoid cycles
         try:
-            from database.migrate import init_db  # local import to avoid cycles
-
             init_db()
         except Exception:
             # Best-effort: leave to caller if initialization fails here

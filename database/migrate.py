@@ -26,7 +26,8 @@ def init_db():
     - Perform lightweight, idempotent upgrades (e.g., BIGINT for telegram_user_id).
     """
 
-    is_postgres = ENGINE.dialect.name == "postgresql"
+    # SQLAlchemy dialect names for psycopg are like 'postgresql+psycopg'
+    is_postgres = ENGINE.dialect.name.startswith("postgresql")
 
     # Use a dedicated connection/transaction to serialize initialization on Postgres
     with ENGINE.connect() as conn:
@@ -145,7 +146,7 @@ def _upgrade_schema_if_needed(conn):
 
     # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
     try:
-        if ENGINE.dialect.name == "postgresql":
+        if ENGINE.dialect.name.startswith("postgresql"):
             conn.execute(
                 text(
                     "CREATE TABLE IF NOT EXISTS banned_users (\n"
@@ -199,7 +200,7 @@ def _upgrade_schema_if_needed(conn):
         logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
     # 3) Create recommended indexes if missing (Postgres)
     try:
-        if ENGINE.dialect.name == "postgresql":
+        if ENGINE.dialect.name.startswith("postgresql"):
             # Users demography indexes
             conn.execute(
                 text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)")
