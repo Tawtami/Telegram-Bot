@@ -1879,9 +1879,10 @@ async def run_webhook_mode(application: Application) -> None:
                           <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
                           <label>{_ui_t('status_label','وضعیت:')}
                             <select name='status'>
-                              <option value='pending' {'selected' if f['status']=='pending' else ''}>{_ui_t('status_pending','pending')}</option>
-                              <option value='approved' {'selected' if f['status']=='approved' else ''}>{_ui_t('status_approved','approved')}</option>
-                              <option value='rejected' {'selected' if f['status']=='rejected' else ''}>{_ui_t('status_rejected','rejected')}</option>
+                              <option value='' {'selected' if not f['status'] else ''}>{_ui_t('status_all','همه')}</option>
+                              <option value='pending' {'selected' if f['status']=='pending' else ''}>{_ui_t('status_pending','در انتظار')}</option>
+                              <option value='approved' {'selected' if f['status']=='approved' else ''}>{_ui_t('status_approved','تایید شده')}</option>
+                              <option value='rejected' {'selected' if f['status']=='rejected' else ''}>{_ui_t('status_rejected','رد شده')}</option>
                             </select>
                           </label>
                           <label>{_ui_t('type_label','نوع:')}
