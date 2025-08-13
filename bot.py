@@ -2304,8 +2304,11 @@ async def run_webhook_mode(application: Application) -> None:
         app.router.add_post(config.webhook.path, telegram_webhook)
 
         # Setup webhook with proper error handling
-        await application.initialize()
-        await application.start()
+        # In test/dev (skip_webhook), avoid starting the Telegram application to prevent
+        # network calls and speed up local server startup for admin endpoints.
+        if not skip_webhook:
+            await application.initialize()
+            await application.start()
 
         # In test/dev environments we may not want to call Telegram set_webhook at all.
         # Skip webhook registration if explicitly requested or when using a placeholder/demo URL.
@@ -2356,7 +2359,7 @@ async def run_webhook_mode(application: Application) -> None:
                         logger.error(f"Failed to set webhook after {max_retries} attempts: {e}")
                         raise
 
-        logger.info(f"✅ Health check at: http://0.0.0.0:{config.webhook.port}/")
+        logger.info(f"✅ Health check at: http://0.0.0.1:{config.webhook.port}/")
 
         # Start background maintenance tasks (rate limiter cleanup)
         try:
@@ -2436,14 +2439,16 @@ async def run_webhook_mode(application: Application) -> None:
             raise
         finally:
             # Cleanup
-            try:
-                await application.bot.delete_webhook()
-                logger.info("✅ Webhook deleted successfully")
-            except Exception as e:
-                logger.warning(f"Warning: Could not delete webhook during shutdown: {e}")
+            if not skip_webhook:
+                try:
+                    await application.bot.delete_webhook()
+                    logger.info("✅ Webhook deleted successfully")
+                except Exception as e:
+                    logger.warning(f"Warning: Could not delete webhook during shutdown: {e}")
 
-            await application.stop()
-            await application.shutdown()
+            if not skip_webhook:
+                await application.stop()
+                await application.shutdown()
             # Stop watchdog
             try:
                 wd = application.bot_data.get("watchdog")
