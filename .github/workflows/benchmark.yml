@@ -45,7 +45,7 @@ jobs:
       - name: Run benchmark tests
         env:
           RUN_BENCHMARKS: "true"
-          BENCH_P95_THRESHOLD_SEC: ${{ env.BENCH_P95_THRESHOLD_SEC || '1.5' }}
+          BENCH_P95_THRESHOLD_SEC: ${{ env.BENCH_P95_THRESHOLD_SEC }}
           BENCH_OUTPUT_PATH: "benchmarks/admin_list.json"
           BENCH_CSV_OUTPUT_PATH: "benchmarks/timeseries.csv"
         run: |
@@ -85,7 +85,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "Benchmarks failed on ${{ github.ref }} (p95 exceeded threshold). See artifacts: admin-benchmark. PR: ${{ github.event.pull_request.html_url || github.server_url + '/' + github.repository + '/actions/runs/' + github.run_id }}"
+              "text": "Benchmarks failed on ${{ github.ref }} (p95 exceeded threshold). See artifacts: admin-benchmark. PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.html_url || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
