@@ -1571,7 +1571,7 @@ async def run_webhook_mode(application: Application) -> None:
                         body=csv_bytes,
                         content_type="text/csv",
                         headers={
-                        "Content-Disposition": f"attachment; filename=orders_{f['status'] or 'all'}.csv"
+                            "Content-Disposition": f"attachment; filename=orders_{f['status'] or 'all'}.csv"
                         },
                         charset="utf-8",
                     )
@@ -1653,7 +1653,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='id' value='{r['id']}'/>"
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
-                        f"<input type='hidden' name='redirect' value='{_qs(page=page)}'/>"
+                        f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
                         f"<button class='btn approve' type='submit'>تایید</button>"
                         f"</form> "
                         f"<form method='POST' action='/admin/act' style='display:inline'>"
@@ -1661,7 +1661,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='id' value='{r['id']}'/>"
                         f"<input type='hidden' name='action' value='reject'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
-                        f"<input type='hidden' name='redirect' value='{_qs(page=page)}'/>"
+                        f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
                         f"<button class='btn reject' type='submit'>رد</button>"
                         f"</form>"
                         f"</td></tr>"
@@ -1813,14 +1813,14 @@ async def run_webhook_mode(application: Application) -> None:
 
                 return web.json_response(
                     {
-                        "status": f['status'],
-                        "type": f['ptype'],
-                        "uid": f['uid'],
-                        "product": f['product_q'],
-                        "from": f['from_str'],
-                        "to": f['to_str'],
-                        "page": f['page'],
-                        "page_size": f['page_size'],
+                        "status": f["status"],
+                        "type": f["ptype"],
+                        "uid": f["uid"],
+                        "product": f["product_q"],
+                        "from": f["from_str"],
+                        "to": f["to_str"],
+                        "page": f["page"],
+                        "page_size": f["page_size"],
                         "total": total,
                         "items": rows,
                     }
