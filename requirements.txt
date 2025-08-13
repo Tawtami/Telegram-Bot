@@ -14,3 +14,4 @@ pytest-cov==4.1.0
 black==24.4.2
 flake8==7.0.0
 coverage==7.5.4
+mypy==1.10.0
