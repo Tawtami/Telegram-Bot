@@ -6,20 +6,25 @@ Centralized settings with environment variable support
 """
 
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Any as _Any, IO
 from dataclasses import dataclass
 import json
 
 # Try to load dotenv, but don't fail if it's not available
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
 except ImportError:
-    # Fallback: create a simple environment loader
-    def load_dotenv():
-        pass
-
+    # Fallback: define a compatible no-op with matching signature
+    def load_dotenv(
+        dotenv_path: str | os.PathLike[str] | None = None,
+        stream: IO[str] | None = None,
+        verbose: bool = False,
+        override: bool = False,
+        interpolate: bool = True,
+        encoding: str | None = None,
+    ) -> bool:
+        return False
     load_dotenv()
 
 
@@ -52,10 +57,10 @@ class SecurityConfig:
 
     max_name_length: int = 50
     min_name_length: int = 2
-    allowed_phone_formats: List[str] = None
+    allowed_phone_formats: Optional[List[str]] = None
     enable_input_sanitization: bool = True
     max_file_size_mb: int = 10
-    allowed_file_types: List[str] = None
+    allowed_file_types: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.allowed_phone_formats is None:
@@ -88,14 +93,14 @@ class BotConfig:
 
     name: str = "Ostad Hatami Math Classes Bot"
     version: str = "2.0.0"
-    admin_user_ids: List[int] = None
+    admin_user_ids: Optional[List[int]] = None
     admin_dashboard_token: str = ""
     maintenance_mode: bool = False
-    welcome_message_template: str = None
+    welcome_message_template: Optional[str] = None
     support_contact: str = "@Ostad_Hatami"
     payment_card_number: str = "5022-2910-8723-9446"
     payment_payee_name: str = "استاد محسن حاتمی"
-    payment_methods: List[str] = None
+    payment_methods: Optional[List[str]] = None
     default_payment_method: str | None = None
     payment_placeholder_show_default: bool = False
     payment_default_first: bool = False

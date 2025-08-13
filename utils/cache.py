@@ -41,7 +41,7 @@ class CacheEntry:
 class SimpleCache:
     """Enhanced in-memory cache with TTL and LRU eviction"""
 
-    def __init__(self, ttl_seconds: int = None, max_size: int = 1000):
+    def __init__(self, ttl_seconds: Optional[int] = None, max_size: int = 1000):
         self.ttl = ttl_seconds or config.performance.cache_ttl_seconds
         self.max_size = max_size
         self.cache: OrderedDict[str, CacheEntry] = OrderedDict()

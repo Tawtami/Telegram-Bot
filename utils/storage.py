@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 try:
     from utils.crypto import crypto_manager
 except Exception:
-    crypto_manager = None  # Fallback if crypto not available
+    crypto_manager = None  # type: ignore[assignment]
 
 
 class StudentStorage:
@@ -33,9 +33,9 @@ class StudentStorage:
         self.banned_file = self.data_dir / "banned.json"
         # Use a thread lock to guard file writes (PTB handlers run concurrently)
         self.lock = threading.Lock()
-        self._cache = {}
+        self._cache: Dict[str, Any] = {}
         self._cache_ttl = 300  # 5 minutes
-        self._last_cache_update = {}
+        self._last_cache_update: Dict[str, float] = {}
         self._initialize_files()
 
     def _initialize_files(self):

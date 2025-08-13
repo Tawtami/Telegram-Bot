@@ -61,10 +61,10 @@ class RateLimitEntry:
 
     def __init__(self, config: RateLimitConfig):
         self.config = config
-        self.requests = deque()
-        self.violations = 0
-        self.last_violation = 0
-        self.blocked_until = 0
+        self.requests: deque[float] = deque()
+        self.violations: int = 0
+        self.last_violation: float = 0.0
+        self.blocked_until: float = 0.0
 
     def is_blocked(self) -> bool:
         """Check if user is currently blocked"""
