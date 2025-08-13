@@ -2424,9 +2424,7 @@ async def run_webhook_mode(application: Application) -> None:
         )  # nosec B104: container/webhook bind
         await site.start()
 
-        logger.info(
-            f"🚀 Web server started on http://{bind_host}:{config.webhook.port}"
-        )
+        logger.info(f"🚀 Web server started on http://{bind_host}:{config.webhook.port}")
 
         # Keep running with proper shutdown handling
         try:
