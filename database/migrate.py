@@ -44,13 +44,27 @@ def init_db():
             try:
                 Base.metadata.create_all(bind=conn)
             except Exception as e:
+<<<<<<< HEAD
                 logger.warning(f"create_all failed, falling back to per-table creation: {e}")
+=======
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                logger.warning(
+                    f"create_all failed, falling back to per-table creation: {e}"
+                )
+>>>>>>> eed93d9 (fix(db/migrate): ensure banned_users and purchases financial columns exist; add rollbacks between DDL to avoid aborted transactions)
                 _create_tables_individually(conn)
 
             # Run idempotent upgrades after ensuring tables exist
             try:
                 _upgrade_schema_if_needed(conn)
             except Exception as ue:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 logger.warning(f"Schema upgrade check failed: {ue}")
         finally:
             # Always release the advisory lock if we acquired it
@@ -90,6 +104,10 @@ def _upgrade_schema_if_needed(conn):
             try:
                 table.create(bind=conn, checkfirst=True)
             except Exception as te:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 logger.warning(f"Table create skipped/failed for {tname}: {te}")
     except Exception as e:
         logger.warning(f"Ensuring tables failed: {e}")
@@ -112,6 +130,10 @@ def _upgrade_schema_if_needed(conn):
                 )
                 logger.info("Upgraded users.telegram_user_id to BIGINT")
             except Exception as e:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
     except Exception as e:
         logger.warning(f"Could not read/upgrade users.telegram_user_id column type: {e}")
@@ -132,7 +154,17 @@ def _upgrade_schema_if_needed(conn):
                 )
                 logger.info("Upgraded purchases.admin_action_by to BIGINT")
             except Exception as e:
+<<<<<<< HEAD
                 logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
+=======
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+                logger.warning(
+                    f"Could not alter purchases.admin_action_by to BIGINT: {e}"
+                )
+>>>>>>> eed93d9 (fix(db/migrate): ensure banned_users and purchases financial columns exist; add rollbacks between DDL to avoid aborted transactions)
     except Exception as e:
         logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
 
@@ -143,13 +175,19 @@ def _upgrade_schema_if_needed(conn):
             try:
                 conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
             except Exception:
-                pass
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             try:
                 conn.execute(
                     text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER")
                 )
             except Exception:
-                pass
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             try:
                 conn.execute(
                     text(
@@ -157,7 +195,10 @@ def _upgrade_schema_if_needed(conn):
                     )
                 )
             except Exception:
-                pass
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             try:
                 conn.execute(
                     text(
@@ -165,7 +206,10 @@ def _upgrade_schema_if_needed(conn):
                     )
                 )
             except Exception:
-                pass
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             conn.execute(
                 text(
                     "CREATE TABLE IF NOT EXISTS banned_users (\n"
