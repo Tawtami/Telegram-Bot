@@ -1545,21 +1545,47 @@ async def run_webhook_mode(application: Application) -> None:
                 wants_csv = f["fmt"] == "csv" or ("text/csv" in accept)
                 if wants_csv:
                     import csv, io
-                    # Map internal user_id -> telegram_user_id for richer exports
+
+                    # Map internal user_id -> telegram_user_id and demographics for richer exports
                     try:
                         user_ids = {getattr(p, "user_id", None) for p in items}
                         user_ids.discard(None)
                         tg_map = {}
+                        user_demo = {}
                         if user_ids:
                             from sqlalchemy import select as _select
                             from database.models_sql import User as _User
+
                             with session_scope() as _s:
-                                for _id, _tg in _s.execute(
-                                    _select(_User.id, _User.telegram_user_id).where(_User.id.in_(list(user_ids)))
+                                for _id, _tg, _city, _grade in _s.execute(
+                                    _select(
+                                        _User.id,
+                                        _User.telegram_user_id,
+                                        _User.city,
+                                        _User.grade,
+                                    ).where(_User.id.in_(list(user_ids)))
                                 ):
                                     tg_map[int(_id)] = int(_tg)
+                                    user_demo[int(_id)] = {
+                                        "city": _city or "",
+                                        "grade": _grade or "",
+                                    }
                     except Exception:
                         tg_map = {}
+                        user_demo = {}
+
+                    # Load course price map (best-effort)
+                    course_price = {}
+                    try:
+                        import json as _json
+                        with open("data/courses.json", "r", encoding="utf-8") as _f:
+                            _all = _json.load(_f)
+                        for c in _all or []:
+                            slug = c.get("course_id") or c.get("slug")
+                            if slug:
+                                course_price[slug] = c.get("price")
+                    except Exception:
+                        course_price = {}
 
                     buf = io.StringIO()
                     writer = csv.writer(buf)
@@ -1568,23 +1594,41 @@ async def run_webhook_mode(application: Application) -> None:
                             "id",
                             "user_id",
                             "telegram_user_id",
+                            "city",
+                            "grade",
                             "product_type",
                             "product_id",
                             "status",
+                            "payment_status",
+                            "amount",
+                            "discount",
                             "admin_action_by",
                             "admin_action_at",
                             "created_at",
                         ]
                     )
                     for p in items:
+                        _uid = getattr(p, "user_id", None)
+                        _tg = tg_map.get(_uid, None)
+                        _demo = user_demo.get(_uid, {"city": "", "grade": ""})
+                        _amount = None
+                        _discount = None
+                        if getattr(p, "product_type", None) == "course":
+                            _amount = course_price.get(getattr(p, "product_id", ""))
+                        _payment_status = getattr(p, "status", None)
                         writer.writerow(
                             [
                                 getattr(p, "id", None),
-                                getattr(p, "user_id", None),
-                                tg_map.get(getattr(p, "user_id", None), None),
+                                _uid,
+                                _tg,
+                                _demo.get("city"),
+                                _demo.get("grade"),
                                 getattr(p, "product_type", None),
                                 getattr(p, "product_id", None),
                                 getattr(p, "status", None),
+                                _payment_status,
+                                _amount,
+                                _discount,
                                 getattr(p, "admin_action_by", None),
                                 (
                                     p.admin_action_at.isoformat()
@@ -1614,21 +1658,46 @@ async def run_webhook_mode(application: Application) -> None:
                         import io
                         from openpyxl import Workbook
 
-                        # Map internal user_id -> telegram_user_id for richer exports
+                        # Map internal user_id -> telegram_user_id and demographics for richer exports
                         try:
                             user_ids = {getattr(p, "user_id", None) for p in items}
                             user_ids.discard(None)
                             tg_map = {}
+                            user_demo = {}
                             if user_ids:
                                 from sqlalchemy import select as _select
                                 from database.models_sql import User as _User
+
                                 with session_scope() as _s:
-                                    for _id, _tg in _s.execute(
-                                        _select(_User.id, _User.telegram_user_id).where(_User.id.in_(list(user_ids)))
+                                    for _id, _tg, _city, _grade in _s.execute(
+                                        _select(
+                                            _User.id,
+                                            _User.telegram_user_id,
+                                            _User.city,
+                                            _User.grade,
+                                        ).where(_User.id.in_(list(user_ids)))
                                     ):
                                         tg_map[int(_id)] = int(_tg)
+                                        user_demo[int(_id)] = {
+                                            "city": _city or "",
+                                            "grade": _grade or "",
+                                        }
                         except Exception:
                             tg_map = {}
+                            user_demo = {}
+
+                        # Load course price map (best-effort)
+                        course_price = {}
+                        try:
+                            import json as _json
+                            with open("data/courses.json", "r", encoding="utf-8") as _f:
+                                _all = _json.load(_f)
+                            for c in _all or []:
+                                slug = c.get("course_id") or c.get("slug")
+                                if slug:
+                                    course_price[slug] = c.get("price")
+                        except Exception:
+                            course_price = {}
 
                         wb = Workbook()
                         ws = wb.active
@@ -1638,23 +1707,41 @@ async def run_webhook_mode(application: Application) -> None:
                                 "id",
                                 "user_id",
                                 "telegram_user_id",
+                                "city",
+                                "grade",
                                 "product_type",
                                 "product_id",
                                 "status",
+                                "payment_status",
+                                "amount",
+                                "discount",
                                 "admin_action_by",
                                 "admin_action_at",
                                 "created_at",
                             ]
                         )
                         for p in items:
+                            _uid = getattr(p, "user_id", None)
+                            _tg = tg_map.get(_uid, None)
+                            _demo = user_demo.get(_uid, {"city": "", "grade": ""})
+                            _amount = None
+                            _discount = None
+                            if getattr(p, "product_type", None) == "course":
+                                _amount = course_price.get(getattr(p, "product_id", ""))
+                            _payment_status = getattr(p, "status", None)
                             ws.append(
                                 [
                                     getattr(p, "id", None),
-                                    getattr(p, "user_id", None),
-                                    tg_map.get(getattr(p, "user_id", None), None),
+                                    _uid,
+                                    _tg,
+                                    _demo.get("city"),
+                                    _demo.get("grade"),
                                     getattr(p, "product_type", None),
                                     getattr(p, "product_id", None),
                                     getattr(p, "status", None),
+                                    _payment_status,
+                                    _amount,
+                                    _discount,
                                     getattr(p, "admin_action_by", None),
                                     (
                                         p.admin_action_at.isoformat()
