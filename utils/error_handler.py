@@ -203,8 +203,8 @@ class ErrorHandler:
         """Get error statistics"""
         async with self._lock:
             total_errors = len(self.errors)
-                errors_by_category: dict[str, int] = defaultdict(int)
-                errors_by_severity: dict[str, int] = defaultdict(int)
+            errors_by_category: dict[str, int] = defaultdict(int)
+            errors_by_severity: dict[str, int] = defaultdict(int)
 
             for error_info in self.errors.values():
                 errors_by_category[error_info.category.value] += 1

@@ -13,6 +13,7 @@ import json
 # Try to load dotenv, but don't fail if it's not available
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     # Fallback: define a compatible no-op with matching signature
@@ -25,6 +26,7 @@ except ImportError:
         encoding: str | None = None,
     ) -> bool:
         return False
+
     load_dotenv()
 
 
