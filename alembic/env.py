@@ -25,8 +25,8 @@ def get_url() -> str:
     if (
         lowered.startswith("postgres://") or lowered.startswith("postgresql://")
     ) and "+" not in url:
-        url = url.replace("postgres://", "postgresql+psycopg://").replace(
-            "postgresql://", "postgresql+psycopg://"
+        url = url.replace("postgres://", "postgresql+psycopg_binary://").replace(
+            "postgresql://", "postgresql+psycopg_binary://"
         )
     return url
 

@@ -65,6 +65,21 @@ def upgrade() -> None:
     )
     op.create_index("ix_profile_changes_timestamp", "profile_changes", ["timestamp"])
 
+    # courses
+    op.create_table(
+        "courses",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("slug", sa.String(length=64), nullable=False),
+        sa.Column("title", sa.String(length=256), nullable=False),
+        sa.Column("type", sa.String(length=16), nullable=False),  # free|paid
+        sa.Column("grade", sa.String(length=32), nullable=True),
+        sa.Column("price", sa.Integer(), nullable=True),
+        sa.Column("extra", sa.JSON(), nullable=True),
+    )
+    op.create_unique_constraint("uq_courses_slug", "courses", ["slug"])
+    op.create_index("ix_courses_slug", "courses", ["slug"])
+    op.create_index("ix_courses_grade", "courses", ["grade"])
+
     # purchases
     op.create_table(
         "purchases",
@@ -73,6 +88,10 @@ def upgrade() -> None:
         sa.Column("product_type", sa.String(length=16), nullable=False),
         sa.Column("product_id", sa.String(length=128), nullable=False),
         sa.Column("status", sa.String(length=16), nullable=False),
+        sa.Column("amount", sa.Integer(), nullable=True),
+        sa.Column("discount", sa.Integer(), nullable=True),
+        sa.Column("payment_method", sa.String(length=32), nullable=True),
+        sa.Column("transaction_id", sa.String(length=128), nullable=True),
         sa.Column("admin_action_by", sa.BigInteger(), nullable=True),
         sa.Column("admin_action_at", sa.DateTime(), nullable=True),
         sa.Column("notes_enc", sa.String(length=2048), nullable=True),
@@ -94,7 +113,7 @@ def upgrade() -> None:
         sa.Column("telegram_file_id", sa.String(length=256), nullable=False),
         sa.Column("file_unique_id", sa.String(length=128), nullable=False),
         sa.Column("submitted_at", sa.DateTime(), nullable=True),
-        sa.Column("duplicate_checked", sa.Integer(), nullable=True),
+        sa.Column("duplicate_checked", sa.Boolean(), nullable=True),
         sa.ForeignKeyConstraint(["purchase_id"], ["purchases.id"], ondelete="CASCADE"),
     )
     op.create_unique_constraint("uq_file_unique_id", "receipts", ["file_unique_id"])
@@ -167,6 +186,7 @@ def downgrade() -> None:
     op.drop_table("purchase_audits")
     op.drop_table("receipts")
     op.drop_table("purchases")
+    op.drop_table("courses")
     op.drop_table("profile_changes")
     op.drop_table("banned_users")
     op.drop_table("users")
