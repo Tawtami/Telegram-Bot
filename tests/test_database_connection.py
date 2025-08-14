@@ -58,9 +58,10 @@ def test_is_postgres_detection():
         # Re-import to get updated value
         import importlib
         import database.db
+
         importlib.reload(database.db)
         assert database.db.is_postgres is True
-    
+
     # Test with SQLite URL
     with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///data/app.db'}):
         importlib.reload(database.db)
@@ -78,12 +79,13 @@ def test_engine_creation_postgres(mock_create_engine):
     """Test engine creation for PostgreSQL."""
     mock_engine = MagicMock()
     mock_create_engine.return_value = mock_engine
-    
+
     with patch.dict(os.environ, {'DATABASE_URL': 'postgresql://user:pass@host/db'}):
         import importlib
         import database.db
+
         importlib.reload(database.db)
-        
+
         # Check that create_engine was called with correct parameters
         mock_create_engine.assert_called()
         call_args = mock_create_engine.call_args
@@ -96,12 +98,13 @@ def test_engine_creation_sqlite(mock_create_engine):
     """Test engine creation for SQLite."""
     mock_engine = MagicMock()
     mock_create_engine.return_value = mock_engine
-    
+
     with patch.dict(os.environ, {'DATABASE_URL': 'sqlite:///data/app.db'}):
         import importlib
         import database.db
+
         importlib.reload(database.db)
-        
+
         # Check that create_engine was called with SQLite-specific parameters
         mock_create_engine.assert_called()
         call_args = mock_create_engine.call_args
@@ -113,6 +116,7 @@ def test_database_imports():
     """Test that database module can be imported without errors."""
     try:
         from database import Base, ENGINE, SessionLocal, session_scope
+
         assert Base is not None
         assert ENGINE is not None
         assert SessionLocal is not None
@@ -124,7 +128,7 @@ def test_database_imports():
 def test_base_class_structure():
     """Test that Base class has expected structure."""
     from database.db import Base
-    
+
     assert hasattr(Base, '__tablename__')
     assert hasattr(Base, 'metadata')
     assert hasattr(Base, '__table__')
@@ -133,14 +137,14 @@ def test_base_class_structure():
 def test_session_scope_context_manager():
     """Test session_scope context manager."""
     from database.db import session_scope
-    
+
     # Mock the session
     mock_session = MagicMock()
-    
+
     with patch('database.db.SessionLocal', return_value=mock_session):
         with session_scope() as session:
             assert session == mock_session
-        
+
         # Check that session was closed
         mock_session.close.assert_called_once()
 
@@ -148,17 +152,17 @@ def test_session_scope_context_manager():
 def test_database_metadata():
     """Test that database metadata is properly configured."""
     from database import alembic_metadata
-    
+
     metadata = alembic_metadata()
     assert metadata is not None
-    
+
     # Check that tables are defined
     assert len(metadata.tables) > 0
-    
+
     # Check for expected table names
     table_names = list(metadata.tables.keys())
     expected_tables = ['users', 'courses', 'purchases']
-    
+
     for expected_table in expected_tables:
         assert expected_table in table_names, f"Expected table {expected_table} not found"
 
@@ -167,7 +171,7 @@ def test_database_connection_parameters():
     """Test database connection parameters are properly set."""
     # Test environment variable handling
     test_url = 'postgresql://test:test@localhost/testdb'
-    
+
     with patch.dict(os.environ, {'DATABASE_URL': test_url}):
         url = _build_db_url()
         assert 'psycopg2' in url
@@ -190,7 +194,7 @@ def test_database_url_normalization():
         ('postgresql+psycopg2://user:pass@host/db', 'postgresql+psycopg2://user:pass@host/db'),
         ('sqlite:///data/app.db', 'sqlite:///data/app.db'),
     ]
-    
+
     for input_url, expected_url in test_cases:
         with patch.dict(os.environ, {'DATABASE_URL': input_url}):
             url = _build_db_url()
