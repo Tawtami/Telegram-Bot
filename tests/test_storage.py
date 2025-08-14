@@ -63,11 +63,11 @@ class TestStudentStorage:
         # Mock time to control cache behavior
         with patch('time.time') as mock_time:
             mock_time.return_value = 1000.0
-            
+
             # First load - should hit file
             data1 = self.storage._load_json(self.storage.students_file)
             assert data1 == {"students": []}
-            
+
             # Second load within TTL - should hit cache
             mock_time.return_value = 1200.0  # 200 seconds later, still within 300s TTL
             data2 = self.storage._load_json(self.storage.students_file)
@@ -77,11 +77,11 @@ class TestStudentStorage:
         """Test JSON loading with cache expiry"""
         with patch('time.time') as mock_time:
             mock_time.return_value = 1000.0
-            
+
             # First load
             data1 = self.storage._load_json(self.storage.students_file)
             assert data1 == {"students": []}
-            
+
             # Load after cache expiry
             mock_time.return_value = 1400.0  # 400 seconds later, beyond 300s TTL
             data2 = self.storage._load_json(self.storage.students_file)
@@ -96,11 +96,11 @@ class TestStudentStorage:
     def test_load_json_invalid_json(self):
         """Test JSON loading with invalid JSON content"""
         invalid_file = Path(self.temp_dir) / "invalid.json"
-        
+
         # Create file with invalid JSON
         with open(invalid_file, 'w', encoding='utf-8') as f:
             f.write('{"invalid": json}')
-        
+
         with patch('utils.storage.logger') as mock_logger:
             data = self.storage._load_json(invalid_file)
             assert data == {}
@@ -110,9 +110,9 @@ class TestStudentStorage:
         """Test successful JSON saving"""
         test_data = {"test": "data"}
         test_file = Path(self.temp_dir) / "test.json"
-        
+
         self.storage._save_json(test_file, test_data)
-        
+
         # Check file was created and contains correct data
         assert test_file.exists()
         with open(test_file, 'r', encoding='utf-8') as f:
@@ -123,7 +123,7 @@ class TestStudentStorage:
         """Test JSON saving error handling"""
         test_data = {"test": "data"}
         test_file = Path(self.temp_dir) / "test.json"
-        
+
         # Mock open to raise an exception
         with patch('builtins.open', side_effect=PermissionError("Permission denied")):
             with patch('utils.storage.logger') as mock_logger:
@@ -139,12 +139,12 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
-        
+
         result = self.storage.save_student(student_data)
         assert result is True
-        
+
         # Verify student was saved
         saved_student = self.storage.get_student(12345)
         assert saved_student is not None
@@ -163,17 +163,17 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         # Update the student
         updated_data = student_data.copy()
         updated_data["grade"] = "یازدهم"
-        
+
         result = self.storage.save_student(updated_data)
         assert result is True
-        
+
         # Verify update
         updated_student = self.storage.get_student(12345)
         assert updated_student["grade"] == "یازدهم"
@@ -182,10 +182,10 @@ class TestStudentStorage:
         """Test student saving with missing required fields"""
         incomplete_data = {
             "user_id": 12345,
-            "first_name": "علی"
+            "first_name": "علی",
             # Missing other required fields
         }
-        
+
         with patch('utils.storage.logger') as mock_logger:
             result = self.storage.save_student(incomplete_data)
             assert result is False
@@ -200,9 +200,9 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
-        
+
         with patch('utils.storage.logger') as mock_logger:
             result = self.storage.save_student(invalid_data)
             assert result is False
@@ -212,7 +212,7 @@ class TestStudentStorage:
         """Test student saving with encryption enabled"""
         with patch('utils.storage.crypto_manager') as mock_crypto:
             mock_crypto.encrypt_text.return_value = "encrypted_text"
-            
+
             student_data = {
                 "user_id": 12345,
                 "first_name": "علی",
@@ -221,12 +221,12 @@ class TestStudentStorage:
                 "city": "تهران",
                 "grade": "دوازدهم",
                 "field": "ریاضی",
-                "phone_number": "09123456789"
+                "phone_number": "09123456789",
             }
-            
+
             result = self.storage.save_student(student_data)
             assert result is True
-            
+
             # Verify encryption was called for sensitive fields
             assert mock_crypto.encrypt_text.call_count == 3  # first_name, last_name, phone_number
 
@@ -240,9 +240,9 @@ class TestStudentStorage:
                 "province": "تهران",
                 "city": "تهران",
                 "grade": "دوازدهم",
-                "field": "ریاضی"
+                "field": "ریاضی",
             }
-            
+
             result = self.storage.save_student(student_data)
             assert result is True
 
@@ -257,9 +257,9 @@ class TestStudentStorage:
                     "province": "تهران",
                     "city": "تهران",
                     "grade": "دوازدهم",
-                    "field": "ریاضی"
+                    "field": "ریاضی",
                 }
-                
+
                 result = self.storage.save_student(student_data)
                 assert result is False
                 mock_logger.error.assert_called_once()
@@ -274,10 +274,10 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         # Retrieve the student
         retrieved = self.storage.get_student(12345)
         assert retrieved is not None
@@ -293,7 +293,7 @@ class TestStudentStorage:
         """Test student retrieval with decryption"""
         with patch('utils.storage.crypto_manager') as mock_crypto:
             mock_crypto.decrypt_text.return_value = "decrypted_text"
-            
+
             # Save encrypted student data
             student_data = {
                 "user_id": 12345,
@@ -302,10 +302,10 @@ class TestStudentStorage:
                 "province": "تهران",
                 "city": "تهران",
                 "grade": "دوازدهم",
-                "field": "ریاضی"
+                "field": "ریاضی",
             }
             self.storage.save_student(student_data)
-            
+
             # Retrieve and verify decryption
             retrieved = self.storage.get_student(12345)
             assert retrieved is not None
@@ -315,7 +315,7 @@ class TestStudentStorage:
         """Test student retrieval when decryption fails"""
         with patch('utils.storage.crypto_manager') as mock_crypto:
             mock_crypto.decrypt_text.side_effect = Exception("Decryption failed")
-            
+
             # Save student data
             student_data = {
                 "user_id": 12345,
@@ -324,10 +324,10 @@ class TestStudentStorage:
                 "province": "تهران",
                 "city": "تهران",
                 "grade": "دوازدهم",
-                "field": "ریاضی"
+                "field": "ریاضی",
             }
             self.storage.save_student(student_data)
-            
+
             # Should still retrieve student even if decryption fails
             retrieved = self.storage.get_student(12345)
             assert retrieved is not None
@@ -343,7 +343,7 @@ class TestStudentStorage:
                 "province": "تهران",
                 "city": "تهران",
                 "grade": "دوازدهم",
-                "field": "ریاضی"
+                "field": "ریاضی",
             },
             {
                 "user_id": 67890,
@@ -352,13 +352,13 @@ class TestStudentStorage:
                 "province": "اصفهان",
                 "city": "اصفهان",
                 "grade": "یازدهم",
-                "field": "تجربی"
-            }
+                "field": "تجربی",
+            },
         ]
-        
+
         for student in students:
             self.storage.save_student(student)
-        
+
         all_students = self.storage.get_all_students()
         assert len(all_students) == 2
         assert any(s["user_id"] == 12345 for s in all_students)
@@ -374,14 +374,14 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         # Register for paid course
         result = self.storage.save_course_registration(12345, "course_math_101", is_paid=True)
         assert result is True
-        
+
         # Verify course was added
         student = self.storage.get_student(12345)
         assert "course_math_101" in student.get("purchased_courses", [])
@@ -396,14 +396,14 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         # Register for free course
         result = self.storage.save_course_registration(12345, "course_intro_101", is_paid=False)
         assert result is True
-        
+
         # Verify course was added
         student = self.storage.get_student(12345)
         assert "course_intro_101" in student.get("free_courses", [])
@@ -423,19 +423,15 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
-        book_data = {
-            "book_id": "book_math_101",
-            "title": "ریاضی دوازدهم",
-            "price": 50000
-        }
-        
+
+        book_data = {"book_id": "book_math_101", "title": "ریاضی دوازدهم", "price": 50000}
+
         result = self.storage.save_book_purchase(12345, book_data)
         assert result is True
-        
+
         # Verify book purchase was saved
         student = self.storage.get_student(12345)
         assert "book_purchases" in student
@@ -454,14 +450,14 @@ class TestStudentStorage:
             "city": "تهران",
             "grade": "دوازدهم",
             "field": "ریاضی",
-            "pending_payments": ["course_math_101", "course_physics_101"]
+            "pending_payments": ["course_math_101", "course_physics_101"],
         }
         self.storage.save_student(student_data)
-        
+
         # Confirm payment
         result = self.storage.confirm_payment(12345)
         assert result is True
-        
+
         # Verify pending payments moved to purchased
         student = self.storage.get_student(12345)
         assert "pending_payments" not in student
@@ -478,10 +474,10 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         result = self.storage.confirm_payment(12345)
         assert result is False
 
@@ -495,14 +491,14 @@ class TestStudentStorage:
             "province": "تهران",
             "city": "تهران",
             "grade": "دوازدهم",
-            "field": "ریاضی"
+            "field": "ریاضی",
         }
         self.storage.save_student(student_data)
-        
+
         # Add pending payment
         result = self.storage.add_pending_payment(12345, "course_math_101")
         assert result is True
-        
+
         # Verify pending payment was added
         student = self.storage.get_student(12345)
         assert "pending_payments" in student
@@ -512,12 +508,12 @@ class TestStudentStorage:
         """Test ban management functionality"""
         # Test initial state
         assert not self.storage.is_user_banned(12345)
-        
+
         # Ban user
         result = self.storage.ban_user(12345)
         assert result is True
         assert self.storage.is_user_banned(12345)
-        
+
         # Unban user
         result = self.storage.unban_user(12345)
         assert result is True
@@ -527,7 +523,7 @@ class TestStudentStorage:
         """Test banning already banned user"""
         # Ban user first
         self.storage.ban_user(12345)
-        
+
         # Try to ban again
         result = self.storage.ban_user(12345)
         assert result is True  # Should still return True
@@ -549,10 +545,10 @@ class TestStudentStorage:
             "grade": "دوازدهم",
             "field": "ریاضی",
             "free_courses": ["course_intro_101"],
-            "purchased_courses": ["course_math_101", "course_physics_101"]
+            "purchased_courses": ["course_math_101", "course_physics_101"],
         }
         self.storage.save_student(student_data)
-        
+
         courses = self.storage.get_user_courses(12345)
         assert courses["free_courses"] == ["course_intro_101"]
         assert courses["purchased_courses"] == ["course_math_101", "course_physics_101"]
@@ -565,7 +561,7 @@ class TestStudentStorage:
     def test_thread_safety(self):
         """Test thread safety of storage operations"""
         import threading
-        
+
         def save_students():
             for i in range(10):
                 student_data = {
@@ -575,21 +571,21 @@ class TestStudentStorage:
                     "province": "تهران",
                     "city": "تهران",
                     "grade": "دوازدهم",
-                    "field": "ریاضی"
+                    "field": "ریاضی",
                 }
                 self.storage.save_student(student_data)
-        
+
         # Create multiple threads
         threads = [threading.Thread(target=save_students) for _ in range(3)]
-        
+
         # Start all threads
         for thread in threads:
             thread.start()
-        
+
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        
+
         # Verify all students were saved
         all_students = self.storage.get_all_students()
         assert len(all_students) == 30  # 3 threads * 10 students each
