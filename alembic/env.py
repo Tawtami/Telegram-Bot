@@ -63,7 +63,7 @@ def run_migrations_online() -> None:
     # Add explicit driver configuration for PostgreSQL
     if "postgresql" in get_url():
         configuration["sqlalchemy.driver"] = "psycopg_binary"
-    
+
     # Try to create engine with more explicit configuration
     try:
         connectable = engine_from_config(
@@ -71,20 +71,19 @@ def run_migrations_online() -> None:
             prefix="sqlalchemy.",
             poolclass=pool.NullPool,
         )
-        
+
         # Test connection before proceeding
         with connectable.connect() as test_conn:
             test_conn.execute(text("SELECT 1"))
             print("Database connection test successful")
-            
+
     except Exception as e:
         print(f"Engine creation failed: {e}")
         # Fallback: try with minimal configuration
         from sqlalchemy import create_engine
+
         connectable = create_engine(
-            get_url(),
-            poolclass=pool.NullPool,
-            echo=True  # Enable SQL logging for debugging
+            get_url(), poolclass=pool.NullPool, echo=True  # Enable SQL logging for debugging
         )
     with connectable.connect() as connection:
         context.configure(
