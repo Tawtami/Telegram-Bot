@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool, text
+from sqlalchemy import pool, text
 from alembic import context
 
 # Alembic config
@@ -33,8 +33,8 @@ def get_url() -> str:
     if (
         lowered.startswith("postgres://") or lowered.startswith("postgresql://")
     ) and "+" not in url:
-        url = url.replace("postgres://", "postgresql+psycopg_binary://").replace(
-            "postgresql://", "postgresql+psycopg_binary://"
+        url = url.replace("postgres://", "postgresql+psycopg://").replace(
+            "postgresql://", "postgresql+psycopg://"
         )
 
     # Debug logging
@@ -57,19 +57,13 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = get_url()
-
-    # Add explicit driver configuration for PostgreSQL
-    if "postgresql" in get_url():
-        configuration["sqlalchemy.driver"] = "psycopg_binary"
-    
-    # Try to create engine with more explicit configuration
+    # Create engine with minimal configuration to avoid driver issues
     try:
-        connectable = engine_from_config(
-            configuration,
-            prefix="sqlalchemy.",
+        from sqlalchemy import create_engine
+        connectable = create_engine(
+            get_url(),
             poolclass=pool.NullPool,
+            echo=True  # Enable SQL logging for debugging
         )
         
         # Test connection before proceeding
@@ -79,13 +73,8 @@ def run_migrations_online() -> None:
             
     except Exception as e:
         print(f"Engine creation failed: {e}")
-        # Fallback: try with minimal configuration
-        from sqlalchemy import create_engine
-        connectable = create_engine(
-            get_url(),
-            poolclass=pool.NullPool,
-            echo=True  # Enable SQL logging for debugging
-        )
+        raise
+    
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
