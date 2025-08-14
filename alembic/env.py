@@ -60,10 +60,9 @@ def run_migrations_online() -> None:
     # Create engine with minimal configuration to avoid driver issues
     try:
         from sqlalchemy import create_engine
+
         connectable = create_engine(
-            get_url(),
-            poolclass=pool.NullPool,
-            echo=True  # Enable SQL logging for debugging
+            get_url(), poolclass=pool.NullPool, echo=True  # Enable SQL logging for debugging
         )
 
         # Test connection before proceeding
