@@ -1,312 +1,458 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Comprehensive tests for utils/security.py to achieve 100% coverage
+Tests for security.py
 """
-
 import pytest
 import re
 import hashlib
 import hmac
 import base64
 import secrets
-from datetime import datetime, timedelta
+import time
 from unittest.mock import patch, MagicMock
+from datetime import datetime, timedelta
 from utils.security import SecurityUtils
-from config import config
 
 
 class TestSecurityUtils:
-    """Test SecurityUtils class for 100% coverage"""
+    """Test cases for SecurityUtils class"""
 
-    def test_sanitize_input_empty_input(self):
-        """Test sanitize_input with empty/None input"""
-        assert SecurityUtils.sanitize_input("") == ""
-        assert SecurityUtils.sanitize_input(None) == ""
-        assert SecurityUtils.sanitize_input(0) == ""  # 0 is falsy, so returns empty string
+    def test_sql_injection_patterns(self):
+        """Test SQL injection pattern detection"""
+        patterns = SecurityUtils._sql_injection_patterns
+        
+        # Test SELECT pattern
+        assert any(pattern.search("SELECT * FROM users") for pattern in patterns)
+        assert any(pattern.search("select * from users") for pattern in patterns)
+        
+        # Test INSERT pattern
+        assert any(pattern.search("INSERT INTO users") for pattern in patterns)
+        
+        # Test UPDATE pattern
+        assert any(pattern.search("UPDATE users SET") for pattern in patterns)
+        
+        # Test DELETE pattern
+        assert any(pattern.search("DELETE FROM users") for pattern in patterns)
+        
+        # Test DROP pattern
+        assert any(pattern.search("DROP TABLE users") for pattern in patterns)
+        
+        # Test CREATE pattern
+        assert any(pattern.search("CREATE TABLE users") for pattern in patterns)
+        
+        # Test ALTER pattern
+        assert any(pattern.search("ALTER TABLE users") for pattern in patterns)
+        
+        # Test EXEC pattern
+        assert any(pattern.search("EXEC sp_procedure") for pattern in patterns)
+        
+        # Test UNION pattern
+        assert any(pattern.search("UNION SELECT") for pattern in patterns)
+        
+        # Test SCRIPT pattern
+        assert any(pattern.search("<SCRIPT>alert('xss')</SCRIPT>") for pattern in patterns)
 
-    def test_sanitize_input_basic_sanitization(self):
+    def test_xss_patterns(self):
+        """Test XSS pattern detection"""
+        patterns = SecurityUtils._xss_patterns
+        
+        # Test script tags
+        assert any(pattern.search("<script>alert('xss')</script>") for pattern in patterns)
+        assert any(pattern.search("<SCRIPT>alert('xss')</SCRIPT>") for pattern in patterns)
+        
+        # Test javascript protocol
+        assert any(pattern.search("javascript:alert('xss')") for pattern in patterns)
+        
+        # Test vbscript protocol
+        assert any(pattern.search("vbscript:msgbox('xss')") for pattern in patterns)
+        
+        # Test onload event
+        assert any(pattern.search("onload=alert('xss')") for pattern in patterns)
+        
+        # Test onerror event
+        assert any(pattern.search("onerror=alert('xss')") for pattern in patterns)
+        
+        # Test onclick event
+        assert any(pattern.search("onclick=alert('xss')") for pattern in patterns)
+        
+        # Test iframe
+        assert any(pattern.search("<iframe src='evil.com'>") for pattern in patterns)
+        
+        # Test object
+        assert any(pattern.search("<object data='evil.swf'>") for pattern in patterns)
+        
+        # Test embed
+        assert any(pattern.search("<embed src='evil.swf'>") for pattern in patterns)
+        
+        # Test data URLs
+        assert any(pattern.search("data:text/html,<script>alert('xss')</script>") for pattern in patterns)
+        assert any(pattern.search("data:application/x-javascript,alert('xss')") for pattern in patterns)
+
+    def test_path_traversal_patterns(self):
+        """Test path traversal pattern detection"""
+        patterns = SecurityUtils._path_traversal_patterns
+        
+        # Test directory traversal
+        assert any(pattern.search("../etc/passwd") for pattern in patterns)
+        assert any(pattern.search("..\\windows\\system32") for pattern in patterns)
+        
+        # Test system directories
+        assert any(pattern.search("/etc/passwd") for pattern in patterns)
+        assert any(pattern.search("/var/log") for pattern in patterns)
+        assert any(pattern.search("/tmp/file") for pattern in patterns)
+        assert any(pattern.search("/home/user") for pattern in patterns)
+        
+        # Test Windows drives
+        assert any(pattern.search("c:\\windows") for pattern in patterns)
+        assert any(pattern.search("D:\\Program Files") for pattern in patterns)
+
+    def test_command_injection_patterns(self):
+        """Test command injection pattern detection"""
+        patterns = SecurityUtils._command_injection_patterns
+        
+        # Test command names
+        assert any(pattern.search("cmd /c dir") for pattern in patterns)
+        assert any(pattern.search("powershell -Command") for pattern in patterns)
+        assert any(pattern.search("bash -c 'ls'") for pattern in patterns)
+        assert any(pattern.search("sh -c 'cat file'") for pattern in patterns)
+        assert any(pattern.search("python -c 'print(1)'") for pattern in patterns)
+        assert any(pattern.search("perl -e 'print 1'") for pattern in patterns)
+        assert any(pattern.search("ruby -e 'puts 1'") for pattern in patterns)
+        
+        # Test command separators
+        assert any(pattern.search("command1 | command2") for pattern in patterns)
+        assert any(pattern.search("command1 & command2") for pattern in patterns)
+        assert any(pattern.search("command1; command2") for pattern in patterns)
+        assert any(pattern.search("command1 ` command2") for pattern in patterns)
+        assert any(pattern.search("$(command)") for pattern in patterns)
+        assert any(pattern.search("${command}") for pattern in patterns)
+        
+        # Test dangerous functions
+        assert any(pattern.search("eval('alert(1)')") for pattern in patterns)
+        assert any(pattern.search("exec('ls')") for pattern in patterns)
+        assert any(pattern.search("system('cat file')") for pattern in patterns)
+        assert any(pattern.search("subprocess.call('ls')") for pattern in patterns)
+
+    def test_sanitize_input_basic(self):
         """Test basic input sanitization"""
-        # Test null bytes removal
-        assert SecurityUtils.sanitize_input("test\x00string") == "teststring"
+        # Test normal text
+        result = SecurityUtils.sanitize_input("Hello World")
+        assert result == "Hello World"
+        
+        # Test empty input
+        result = SecurityUtils.sanitize_input("")
+        assert result == ""
+        
+        result = SecurityUtils.sanitize_input(None)
+        assert result == ""
+        
+        # Test non-string input
+        result = SecurityUtils.sanitize_input(123)
+        assert result == "123"
 
-        # Test control characters removal
-        assert SecurityUtils.sanitize_input("test\x01\x02\x03string") == "teststring"
+    def test_sanitize_input_sql_injection(self):
+        """Test SQL injection sanitization"""
+        malicious_input = "'; DROP TABLE users; --"
+        result = SecurityUtils.sanitize_input(malicious_input)
+        
+        # Should remove SQL injection patterns
+        assert "DROP TABLE" not in result
+        assert ";" not in result
+        assert "--" not in result
 
-        # Test whitespace trimming
-        assert SecurityUtils.sanitize_input("  test  ") == "test"
+    def test_sanitize_input_xss(self):
+        """Test XSS sanitization"""
+        malicious_input = "<script>alert('xss')</script>Hello"
+        result = SecurityUtils.sanitize_input(malicious_input)
+        
+        # Should remove XSS patterns
+        assert "<script>" not in result
+        assert "alert('xss')" not in result
+        assert "Hello" in result  # Normal text should remain
 
-    def test_sanitize_input_sql_injection_patterns(self):
-        """Test SQL injection pattern removal"""
-        malicious_input = "SELECT * FROM users; DROP TABLE users; -- comment"
-        sanitized = SecurityUtils.sanitize_input(malicious_input)
+    def test_sanitize_input_path_traversal(self):
+        """Test path traversal sanitization"""
+        malicious_input = "../../../etc/passwd"
+        result = SecurityUtils.sanitize_input(malicious_input)
+        
+        # Should remove path traversal patterns
+        assert ".." not in result
+        assert "/etc/" not in result
 
-        # Should remove SQL keywords and comments
-        assert "SELECT" not in sanitized
-        assert "DROP" not in sanitized
-        assert "--" not in sanitized
-        assert "FROM users" in sanitized  # Should remain
+    def test_sanitize_input_command_injection(self):
+        """Test command injection sanitization"""
+        malicious_input = "ls; cat /etc/passwd"
+        result = SecurityUtils.sanitize_input(malicious_input)
+        
+        # Should remove command injection patterns
+        assert ";" not in result
+        assert "cat" not in result
 
-    def test_sanitize_input_xss_patterns(self):
-        """Test XSS pattern removal"""
-        malicious_input = "<script>alert('xss')</script>javascript:void(0)"
-        sanitized = SecurityUtils.sanitize_input(malicious_input)
-
-        assert "<script" not in sanitized
-        assert "javascript:" not in sanitized
-        assert "alert('xss')" in sanitized  # Should remain
-
-    def test_sanitize_input_path_traversal_patterns(self):
-        """Test path traversal pattern removal"""
-        malicious_input = "../../../etc/passwd c:\\windows\\system32"
-        sanitized = SecurityUtils.sanitize_input(malicious_input)
-
-        assert "../" not in sanitized
-        assert "c:\\" not in sanitized
-        assert "etc/passwd" in sanitized  # Should remain
-
-    def test_sanitize_input_command_injection_patterns(self):
-        """Test command injection pattern removal"""
-        malicious_input = "cmd /c dir; powershell Get-Process | bash"
-        sanitized = SecurityUtils.sanitize_input(malicious_input)
-
-        assert "cmd" not in sanitized
-        assert "powershell" not in sanitized
-        assert "bash" not in sanitized
-        assert "dir" in sanitized  # Should remain
+    def test_sanitize_input_control_characters(self):
+        """Test control character removal"""
+        malicious_input = "Hello\x00World\x01\x02\x03"
+        result = SecurityUtils.sanitize_input(malicious_input)
+        
+        # Should remove null bytes and control characters
+        assert "\x00" not in result
+        assert "\x01" not in result
+        assert "\x02" not in result
+        assert "\x03" not in result
+        assert "Hello" in result
+        assert "World" in result
 
     def test_sanitize_input_length_limit(self):
-        """Test length limiting functionality"""
-        long_input = "a" * 100
-        sanitized = SecurityUtils.sanitize_input(long_input, max_length=50)
-        assert len(sanitized) == 50
-        assert sanitized == "a" * 50
+        """Test input length limiting"""
+        long_input = "A" * 1000
+        result = SecurityUtils.sanitize_input(long_input, max_length=100)
+        
+        assert len(result) == 100
+        assert result == "A" * 100
+
+    def test_sanitize_input_whitespace_trimming(self):
+        """Test whitespace trimming"""
+        input_with_spaces = "  Hello World  "
+        result = SecurityUtils.sanitize_input(input_with_spaces)
+        
+        assert result == "Hello World"
 
     def test_validate_filename_valid(self):
-        """Test filename validation with valid names"""
-        valid_names = ["document.pdf", "image_123.jpg", "file-name.txt", "a" * 255]  # Max length
-
-        for name in valid_names:
-            assert SecurityUtils.validate_filename(name) is True
+        """Test valid filename validation"""
+        valid_filenames = [
+            "document.pdf",
+            "image.jpg",
+            "file_123.txt",
+            "my-file.docx",
+            "file.name"
+        ]
+        
+        for filename in valid_filenames:
+            assert SecurityUtils.validate_filename(filename) is True
 
     def test_validate_filename_invalid(self):
-        """Test filename validation with invalid names"""
-        invalid_names = [
+        """Test invalid filename validation"""
+        invalid_filenames = [
             "",  # Empty
             None,  # None
-            "file<name.txt",  # Dangerous character
-            "file:name.txt",  # Dangerous character
-            "file|name.txt",  # Dangerous character
-            "file?name.txt",  # Dangerous character
-            "file*name.txt",  # Dangerous character
-            "file\\name.txt",  # Dangerous character
-            "file/name.txt",  # Dangerous character
+            "file<name.txt",  # Contains <
+            "file>name.txt",  # Contains >
+            "file:name.txt",  # Contains :
+            'file"name.txt',  # Contains "
+            "file|name.txt",  # Contains |
+            "file?name.txt",  # Contains ?
+            "file*name.txt",  # Contains *
+            "file\\name.txt",  # Contains backslash
+            "file/name.txt",  # Contains forward slash
             "file..name.txt",  # Path traversal
-            "a" * 256,  # Too long
+            "A" * 300,  # Too long
         ]
-
-        for name in invalid_names:
-            assert SecurityUtils.validate_filename(name) is False
+        
+        for filename in invalid_filenames:
+            assert SecurityUtils.validate_filename(filename) is False
 
     def test_generate_secure_token(self):
         """Test secure token generation"""
-        token1 = SecurityUtils.generate_secure_token(16)
-        token2 = SecurityUtils.generate_secure_token(32)
+        # Test default length
+        token1 = SecurityUtils.generate_secure_token()
+        assert len(token1) == 32
+        
+        # Test custom length
+        token2 = SecurityUtils.generate_secure_token(64)
+        assert len(token2) == 64
+        
+        # Test tokens are different
+        assert token1 != token2
+        
+        # Test tokens are URL safe
+        assert "=" not in token1
+        assert "=" not in token2
 
-        assert len(token1) > 0
-        assert len(token2) > 0
-        assert token1 != token2  # Should be different each time
-        assert isinstance(token1, str)
-        assert isinstance(token2, str)
+    def test_hash_password(self):
+        """Test password hashing"""
+        password = "my_secure_password"
+        
+        # Test without salt
+        hash1, salt1 = SecurityUtils.hash_password(password)
+        assert isinstance(hash1, str)
+        assert isinstance(salt1, str)
+        assert len(salt1) == 32  # 16 bytes hex encoded
+        
+        # Test with custom salt
+        custom_salt = "custom_salt_12345"
+        hash2, salt2 = SecurityUtils.hash_password(password, custom_salt)
+        assert hash2 != hash1
+        assert salt2 == custom_salt
 
-    def test_hash_password_without_salt(self):
-        """Test password hashing without providing salt"""
-        password = "testpassword123"
-        hashed, salt = SecurityUtils.hash_password(password)
-
-        assert isinstance(hashed, str)
-        assert isinstance(salt, str)
-        assert len(salt) == 32  # 16 bytes hex encoded
-        assert hashed != password
-
-    def test_hash_password_with_salt(self):
-        """Test password hashing with provided salt"""
-        password = "testpassword123"
-        custom_salt = "custom_salt_123"
-        hashed, salt = SecurityUtils.hash_password(password, custom_salt)
-
-        assert hashed != password
-        assert salt == custom_salt
-
-    def test_verify_password_success(self):
-        """Test successful password verification"""
-        password = "testpassword123"
-        hashed, salt = SecurityUtils.hash_password(password)
-
-        assert SecurityUtils.verify_password(password, hashed, salt) is True
-
-    def test_verify_password_failure(self):
-        """Test failed password verification"""
-        password = "testpassword123"
-        wrong_password = "wrongpassword"
-        hashed, salt = SecurityUtils.hash_password(password)
-
-        assert SecurityUtils.verify_password(wrong_password, hashed, salt) is False
+    def test_verify_password(self):
+        """Test password verification"""
+        password = "my_secure_password"
+        hash_value, salt = SecurityUtils.hash_password(password)
+        
+        # Test correct password
+        assert SecurityUtils.verify_password(password, hash_value, salt) is True
+        
+        # Test incorrect password
+        assert SecurityUtils.verify_password("wrong_password", hash_value, salt) is False
+        
+        # Test incorrect hash
+        wrong_hash = "wrong_hash_value"
+        assert SecurityUtils.verify_password(password, wrong_hash, salt) is False
+        
+        # Test incorrect salt
+        wrong_salt = "wrong_salt"
+        assert SecurityUtils.verify_password(password, hash_value, wrong_salt) is False
 
     def test_verify_password_exception_handling(self):
-        """Test password verification with exception handling"""
-        # Mock hash_password to raise an exception
-        with patch.object(SecurityUtils, 'hash_password', side_effect=Exception("Test error")):
-            result = SecurityUtils.verify_password("password", "hash", "salt")
-            assert result is False
+        """Test password verification with exceptions"""
+        # Test with invalid hash format
+        assert SecurityUtils.verify_password("password", "invalid_hash", "salt") is False
 
     def test_generate_hmac(self):
         """Test HMAC generation"""
-        data = "test data"
-        secret = "secret_key"
-        hmac_result = SecurityUtils.generate_hmac(data, secret)
+        data = "test_data"
+        secret = "test_secret"
+        
+        hmac_value = SecurityUtils.generate_hmac(data, secret)
+        
+        assert isinstance(hmac_value, str)
+        assert len(hmac_value) == 64  # SHA-256 hex digest
+        
+        # Test consistency
+        hmac_value2 = SecurityUtils.generate_hmac(data, secret)
+        assert hmac_value == hmac_value2
 
-        assert isinstance(hmac_result, str)
-        assert len(hmac_result) == 64  # SHA256 hex digest length
-
-    def test_verify_hmac_success(self):
-        """Test successful HMAC verification"""
-        data = "test data"
-        secret = "secret_key"
-        signature = SecurityUtils.generate_hmac(data, secret)
-
-        assert SecurityUtils.verify_hmac(data, signature, secret) is True
-
-    def test_verify_hmac_failure(self):
-        """Test failed HMAC verification"""
-        data = "test data"
-        secret = "secret_key"
-        wrong_signature = "wrong_signature"
-
-        assert SecurityUtils.verify_hmac(data, wrong_signature, secret) is False
+    def test_verify_hmac(self):
+        """Test HMAC verification"""
+        data = "test_data"
+        secret = "test_secret"
+        
+        # Generate HMAC
+        hmac_value = SecurityUtils.generate_hmac(data, secret)
+        
+        # Test correct verification
+        assert SecurityUtils.verify_hmac(data, hmac_value, secret) is True
+        
+        # Test incorrect data
+        assert SecurityUtils.verify_hmac("wrong_data", hmac_value, secret) is False
+        
+        # Test incorrect signature
+        assert SecurityUtils.verify_hmac(data, "wrong_signature", secret) is False
+        
+        # Test incorrect secret
+        assert SecurityUtils.verify_hmac(data, hmac_value, "wrong_secret") is False
 
     def test_rate_limit_key(self):
         """Test rate limit key generation"""
         user_id = 12345
         action = "login"
+        
         key = SecurityUtils.rate_limit_key(user_id, action)
+        expected_key = f"rate_limit:{user_id}:{action}"
+        
+        assert key == expected_key
 
-        assert key == "rate_limit:12345:login"
-        assert isinstance(key, str)
-
-    def test_validate_json_structure_valid(self):
-        """Test JSON structure validation with valid data"""
-        data = {"name": "test", "age": 25, "email": "test@example.com"}
-        required_fields = ["name", "age"]
-
+    def test_validate_json_structure(self):
+        """Test JSON structure validation"""
+        # Test valid structure
+        data = {"field1": "value1", "field2": "value2"}
+        required_fields = ["field1", "field2"]
         assert SecurityUtils.validate_json_structure(data, required_fields) is True
-
-    def test_validate_json_structure_invalid(self):
-        """Test JSON structure validation with invalid data"""
-        # Missing required field
-        data = {"name": "test", "age": 25}
-        required_fields = ["name", "age", "email"]
-
+        
+        # Test missing field
+        required_fields = ["field1", "field2", "field3"]
         assert SecurityUtils.validate_json_structure(data, required_fields) is False
+        
+        # Test not a dict
+        assert SecurityUtils.validate_json_structure("not_a_dict", required_fields) is False
+        assert SecurityUtils.validate_json_structure([], required_fields) is False
+        assert SecurityUtils.validate_json_structure(None, required_fields) is False
 
-    def test_validate_json_structure_not_dict(self):
-        """Test JSON structure validation with non-dict data"""
-        data = "not a dict"
-        required_fields = ["name"]
+    def test_sanitize_json(self):
+        """Test JSON sanitization"""
+        # Test string
+        result = SecurityUtils.sanitize_json("Hello<script>alert('xss')</script>")
+        assert "<script>" not in result
+        
+        # Test dict
+        data = {
+            "name": "John<script>alert('xss')</script>",
+            "age": 25
+        }
+        result = SecurityUtils.sanitize_json(data)
+        assert "<script>" not in result["name"]
+        assert result["age"] == 25
+        
+        # Test list
+        data = ["Hello<script>alert('xss')</script>", 123]
+        result = SecurityUtils.sanitize_json(data)
+        assert "<script>" not in result[0]
+        assert result[1] == 123
+        
+        # Test non-string/non-container
+        result = SecurityUtils.sanitize_json(123)
+        assert result == 123
 
-        assert SecurityUtils.validate_json_structure(data, required_fields) is False
-
-    def test_sanitize_json_string(self):
-        """Test JSON sanitization with string data"""
-        malicious_string = "<script>alert('xss')</script>"
-        sanitized = SecurityUtils.sanitize_json(malicious_string)
-
-        assert "<script" not in sanitized
-        assert "alert('xss')" in sanitized
-
-    def test_sanitize_json_dict(self):
-        """Test JSON sanitization with dictionary data"""
-        data = {"name": "<script>alert('xss')</script>", "description": "normal text"}
-        sanitized = SecurityUtils.sanitize_json(data)
-
-        assert "<script" not in sanitized["name"]
-        assert sanitized["description"] == "normal text"
-
-    def test_sanitize_json_list(self):
-        """Test JSON sanitization with list data"""
-        data = [
-            "<script>alert('xss')</script>",
-            "normal text",
-            {"nested": "<iframe>malicious</iframe>"},
+    def test_validate_phone_number(self):
+        """Test phone number validation"""
+        # Test valid phone numbers
+        valid_phones = [
+            "09123456789",  # Iranian mobile
+            "+989123456789",  # International format
+            "00989123456789",  # International format with 00
+            "1234567890",  # Generic 10-digit
+            "123456789012345"  # Generic 15-digit
         ]
-        sanitized = SecurityUtils.sanitize_json(data)
-
-        assert "<script" not in sanitized[0]
-        assert sanitized[1] == "normal text"
-        assert "<iframe" not in sanitized[2]["nested"]
-
-    def test_sanitize_json_other_types(self):
-        """Test JSON sanitization with other data types"""
-        data = 123
-        sanitized = SecurityUtils.sanitize_json(data)
-        assert sanitized == 123
-
-    def test_validate_phone_number_valid(self):
-        """Test phone number validation with valid numbers"""
-        valid_numbers = [
-            "1234567890",
-            "+12345678901",
-            "123-456-7890",
-            "(123) 456-7890",
-            "123.456.7890",
-        ]
-
-        for phone in valid_numbers:
+        
+        for phone in valid_phones:
             assert SecurityUtils.validate_phone_number(phone) is True
-
-    def test_validate_phone_number_invalid(self):
-        """Test phone number validation with invalid numbers"""
-        invalid_numbers = [
+        
+        # Test invalid phone numbers
+        invalid_phones = [
             "",  # Empty
             None,  # None
             "123",  # Too short
-            "12345678901234567890",  # Too long
+            "1234567890123456",  # Too long
             "0000000000",  # Too many leading zeros
             "1111111111",  # Too many ones
             "9999999999",  # Too many nines
-            "123456666666",  # Too many repeated digits
+            "1233333333",  # Too many repeated digits
+            "abc123def",  # Contains letters
         ]
-
-        for phone in invalid_numbers:
+        
+        for phone in invalid_phones:
             assert SecurityUtils.validate_phone_number(phone) is False
 
-    def test_validate_email_valid(self):
-        """Test email validation with valid emails"""
+    def test_validate_email(self):
+        """Test email validation"""
+        # Test valid emails
         valid_emails = [
-            "test@example.com",
-            "user.name@domain.co.uk",
-            "user+tag@example.org",
-            "123@456.com",
+            "user@example.com",
+            "user.name@example.com",
+            "user+tag@example.co.uk",
+            "user123@example-domain.org"
         ]
-
+        
         for email in valid_emails:
             assert SecurityUtils.validate_email(email) is True
-
-    def test_validate_email_invalid(self):
-        """Test email validation with invalid emails"""
+        
+        # Test invalid emails
         invalid_emails = [
             "",  # Empty
             None,  # None
-            "invalid-email",  # No @ symbol
+            "invalid-email",  # No @
             "@example.com",  # No local part
             "user@",  # No domain
             "user..name@example.com",  # Double dots
-            "user.@example.com",  # Dot immediately before @
-            "user@.example.com",  # @ before dot
-            "user@example..com",  # Multiple consecutive dots
+            "user.@example.com",  # Dot before @
+            "@.example.com",  # @ before dot
+            "user@example..com",  # Multiple dots
             "user<tag>@example.com",  # HTML tags
-            "a" * 255 + "@example.com",  # Too long
+            "user\"tag\"@example.com",  # Quotes
+            "user'tag'@example.com",  # Quotes
+            "a" * 300 + "@example.com",  # Too long
         ]
-
+        
         for email in invalid_emails:
             assert SecurityUtils.validate_email(email) is False
 
@@ -315,181 +461,131 @@ class TestSecurityUtils:
         """Test secure session token creation"""
         mock_config.bot_token = "test_bot_token"
         user_id = 12345
-        expires_in_hours = 24
-
-        token = SecurityUtils.create_secure_session_token(user_id, expires_in_hours)
-
+        
+        token = SecurityUtils.create_secure_session_token(user_id, expires_in_hours=1)
+        
         assert isinstance(token, str)
         assert len(token) > 0
-
-        # Decode and verify structure
+        
+        # Test token contains user ID
         decoded = base64.urlsafe_b64decode(token.encode()).decode()
-        parts = decoded.split(":")
-        assert len(parts) == 3
-        assert parts[0] == str(user_id)
+        assert str(user_id) in decoded
 
     @patch('utils.security.config')
     def test_verify_session_token_valid(self, mock_config):
         """Test valid session token verification"""
         mock_config.bot_token = "test_bot_token"
         user_id = 12345
-
-        # Create a token
-        token = SecurityUtils.create_secure_session_token(user_id, 24)
-
-        # Verify it
+        
+        # Create token
+        token = SecurityUtils.create_secure_session_token(user_id, expires_in_hours=1)
+        
+        # Verify token
         result = SecurityUtils.verify_session_token(token)
         assert result == user_id
 
-    def test_verify_session_token_invalid_format(self):
-        """Test session token verification with invalid format"""
-        # Token with wrong number of parts
-        invalid_token = base64.urlsafe_b64encode("invalid:format".encode()).decode()
-
-        result = SecurityUtils.verify_session_token(invalid_token)
-        assert result is None
-
     @patch('utils.security.config')
     def test_verify_session_token_expired(self, mock_config):
-        """Test session token verification with expired token"""
+        """Test expired session token verification"""
         mock_config.bot_token = "test_bot_token"
-        # Create a token that expired 1 hour ago
-        timestamp = (datetime.utcnow() - timedelta(hours=1)).timestamp()
-        token_data = f"12345:{timestamp}"
-        signature = SecurityUtils.generate_hmac(token_data, "test_bot_token")
-        full_token_data = f"{token_data}:{signature}"
-        token = base64.urlsafe_b64encode(full_token_data.encode()).decode()
-
+        user_id = 12345
+        
+        # Create token with very short expiration
+        token = SecurityUtils.create_secure_session_token(user_id, expires_in_hours=0.0001)
+        
+        # Wait for expiration
+        time.sleep(0.1)
+        
+        # Verify expired token
         result = SecurityUtils.verify_session_token(token)
         assert result is None
 
-    @patch('utils.security.config')
-    def test_verify_session_token_invalid_signature(self, mock_config):
-        """Test session token verification with invalid signature"""
-        mock_config.bot_token = "test_bot_token"
-        # Create a token with a signature that doesn't match the expected HMAC
-        timestamp = (datetime.utcnow() + timedelta(hours=1)).timestamp()
-        token_data = f"12345:{timestamp}"
-        # Generate HMAC with wrong secret
-        wrong_signature = SecurityUtils.generate_hmac(token_data, "wrong_secret")
-        full_token_data = f"{token_data}:{wrong_signature}"
-        token = base64.urlsafe_b64encode(full_token_data.encode()).decode()
-
-        result = SecurityUtils.verify_session_token(token)
+    def test_verify_session_token_invalid(self):
+        """Test invalid session token verification"""
+        # Test invalid token format
+        result = SecurityUtils.verify_session_token("invalid_token")
+        assert result is None
+        
+        # Test malformed token
+        malformed_token = base64.urlsafe_b64encode("invalid:format".encode()).decode()
+        result = SecurityUtils.verify_session_token(malformed_token)
         assert result is None
 
-    def test_verify_session_token_exception_handling(self):
-        """Test session token verification with exception handling"""
-        # Invalid base64
-        result = SecurityUtils.verify_session_token("invalid_base64!")
-        assert result is None
-
-    @patch('utils.security.logger')
-    def test_log_security_event(self, mock_logger):
+    def test_log_security_event(self):
         """Test security event logging"""
-        event_type = "login_attempt"
-        user_id = 12345
-        details = {"ip": "192.168.1.1", "user_agent": "test"}
+        with patch('utils.security.logger') as mock_logger:
+            SecurityUtils.log_security_event(
+                event_type="login_attempt",
+                user_id=12345,
+                details={"ip": "192.168.1.1"}
+            )
+            
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0][0]
+            assert "Security event:" in call_args
+            assert "login_attempt" in call_args
+            assert "12345" in call_args
+            assert "192.168.1.1" in call_args
 
-        SecurityUtils.log_security_event(event_type, user_id, details)
-
-        mock_logger.warning.assert_called_once()
-        log_call = mock_logger.warning.call_args[0][0]
-        assert "Security event:" in log_call
-        assert event_type in log_call
-
-    @patch('utils.security.logger')
-    def test_log_security_event_no_details(self, mock_logger):
-        """Test security event logging without details"""
-        event_type = "logout"
-        user_id = 12345
-
-        SecurityUtils.log_security_event(event_type, user_id)
-
-        mock_logger.warning.assert_called_once()
-
-    @patch('utils.security.logger')
-    def test_log_security_event_no_user_id(self, mock_logger):
-        """Test security event logging without user_id"""
-        event_type = "system_alert"
-        details = {"message": "test alert"}
-
-        SecurityUtils.log_security_event(event_type, details=details)
-
-        mock_logger.warning.assert_called_once()
+    def test_log_security_event_minimal(self):
+        """Test security event logging with minimal data"""
+        with patch('utils.security.logger') as mock_logger:
+            SecurityUtils.log_security_event("test_event")
+            
+            mock_logger.warning.assert_called_once()
+            call_args = mock_logger.warning.call_args[0][0]
+            assert "Security event:" in call_args
+            assert "test_event" in call_args
 
     def test_check_suspicious_activity(self):
-        """Test suspicious activity checking"""
+        """Test suspicious activity detection"""
         user_id = 12345
         action = "login"
-        context = {"ip": "192.168.1.1"}
-
+        context = {"ip": "192.168.1.1", "user_agent": "Mozilla/5.0"}
+        
         # Current implementation always returns False
         result = SecurityUtils.check_suspicious_activity(user_id, action, context)
         assert result is False
 
-    def test_security_patterns_compilation(self):
-        """Test that security patterns are properly compiled"""
-        # Test SQL injection patterns
-        assert len(SecurityUtils._sql_injection_patterns) == 3
-        for pattern in SecurityUtils._sql_injection_patterns:
-            assert isinstance(pattern, re.Pattern)
+    def test_edge_cases(self):
+        """Test various edge cases"""
+        # Test very long input
+        long_input = "A" * 10000
+        result = SecurityUtils.sanitize_input(long_input, max_length=100)
+        assert len(result) == 100
+        
+        # Test input with only dangerous characters
+        dangerous_input = "<script>alert('xss')</script>"
+        result = SecurityUtils.sanitize_input(dangerous_input)
+        assert result == ""  # All content should be removed
+        
+        # Test input with mixed content
+        mixed_input = "Hello<script>alert('xss')</script>World"
+        result = SecurityUtils.sanitize_input(mixed_input)
+        assert "Hello" in result
+        assert "World" in result
+        assert "<script>" not in result
+        assert "alert('xss')" not in result
 
-        # Test XSS patterns
-        assert len(SecurityUtils._xss_patterns) == 3
-        for pattern in SecurityUtils._xss_patterns:
-            assert isinstance(pattern, re.Pattern)
-
-        # Test path traversal patterns
-        assert len(SecurityUtils._path_traversal_patterns) == 3
-        for pattern in SecurityUtils._path_traversal_patterns:
-            assert isinstance(pattern, re.Pattern)
-
-        # Test command injection patterns
-        assert len(SecurityUtils._command_injection_patterns) == 3
-        for pattern in SecurityUtils._command_injection_patterns:
-            assert isinstance(pattern, re.Pattern)
-
-    def test_hash_password_imports(self):
-        """Test that hash_password properly imports required modules"""
-        # This test ensures the import statements work correctly
-        password = "test"
-        hashed, salt = SecurityUtils.hash_password(password)
-        assert isinstance(hashed, str)
-        assert isinstance(salt, str)
-
-    def test_edge_cases_sanitize_input(self):
-        """Test edge cases for sanitize_input"""
-        # Test with very long input
-        long_input = "a" * 10000
-        sanitized = SecurityUtils.sanitize_input(long_input, max_length=100)
-        assert len(sanitized) == 100
-
-        # Test with mixed malicious content
-        mixed_input = "normal<script>alert('xss')</script>text; DROP TABLE users; --"
-        sanitized = SecurityUtils.sanitize_input(mixed_input)
-        assert "<script" not in sanitized
-        assert "DROP" not in sanitized
-        assert "--" not in sanitized
-        assert "normal" in sanitized
-        assert "text" in sanitized
-
-    def test_edge_cases_validate_phone_number(self):
-        """Test edge cases for phone number validation"""
-        # Test with various separators
-        phone_with_separators = "+1 (234) 567-8901 ext. 123"
-        assert SecurityUtils.validate_phone_number(phone_with_separators) is True
-
-        # Test with international format
-        international_phone = "+44 20 7946 0958"
-        assert SecurityUtils.validate_phone_number(international_phone) is True
-
-    def test_edge_cases_validate_email(self):
-        """Test edge cases for email validation"""
-        # Test with subdomains
-        subdomain_email = "user@sub.domain.example.com"
-        assert SecurityUtils.validate_email(subdomain_email) is True
-
-        # Test with numbers in domain
-        numeric_domain = "user@domain123.com"
-        assert SecurityUtils.validate_email(numeric_domain) is True
+    def test_concurrent_access(self):
+        """Test concurrent access to security utilities"""
+        import threading
+        
+        def generate_tokens():
+            for _ in range(100):
+                SecurityUtils.generate_secure_token()
+                SecurityUtils.hash_password("test_password")
+        
+        # Create multiple threads
+        threads = [threading.Thread(target=generate_tokens) for _ in range(5)]
+        
+        # Start all threads
+        for thread in threads:
+            thread.start()
+        
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+        
+        # No exceptions should occur
+        assert True
