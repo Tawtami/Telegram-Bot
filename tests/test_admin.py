@@ -21,6 +21,10 @@ def test_storage_has_admin_methods(tmp_path):
 
 def test_sql_create_purchase(tmp_path):
     with session_scope() as s:
-        u = get_or_create_user(s, telegram_user_id=456, first_name="A", last_name="B")
-        p = create_purchase(s, user_id=u.id, product_type="book", product_id="X")
+        # Use timestamp to ensure unique values
+        import time
+
+        timestamp = int(time.time() * 1000)
+        u = get_or_create_user(s, telegram_user_id=timestamp, first_name="A", last_name="B")
+        p = create_purchase(s, user_id=u.id, product_type="book", product_id=f"X{timestamp}")
         assert isinstance(p, Purchase)

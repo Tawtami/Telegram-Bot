@@ -28,8 +28,12 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
     from database.models_sql import User, Purchase
 
     with session_scope() as s:
+        # Use timestamp to ensure unique telegram_user_id
+        import time
+
+        timestamp = int(time.time() * 1000)
         u = User(
-            telegram_user_id=999001,
+            telegram_user_id=timestamp,
             first_name_enc="x",
             last_name_enc="y",
             phone_enc="z",
@@ -88,7 +92,7 @@ async def test_admin_filters_status_type_uid_product_date_size_paging(monkeypatc
         assert all(item["type"] == "book" for item in js["items"]) or js["total"] >= 0
 
         # 3) uid filter (by telegram id)
-        st, js = await _http_json(base + "&uid=999001")
+        st, js = await _http_json(base + "&uid=" + str(timestamp))
         assert st == 200
         assert all(isinstance(item["user_id"], int) for item in js["items"]) or js["total"] >= 0
 

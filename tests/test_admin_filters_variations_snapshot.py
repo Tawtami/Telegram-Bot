@@ -36,8 +36,12 @@ async def test_admin_filters_status_and_type(monkeypatch):
 
     # Seed a mix of purchases
     with session_scope() as s:
+        # Use timestamp to ensure unique telegram_user_id
+        import time
+
+        timestamp = int(time.time() * 1000)
         u = User(
-            telegram_user_id=818283,
+            telegram_user_id=timestamp,
             first_name_enc="x",
             last_name_enc="y",
             phone_enc="z",

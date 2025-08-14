@@ -34,8 +34,12 @@ async def test_admin_pagination_labels_and_links(monkeypatch):
     from datetime import datetime, timedelta
 
     with session_scope() as s:
+        # Use timestamp to ensure unique telegram_user_id
+        import time
+
+        timestamp = int(time.time() * 1000)
         u = User(
-            telegram_user_id=555666,
+            telegram_user_id=timestamp,
             first_name_enc="x",
             last_name_enc="y",
             phone_enc="z",

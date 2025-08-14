@@ -20,8 +20,10 @@ async def test_admin_post_approve_with_financial_fields(monkeypatch):
     from datetime import datetime
 
     with session_scope() as s:
+        # Use timestamp to ensure unique telegram_user_id
+        timestamp = int(datetime.utcnow().timestamp() * 1000)
         u = User(
-            telegram_user_id=999111,
+            telegram_user_id=timestamp,
             first_name_enc="x",
             last_name_enc="y",
             phone_enc="z",
