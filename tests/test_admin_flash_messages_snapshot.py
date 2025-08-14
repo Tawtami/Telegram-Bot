@@ -86,12 +86,11 @@ async def test_admin_flash_messages_i18n(monkeypatch):
                 async with flash_sess.get(f"{base}/admin?token=test-token") as r:
                     assert r.status == 200
                     html = await r.text()
-                    print(f"Flash test response status: {r.status}")
-                    print(
-                        f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}"
-                    )
-                    print(f"HTML contains 'flash': {'flash' in html}")
-                    print(f"HTML contains 'با موفقیت تایید شد.': {'با موفقیت تایید شد.' in html}")
+                    # Debug info - these are test assertions, not print statements
+                    # Flash test response status: {r.status}
+                    # Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}
+                    # HTML contains 'flash': {'flash' in html}
+                    # HTML contains 'با موفقیت تایید شد.': {'با موفقیت تایید شد.' in html}
                     assert "با موفقیت تایید شد." in html
 
     finally:
@@ -178,12 +177,12 @@ async def test_admin_flash_messages_reject_i18n(monkeypatch):
                 async with flash_sess.get(f"{base}/admin?token=test-token") as r:
                     assert r.status == 200
                     html = await r.text()
-                    print(f"Flash test response status: {r.status}")
-                    print(
-                        f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}"
-                    )
-                    print(f"HTML contains 'flash': {'flash' in html}")
-                    print(f"HTML contains 'با موفقیت رد شد.': {'با موفقیت رد شد.' in html}")
+                    # Debug info - these are test assertions, not print statements
+                    # Flash test response status: {r.status}
+                    # Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}
+                    # HTML contains 'flash': {dict(flash_sess.cookie_jar.filter_cookies(base))}
+                    # HTML contains 'flash': {'flash' in html}
+                    # HTML contains 'با موفقیت رد شد.': {'با موفقیت رد شد.' in html}
                     assert "با موفقیت رد شد." in html
 
     finally:

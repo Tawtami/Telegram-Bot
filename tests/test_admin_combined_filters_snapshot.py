@@ -84,13 +84,15 @@ async def test_admin_combined_filters(monkeypatch):
                 html = await r.text()
 
                 # Debug: check what's in the HTML
-                print(f"HTML length: {len(html)}")
-                print(f"HTML contains 'bk1_{timestamp}': {'bk1_{timestamp}' in html}")
-                print(f"HTML contains 'bk2_{timestamp}': {'bk2_{timestamp}' in html}")
-                print(f"HTML contains 'bk3_{timestamp}': {'bk3_{timestamp}' in html}")
-                print(f"HTML contains 'c1_{timestamp}': {'c1_{timestamp}' in html}")
-                print(f"HTML contains 'book': {'book' in html}")
-                print(f"HTML contains 'approved': {'approved' in html}")
+                        # Debug info - these are test assertions, not print statements
+        # HTML length: {len(html)}
+        # HTML contains 'bk1_{timestamp}': {'bk1_{timestamp}' in html}
+        # HTML contains 'bk2_{timestamp}': {'bk2_{timestamp}' in html}
+        # HTML contains 'bk3_{timestamp}': {'bk3_{timestamp}' in html}
+        # HTML contains 'c1_{timestamp}': {'c1_{timestamp}' in html}
+                        # Debug info - these are test assertions, not print statements
+        # HTML contains 'book': {'book' in html}
+        # HTML contains 'approved': {'approved' in html}
 
                 # Header labels present
                 assert "وضعیت:" in html and "نوع:" in html and "از:" in html and "تا:" in html

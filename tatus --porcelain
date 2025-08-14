@@ -1,0 +1,5 @@
+[33mde3ac87[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;33mtag: [m[1;33mv1.0.0-coverage100[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge branch 'main' of https://github.com/Tawtami/Telegram-Bot
+[33mc98087e[m feat(tests): achieve 100% coverage for utils/
+[33m0cb59e6[m Add comprehensive tests for performance_monitor.py - Achieve 100% coverage with performance monitoring, metrics collection, alert system, and edge cases - COMPLETE UTILS TEST COVERAGE!
+[33md7f8792[m Add comprehensive tests for security.py - Achieve 100% coverage with security scenarios, input validation, password hashing, HMAC operations, session tokens, and edge cases
+[33m0d7ec71[m Add comprehensive tests for storage.py - Achieve 100% coverage with file operations, student management, course registration, ban management, and edge cases

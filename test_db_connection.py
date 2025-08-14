@@ -15,10 +15,10 @@ def test_connection():
         # Get database URL from environment
         db_url = os.getenv("DATABASE_URL")
         if not db_url:
-            print("❌ DATABASE_URL environment variable not set")
+            logger.error("❌ DATABASE_URL environment variable not set")
             return False
 
-        print(f"🔗 Testing connection to: {db_url}")
+        logger.info(f"🔗 Testing connection to: {db_url}")
 
         # Create engine with psycopg2
         if db_url.startswith("postgres") and "+" not in db_url:
@@ -26,7 +26,7 @@ def test_connection():
             db_url = db_url.replace("postgres://", "postgresql+psycopg2://").replace(
                 "postgresql://", "postgresql+psycopg2://"
             )
-            print(f"🔄 Converted URL to: {db_url}")
+            logger.info(f"🔄 Converted URL to: {db_url}")
 
         # Create engine
         engine = create_engine(
@@ -38,12 +38,12 @@ def test_connection():
 
         # Test connection
         with engine.connect() as conn:
-            print("✅ Database connection successful!")
+            logger.info("✅ Database connection successful!")
 
             # Test basic query
             result = conn.execute(text("SELECT version()"))
             version = result.scalar()
-            print(f"📊 PostgreSQL version: {version}")
+            logger.info(f"📊 PostgreSQL version: {version}")
 
             # Test if alembic_version table exists
             try:
@@ -53,14 +53,14 @@ def test_connection():
                     )
                 )
                 exists = result.scalar()
-                print(f"📋 Alembic version table exists: {exists}")
+                logger.info(f"📋 Alembic version table exists: {exists}")
             except Exception as e:
-                print(f"⚠️ Could not check alembic_version table: {e}")
+                logger.warning(f"⚠️ Could not check alembic_version table: {e}")
 
             return True
 
     except Exception as e:
-        print(f"❌ Connection failed: {e}")
+        logger.error(f"❌ Connection failed: {e}")
         return False
 
 

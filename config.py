@@ -6,9 +6,14 @@ Centralized settings with environment variable support
 """
 
 import os
+import logging
 from typing import Dict, List, Any, Optional, Any as _Any, IO
 from dataclasses import dataclass
 import json
+
+# Configure basic logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Try to load dotenv, but don't fail if it's not available
 try:
@@ -170,7 +175,7 @@ class Config:
             if os.getenv("ENVIRONMENT") == "production":
                 raise ValueError("BOT_TOKEN environment variable is required in production")
             else:
-                print("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
+                logger.warning("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
                 self.bot_token = "DEVELOPMENT_TOKEN_PLACEHOLDER"
 
         # Webhook configuration for Railway
@@ -220,7 +225,7 @@ class Config:
                     int(uid.strip()) for uid in admin_ids_str.split(",") if uid.strip()
                 ]
             except ValueError as e:
-                print(f"⚠️ Warning: Invalid ADMIN_USER_IDS format: {e}")
+                logger.warning(f"⚠️ Warning: Invalid ADMIN_USER_IDS format: {e}")
                 admin_user_ids = []
 
         self.bot = BotConfig(

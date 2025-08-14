@@ -20,7 +20,7 @@ try:
 
     target_metadata = alembic_metadata()
 except Exception as e:
-    print(f"Error importing database metadata: {e}")
+    logger.error(f"Error importing database metadata: {e}")
     # Fallback to empty metadata if import fails
     from sqlalchemy import MetaData
 
@@ -39,7 +39,7 @@ def get_url() -> str:
         )
 
     # Debug logging
-    print(f"Database URL: {url}")
+    logger.info(f"Database URL: {url}")
     return url
 
 
@@ -73,10 +73,10 @@ def run_migrations_online() -> None:
         # Test connection before proceeding
         with connectable.connect() as test_conn:
             test_conn.execute(text("SELECT 1"))
-            print("Database connection test successful")
+            logger.info("Database connection test successful")
 
     except Exception as e:
-        print(f"Engine creation failed: {e}")
+        logger.error(f"Engine creation failed: {e}")
         raise
 
     with connectable.connect() as connection:
@@ -93,9 +93,9 @@ def run_migrations_online() -> None:
                 )
             )
             version_table_exists = result.scalar()
-            print(f"Alembic version table exists: {version_table_exists}")
+            logger.info(f"Alembic version table exists: {version_table_exists}")
         except Exception as e:
-            print(f"Could not check version table: {e}")
+            logger.warning(f"Could not check version table: {e}")
             version_table_exists = False
 
         context.configure(

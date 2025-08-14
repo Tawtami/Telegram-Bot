@@ -20,7 +20,7 @@ from sqlalchemy import select
 def run(dry_run: bool = True):
     students_file = Path("data/students.json")
     if not students_file.exists():
-        print("students.json not found; skipping")
+        logger.warning("students.json not found; skipping")
         return
     data = json.loads(students_file.read_text(encoding="utf-8")) or {}
     students = data.get("students", [])
@@ -42,7 +42,7 @@ def run(dry_run: bool = True):
                 field_of_study=s.get("field"),
             )
         count += 1
-    print(("Dry-run: " if dry_run else "Migrated: ") + str(count))
+    logger.info(("Dry-run: " if dry_run else "Migrated: ") + str(count))
 
 
 def seed_quiz_from_json(json_path: str) -> int:
@@ -93,6 +93,6 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.seed_quiz:
         n = seed_quiz_from_json(args.seed_quiz)
-        print(f"Inserted {n} quiz questions")
+        logger.info(f"Inserted {n} quiz questions")
     else:
         run(dry_run=args.dry_run)

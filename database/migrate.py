@@ -9,7 +9,19 @@ import logging
 from sqlalchemy import text
 
 from database.db import ENGINE, Base
-from database.models_sql import *  # noqa
+from database.models_sql import (
+    Base,
+    User,
+    Course,
+    Purchase,
+    Receipt,
+    PurchaseAudit,
+    ProfileChange,
+    QuizQuestion,
+    QuizAttempt,
+    UserStats,
+    BannedUser,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -334,4 +346,4 @@ def _create_tables_individually(conn):
 
 if __name__ == "__main__":
     init_db()
-    print("DB initialized.")
+    logger.info("DB initialized.")

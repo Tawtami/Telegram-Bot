@@ -4,6 +4,10 @@
 Handler modules for Ostad Hatami Bot
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 # Try to import handlers with fallback for missing telegram modules
 try:
     from .registration import build_registration_conversation
@@ -16,7 +20,7 @@ try:
 
     HANDLERS_AVAILABLE = True
 except ImportError as e:
-    print(f"⚠️ Warning: Some handlers not available due to missing dependencies: {e}")
+    logger.warning(f"⚠️ Warning: Some handlers not available due to missing dependencies: {e}")
     HANDLERS_AVAILABLE = False
 
     # Create dummy functions for development

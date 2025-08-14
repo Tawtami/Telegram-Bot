@@ -30,13 +30,9 @@ jobs:
           python -m py_compile start.py
           python -m py_compile config.py
 
-      - name: Run basic tests
+      - name: Run CI/CD tests
         run: |
-          python -c "from config import config; print('✅ Config loaded successfully')"
-          python -c "import handlers.registration; print('✅ Registration handler imported')"
-          python -c "import handlers.books; print('✅ Books handler imported')"
-          python -c "import handlers.courses; print('✅ Courses handler imported')"
-          python -c "import handlers.payments; print('✅ Payments handler imported')"
+          python ci_test.py
 
       - name: Run pytest
         run: |

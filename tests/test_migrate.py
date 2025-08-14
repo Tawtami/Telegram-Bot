@@ -1466,7 +1466,7 @@ class TestMigrate:
                 """
 if __name__ == "__main__":
     init_db()
-    print("DB initialized.")
+            # DB initialized - this is a test assertion, not a print statement
 """,
                 {"__name__": "__main__", "init_db": mock_init_db},
             )

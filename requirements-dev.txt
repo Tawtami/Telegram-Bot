@@ -1,0 +1,42 @@
+# Development requirements with flexible version constraints
+# This file can be used when the main requirements.txt has installation issues
+
+# Core bot framework
+python-telegram-bot[webhooks,rate-limiter]>=20.0,<21.0
+
+# Environment and configuration
+python-dotenv>=1.0.0
+
+# HTTP client
+aiohttp>=3.7.0
+
+# Cryptography (optional, can be skipped in dev)
+# cryptography>=42.0.0
+
+# Database
+SQLAlchemy>=2.0.0
+# psycopg2-binary>=2.9.0  # PostgreSQL driver (optional)
+
+# Database migrations
+alembic>=1.13.0
+
+# Monitoring and logging
+# sentry-sdk>=2.8.0  # Optional monitoring
+
+# Excel support
+# openpyxl>=3.1.0  # Optional
+
+# Testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Code quality
+black>=24.8.0
+flake8>=7.0.0
+coverage>=7.5.0
+mypy>=1.10.0
+bandit>=1.7.0
+
+# Load testing (optional)
+# locust>=2.28.0
