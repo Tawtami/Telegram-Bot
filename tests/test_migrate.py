@@ -928,19 +928,19 @@ class TestMigrate:
         """Test rollback failures in _upgrade_schema_if_needed"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock table creation failure with rollback failure
                 mock_table.create.side_effect = SQLAlchemyError("Table creation failed")
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 # Should handle rollback failure gracefully
                 _upgrade_schema_if_needed(mock_conn)
 
@@ -948,22 +948,24 @@ class TestMigrate:
         """Test rollback failures in init_db"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock create_all failure with rollback failure
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.side_effect = SQLAlchemyError("create_all failed")
                 mock_conn.rollback.side_effect = SQLAlchemyError("rollback failed")
-                
-                with patch('database.migrate._create_tables_individually') as mock_create_individual:
+
+                with patch(
+                    'database.migrate._create_tables_individually'
+                ) as mock_create_individual:
                     with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                         init_db()
-                        
+
                         # Should still call fallback despite rollback failure
                         mock_create_individual.assert_called_once_with(mock_conn)
 
@@ -971,55 +973,55 @@ class TestMigrate:
         """Test rollback failures in fallback DDL operations"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock fallback DDL with rollback failures
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
                     SQLAlchemyError("DDL failed"),  # First DDL operation
                 ]
-                
+
                 # Mock rollback failures
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle rollback failures gracefully
 
     def test_index_creation_rollback_failures(self):
         """Test rollback failures in index creation"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock successful fallback DDL
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
@@ -1036,49 +1038,49 @@ class TestMigrate:
                     MagicMock(),
                     SQLAlchemyError("Index creation failed"),  # Index creation
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle index creation failure gracefully
 
     def test_constraint_creation_rollback_failures(self):
         """Test rollback failures in constraint creation"""
         with patch('database.migrate.Base') as mock_base:
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             mock_table.indexes = []
-            
+
             mock_base.metadata.sorted_tables = [mock_table]
-            
+
             # Mock successful table creation
             mock_table.create.return_value = None
-            
+
             # Mock constraint creation failure with rollback failure
             mock_conn.execute.side_effect = SQLAlchemyError("Constraint creation failed")
             mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-            
+
             _create_tables_individually(mock_conn)
-            
+
             # Should handle rollback failure gracefully
 
     def test_advisory_unlock_failures(self):
         """Test advisory unlock failures in init_db"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock successful table creation
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.return_value = None
-                
+
                 # Mock successful schema upgrade
                 with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                     # Mock advisory unlock failure
@@ -1087,146 +1089,146 @@ class TestMigrate:
                         MagicMock(),  # create_all
                         SQLAlchemyError("unlock failed"),  # Unlock failure
                     ]
-                    
+
                     init_db()
-                    
+
                     # Should handle unlock failure gracefully
 
     def test_schema_upgrade_rollback_failures(self):
         """Test rollback failures in schema upgrade"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock successful table creation
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.return_value = None
-                
+
                 # Mock schema upgrade failure with rollback failure
                 with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                     mock_upgrade.side_effect = SQLAlchemyError("upgrade failed")
                     mock_conn.rollback.side_effect = SQLAlchemyError("rollback failed")
-                    
+
                     init_db()
-                    
+
                     # Should handle rollback failure gracefully
 
     def test_table_creation_rollback_failures_in_upgrade(self):
         """Test rollback failures in table creation during schema upgrade"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock table creation failure with rollback failure
                 mock_table.create.side_effect = SQLAlchemyError("Table creation failed")
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle rollback failure gracefully
 
     def test_column_upgrade_rollback_failures(self):
         """Test rollback failures in column upgrades"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock column type check - needs upgrade
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "integer"  # Needs upgrade to BIGINT
-                
+
                 # Mock column upgrade failure with rollback failure
                 mock_conn.execute.side_effect = [
                     mock_result,  # First call for check
                     SQLAlchemyError("Column upgrade failed"),  # Second call for upgrade
                 ]
-                
+
                 # Mock rollback failure
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle rollback failure gracefully
 
     def test_fallback_ddl_individual_rollback_failures(self):
         """Test individual rollback failures in fallback DDL operations"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock individual DDL operations with rollback failures
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
                     MagicMock(),  # First DDL operation
                     SQLAlchemyError("Second DDL failed"),  # Second DDL operation
                 ]
-                
+
                 # Mock rollback failures for individual operations
                 mock_conn.rollback.side_effect = [
                     MagicMock(),  # First rollback
                     SQLAlchemyError("Second rollback failed"),  # Second rollback
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle individual rollback failures gracefully
 
     def test_individual_ddl_rollback_failures(self):
         """Test individual rollback failures in DDL operations"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock individual DDL operations with individual rollback failures
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
@@ -1239,7 +1241,7 @@ class TestMigrate:
                     MagicMock(),  # Seventh DDL operation (quiz_attempts table)
                     MagicMock(),  # Eighth DDL operation (user_stats table)
                 ]
-                
+
                 # Mock rollback failures for individual operations
                 mock_conn.rollback.side_effect = [
                     MagicMock(),  # First rollback
@@ -1251,50 +1253,50 @@ class TestMigrate:
                     MagicMock(),  # Seventh rollback
                     MagicMock(),  # Eighth rollback
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle individual rollback failures gracefully
 
     def test_individual_ddl_operation_failures(self):
         """Test individual DDL operation failures"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock individual DDL operation failures
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
                     MagicMock(),  # First DDL operation (amount column)
                     SQLAlchemyError("Discount column failed"),  # Second DDL operation
                 ]
-                
+
                 # Mock successful rollbacks
                 mock_conn.rollback.return_value = None
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle individual DDL failures gracefully
 
     def test_remaining_table_creation_failures(self):
         """Test remaining table creation failures in _create_tables_individually"""
         with patch('database.migrate.Base') as mock_base:
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_users_table = MagicMock()
             mock_users_table.name = "users"
@@ -1302,18 +1304,22 @@ class TestMigrate:
             mock_courses_table.name = "courses"
             mock_other_table = MagicMock()
             mock_other_table.name = "other_table"
-            
-            mock_base.metadata.sorted_tables = [mock_users_table, mock_courses_table, mock_other_table]
-            
+
+            mock_base.metadata.sorted_tables = [
+                mock_users_table,
+                mock_courses_table,
+                mock_other_table,
+            ]
+
             # Mock successful table creation for ordered tables
             mock_users_table.create.return_value = None
             mock_courses_table.create.return_value = None
-            
+
             # Mock table creation failure for remaining table
             mock_other_table.create.side_effect = SQLAlchemyError("Other table creation failed")
-            
+
             _create_tables_individually(mock_conn)
-            
+
             # Verify warning was logged for remaining table failure
             self.mock_logger.warning.assert_called_with(
                 "Table create skipped/failed for other_table: Other table creation failed"
@@ -1323,24 +1329,24 @@ class TestMigrate:
         """Test index creation failures for remaining tables"""
         with patch('database.migrate.Base') as mock_base:
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             mock_index = MagicMock()
             mock_index.name = "test_index"
             mock_table.indexes = [mock_index]
-            
+
             mock_base.metadata.sorted_tables = [mock_table]
-            
+
             # Mock successful table creation
             mock_table.create.return_value = None
-            
+
             # Mock index creation failure
             mock_index.create.side_effect = SQLAlchemyError("Index creation failed")
-            
+
             _create_tables_individually(mock_conn)
-            
+
             # Verify warning was logged
             self.mock_logger.warning.assert_called_with(
                 "Index create skipped/failed for test_index: Index creation failed"
@@ -1350,17 +1356,17 @@ class TestMigrate:
         """Test exception handling in advisory unlock"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock successful table creation
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.return_value = None
-                
+
                 # Mock successful schema upgrade
                 with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                     # Mock advisory unlock exception
@@ -1369,26 +1375,26 @@ class TestMigrate:
                         MagicMock(),  # create_all
                         Exception("Unlock exception"),  # Unlock exception
                     ]
-                    
+
                     init_db()
-                    
+
                     # Should handle unlock exception gracefully
 
     def test_advisory_unlock_exception_handling_specific(self):
         """Test specific exception handling in advisory unlock (lines 68-69)"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock successful table creation
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.return_value = None
-                
+
                 # Mock successful schema upgrade
                 with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                     # Mock advisory unlock exception specifically for lines 68-69
@@ -1397,26 +1403,26 @@ class TestMigrate:
                         MagicMock(),  # create_all
                         Exception("Unlock exception"),  # Unlock exception
                     ]
-                    
+
                     init_db()
-                    
+
                     # Should handle unlock exception gracefully
 
     def test_advisory_unlock_exception_handling_direct(self):
         """Test direct exception handling in advisory unlock (lines 68-69)"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
             mock_engine.connect.return_value.__enter__.return_value = mock_conn
-            
+
             # Mock successful advisory lock acquisition
             mock_conn.execute.return_value = MagicMock()
-            
+
             # Mock successful table creation
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.create_all.return_value = None
-                
+
                 # Mock successful schema upgrade
                 with patch('database.migrate._upgrade_schema_if_needed') as mock_upgrade:
                     # Mock advisory unlock exception specifically for lines 68-69
@@ -1425,11 +1431,11 @@ class TestMigrate:
                         if "pg_advisory_unlock" in str(args[0]):
                             raise Exception("Unlock exception")
                         return MagicMock()
-                    
+
                     mock_conn.execute.side_effect = unlock_side_effect
-                    
+
                     init_db()
-                    
+
                     # Should handle unlock exception gracefully
 
     def test_main_block_execution(self):
@@ -1438,11 +1444,12 @@ class TestMigrate:
         # We need to run the script directly to trigger the main block
         import subprocess
         import sys
-        
+
         # Run the migrate.py script directly
-        result = subprocess.run([sys.executable, 'database/migrate.py'], 
-                              capture_output=True, text=True, timeout=10)
-        
+        result = subprocess.run(
+            [sys.executable, 'database/migrate.py'], capture_output=True, text=True, timeout=10
+        )
+
         # Verify the script executed (even if it failed due to missing DB connection)
         # The important thing is that the main block was reached
         assert result.returncode != -1  # Should not be killed by signal
@@ -1451,16 +1458,19 @@ class TestMigrate:
         """Test main block execution using alternative approach (lines 336-337)"""
         # Alternative approach: directly execute the main block code
         from database.migrate import init_db
-        
+
         # Mock init_db to avoid actual execution
         with patch('database.migrate.init_db') as mock_init_db:
             # Execute the main block code directly
-            exec("""
+            exec(
+                """
 if __name__ == "__main__":
     init_db()
     print("DB initialized.")
-""", {"__name__": "__main__", "init_db": mock_init_db})
-            
+""",
+                {"__name__": "__main__", "init_db": mock_init_db},
+            )
+
             # Verify init_db was called
             mock_init_db.assert_called_once()
 
@@ -1468,128 +1478,128 @@ if __name__ == "__main__":
         """Test exception handling in ensuring tables"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock table creation failure
                 mock_table.create.side_effect = SQLAlchemyError("Table creation failed")
-                
+
                 # Mock rollback failure
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle rollback failure gracefully
 
     def test_column_type_check_exception_handling(self):
         """Test exception handling in column type checks"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock column type check exception
                 mock_conn.execute.side_effect = Exception("Column check exception")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle column check exception gracefully
 
     def test_purchases_column_type_check_exception_handling(self):
         """Test exception handling in purchases column type checks"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful users column type check
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock purchases column type check exception
                 mock_conn.execute.side_effect = [
                     mock_result,  # Users column check
                     Exception("Purchases column check exception"),  # Purchases column check
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle purchases column check exception gracefully
 
     def test_fallback_ddl_exception_handling(self):
         """Test exception handling in fallback DDL"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock fallback DDL exception
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
                     Exception("Fallback DDL exception"),  # Fallback DDL
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle fallback DDL exception gracefully
 
     def test_index_creation_exception_handling(self):
         """Test exception handling in index creation"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful column type checks
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock successful fallback DDL
                 mock_conn.execute.side_effect = [
                     mock_result,  # Column check
@@ -1606,86 +1616,88 @@ if __name__ == "__main__":
                     MagicMock(),
                     Exception("Index creation exception"),  # Index creation
                 ]
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle index creation exception gracefully
 
     def test_check_constraint_exception_handling(self):
         """Test exception handling in check constraint creation"""
         with patch('database.migrate.Base') as mock_base:
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             mock_table.indexes = []
-            
+
             mock_base.metadata.sorted_tables = [mock_table]
-            
+
             # Mock successful table creation
             mock_table.create.return_value = None
-            
+
             # Mock check constraint creation exception
             mock_conn.execute.side_effect = Exception("Check constraint exception")
-            
+
             _create_tables_individually(mock_conn)
-            
+
             # Should handle check constraint exception gracefully
 
     def test_ensuring_tables_exception_handling_comprehensive(self):
         """Test comprehensive exception handling in ensuring tables"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata with exception during iteration
             with patch('database.migrate.Base') as mock_base:
                 # Mock Base.metadata.sorted_tables to raise exception
                 mock_base.metadata.sorted_tables = MagicMock()
-                mock_base.metadata.sorted_tables.__iter__ = MagicMock(side_effect=Exception("Iteration failed"))
-                
+                mock_base.metadata.sorted_tables.__iter__ = MagicMock(
+                    side_effect=Exception("Iteration failed")
+                )
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle iteration exception gracefully
 
     def test_purchases_column_upgrade_exception_handling(self):
         """Test exception handling in purchases column upgrade"""
         with patch('database.migrate.ENGINE') as mock_engine:
             mock_engine.dialect.name = "postgresql+psycopg2"
-            
+
             mock_conn = MagicMock()
-            
+
             # Mock table metadata
             mock_table = MagicMock()
             mock_table.name = "users"
             with patch('database.migrate.Base') as mock_base:
                 mock_base.metadata.sorted_tables = [mock_table]
-                
+
                 # Mock successful table creation
                 mock_table.create.return_value = None
-                
+
                 # Mock successful users column type check
                 mock_result = MagicMock()
                 mock_result.scalar.return_value = "bigint"  # No upgrade needed
-                
+
                 # Mock purchases column type check - needs upgrade
                 mock_result2 = MagicMock()
                 mock_result2.scalar.return_value = "integer"  # Needs upgrade to BIGINT
-                
+
                 # Mock column upgrade failure with rollback failure
                 mock_conn.execute.side_effect = [
                     mock_result,  # Users column check
                     mock_result2,  # Purchases column check
                     SQLAlchemyError("Column upgrade failed"),  # Column upgrade
                 ]
-                
+
                 # Mock rollback failure
                 mock_conn.rollback.side_effect = SQLAlchemyError("Rollback failed")
-                
+
                 _upgrade_schema_if_needed(mock_conn)
-                
+
                 # Should handle rollback failure gracefully
 
     def test_main_execution_direct(self):
@@ -1695,7 +1707,7 @@ if __name__ == "__main__":
         with patch('database.migrate.init_db') as mock_init_db:
             # Import and execute the module to trigger main block
             import database.migrate
-            
+
             # Note: The main block only executes when the script is run directly
             # When imported as a module, it doesn't execute
             # We can't easily test the main block execution in this context

@@ -28,10 +28,10 @@ class TestSecurityUtils:
         """Test basic input sanitization"""
         # Test null bytes removal
         assert SecurityUtils.sanitize_input("test\x00string") == "teststring"
-        
+
         # Test control characters removal
         assert SecurityUtils.sanitize_input("test\x01\x02\x03string") == "teststring"
-        
+
         # Test whitespace trimming
         assert SecurityUtils.sanitize_input("  test  ") == "test"
 
@@ -39,7 +39,7 @@ class TestSecurityUtils:
         """Test SQL injection pattern removal"""
         malicious_input = "SELECT * FROM users; DROP TABLE users; -- comment"
         sanitized = SecurityUtils.sanitize_input(malicious_input)
-        
+
         # Should remove SQL keywords and comments
         assert "SELECT" not in sanitized
         assert "DROP" not in sanitized
@@ -50,7 +50,7 @@ class TestSecurityUtils:
         """Test XSS pattern removal"""
         malicious_input = "<script>alert('xss')</script>javascript:void(0)"
         sanitized = SecurityUtils.sanitize_input(malicious_input)
-        
+
         assert "<script" not in sanitized
         assert "javascript:" not in sanitized
         assert "alert('xss')" in sanitized  # Should remain
@@ -59,7 +59,7 @@ class TestSecurityUtils:
         """Test path traversal pattern removal"""
         malicious_input = "../../../etc/passwd c:\\windows\\system32"
         sanitized = SecurityUtils.sanitize_input(malicious_input)
-        
+
         assert "../" not in sanitized
         assert "c:\\" not in sanitized
         assert "etc/passwd" in sanitized  # Should remain
@@ -68,7 +68,7 @@ class TestSecurityUtils:
         """Test command injection pattern removal"""
         malicious_input = "cmd /c dir; powershell Get-Process | bash"
         sanitized = SecurityUtils.sanitize_input(malicious_input)
-        
+
         assert "cmd" not in sanitized
         assert "powershell" not in sanitized
         assert "bash" not in sanitized
@@ -83,13 +83,8 @@ class TestSecurityUtils:
 
     def test_validate_filename_valid(self):
         """Test filename validation with valid names"""
-        valid_names = [
-            "document.pdf",
-            "image_123.jpg",
-            "file-name.txt",
-            "a" * 255  # Max length
-        ]
-        
+        valid_names = ["document.pdf", "image_123.jpg", "file-name.txt", "a" * 255]  # Max length
+
         for name in valid_names:
             assert SecurityUtils.validate_filename(name) is True
 
@@ -108,7 +103,7 @@ class TestSecurityUtils:
             "file..name.txt",  # Path traversal
             "a" * 256,  # Too long
         ]
-        
+
         for name in invalid_names:
             assert SecurityUtils.validate_filename(name) is False
 
@@ -116,7 +111,7 @@ class TestSecurityUtils:
         """Test secure token generation"""
         token1 = SecurityUtils.generate_secure_token(16)
         token2 = SecurityUtils.generate_secure_token(32)
-        
+
         assert len(token1) > 0
         assert len(token2) > 0
         assert token1 != token2  # Should be different each time
@@ -127,7 +122,7 @@ class TestSecurityUtils:
         """Test password hashing without providing salt"""
         password = "testpassword123"
         hashed, salt = SecurityUtils.hash_password(password)
-        
+
         assert isinstance(hashed, str)
         assert isinstance(salt, str)
         assert len(salt) == 32  # 16 bytes hex encoded
@@ -138,7 +133,7 @@ class TestSecurityUtils:
         password = "testpassword123"
         custom_salt = "custom_salt_123"
         hashed, salt = SecurityUtils.hash_password(password, custom_salt)
-        
+
         assert hashed != password
         assert salt == custom_salt
 
@@ -146,7 +141,7 @@ class TestSecurityUtils:
         """Test successful password verification"""
         password = "testpassword123"
         hashed, salt = SecurityUtils.hash_password(password)
-        
+
         assert SecurityUtils.verify_password(password, hashed, salt) is True
 
     def test_verify_password_failure(self):
@@ -154,7 +149,7 @@ class TestSecurityUtils:
         password = "testpassword123"
         wrong_password = "wrongpassword"
         hashed, salt = SecurityUtils.hash_password(password)
-        
+
         assert SecurityUtils.verify_password(wrong_password, hashed, salt) is False
 
     def test_verify_password_exception_handling(self):
@@ -169,7 +164,7 @@ class TestSecurityUtils:
         data = "test data"
         secret = "secret_key"
         hmac_result = SecurityUtils.generate_hmac(data, secret)
-        
+
         assert isinstance(hmac_result, str)
         assert len(hmac_result) == 64  # SHA256 hex digest length
 
@@ -178,7 +173,7 @@ class TestSecurityUtils:
         data = "test data"
         secret = "secret_key"
         signature = SecurityUtils.generate_hmac(data, secret)
-        
+
         assert SecurityUtils.verify_hmac(data, signature, secret) is True
 
     def test_verify_hmac_failure(self):
@@ -186,7 +181,7 @@ class TestSecurityUtils:
         data = "test data"
         secret = "secret_key"
         wrong_signature = "wrong_signature"
-        
+
         assert SecurityUtils.verify_hmac(data, wrong_signature, secret) is False
 
     def test_rate_limit_key(self):
@@ -194,7 +189,7 @@ class TestSecurityUtils:
         user_id = 12345
         action = "login"
         key = SecurityUtils.rate_limit_key(user_id, action)
-        
+
         assert key == "rate_limit:12345:login"
         assert isinstance(key, str)
 
@@ -202,7 +197,7 @@ class TestSecurityUtils:
         """Test JSON structure validation with valid data"""
         data = {"name": "test", "age": 25, "email": "test@example.com"}
         required_fields = ["name", "age"]
-        
+
         assert SecurityUtils.validate_json_structure(data, required_fields) is True
 
     def test_validate_json_structure_invalid(self):
@@ -210,32 +205,29 @@ class TestSecurityUtils:
         # Missing required field
         data = {"name": "test", "age": 25}
         required_fields = ["name", "age", "email"]
-        
+
         assert SecurityUtils.validate_json_structure(data, required_fields) is False
 
     def test_validate_json_structure_not_dict(self):
         """Test JSON structure validation with non-dict data"""
         data = "not a dict"
         required_fields = ["name"]
-        
+
         assert SecurityUtils.validate_json_structure(data, required_fields) is False
 
     def test_sanitize_json_string(self):
         """Test JSON sanitization with string data"""
         malicious_string = "<script>alert('xss')</script>"
         sanitized = SecurityUtils.sanitize_json(malicious_string)
-        
+
         assert "<script" not in sanitized
         assert "alert('xss')" in sanitized
 
     def test_sanitize_json_dict(self):
         """Test JSON sanitization with dictionary data"""
-        data = {
-            "name": "<script>alert('xss')</script>",
-            "description": "normal text"
-        }
+        data = {"name": "<script>alert('xss')</script>", "description": "normal text"}
         sanitized = SecurityUtils.sanitize_json(data)
-        
+
         assert "<script" not in sanitized["name"]
         assert sanitized["description"] == "normal text"
 
@@ -244,10 +236,10 @@ class TestSecurityUtils:
         data = [
             "<script>alert('xss')</script>",
             "normal text",
-            {"nested": "<iframe>malicious</iframe>"}
+            {"nested": "<iframe>malicious</iframe>"},
         ]
         sanitized = SecurityUtils.sanitize_json(data)
-        
+
         assert "<script" not in sanitized[0]
         assert sanitized[1] == "normal text"
         assert "<iframe" not in sanitized[2]["nested"]
@@ -265,9 +257,9 @@ class TestSecurityUtils:
             "+12345678901",
             "123-456-7890",
             "(123) 456-7890",
-            "123.456.7890"
+            "123.456.7890",
         ]
-        
+
         for phone in valid_numbers:
             assert SecurityUtils.validate_phone_number(phone) is True
 
@@ -283,7 +275,7 @@ class TestSecurityUtils:
             "9999999999",  # Too many nines
             "123456666666",  # Too many repeated digits
         ]
-        
+
         for phone in invalid_numbers:
             assert SecurityUtils.validate_phone_number(phone) is False
 
@@ -293,9 +285,9 @@ class TestSecurityUtils:
             "test@example.com",
             "user.name@domain.co.uk",
             "user+tag@example.org",
-            "123@456.com"
+            "123@456.com",
         ]
-        
+
         for email in valid_emails:
             assert SecurityUtils.validate_email(email) is True
 
@@ -314,7 +306,7 @@ class TestSecurityUtils:
             "user<tag>@example.com",  # HTML tags
             "a" * 255 + "@example.com",  # Too long
         ]
-        
+
         for email in invalid_emails:
             assert SecurityUtils.validate_email(email) is False
 
@@ -324,12 +316,12 @@ class TestSecurityUtils:
         mock_config.bot_token = "test_bot_token"
         user_id = 12345
         expires_in_hours = 24
-        
+
         token = SecurityUtils.create_secure_session_token(user_id, expires_in_hours)
-        
+
         assert isinstance(token, str)
         assert len(token) > 0
-        
+
         # Decode and verify structure
         decoded = base64.urlsafe_b64decode(token.encode()).decode()
         parts = decoded.split(":")
@@ -341,10 +333,10 @@ class TestSecurityUtils:
         """Test valid session token verification"""
         mock_config.bot_token = "test_bot_token"
         user_id = 12345
-        
+
         # Create a token
         token = SecurityUtils.create_secure_session_token(user_id, 24)
-        
+
         # Verify it
         result = SecurityUtils.verify_session_token(token)
         assert result == user_id
@@ -353,7 +345,7 @@ class TestSecurityUtils:
         """Test session token verification with invalid format"""
         # Token with wrong number of parts
         invalid_token = base64.urlsafe_b64encode("invalid:format".encode()).decode()
-        
+
         result = SecurityUtils.verify_session_token(invalid_token)
         assert result is None
 
@@ -367,7 +359,7 @@ class TestSecurityUtils:
         signature = SecurityUtils.generate_hmac(token_data, "test_bot_token")
         full_token_data = f"{token_data}:{signature}"
         token = base64.urlsafe_b64encode(full_token_data.encode()).decode()
-        
+
         result = SecurityUtils.verify_session_token(token)
         assert result is None
 
@@ -382,7 +374,7 @@ class TestSecurityUtils:
         wrong_signature = SecurityUtils.generate_hmac(token_data, "wrong_secret")
         full_token_data = f"{token_data}:{wrong_signature}"
         token = base64.urlsafe_b64encode(full_token_data.encode()).decode()
-        
+
         result = SecurityUtils.verify_session_token(token)
         assert result is None
 
@@ -398,9 +390,9 @@ class TestSecurityUtils:
         event_type = "login_attempt"
         user_id = 12345
         details = {"ip": "192.168.1.1", "user_agent": "test"}
-        
+
         SecurityUtils.log_security_event(event_type, user_id, details)
-        
+
         mock_logger.warning.assert_called_once()
         log_call = mock_logger.warning.call_args[0][0]
         assert "Security event:" in log_call
@@ -411,9 +403,9 @@ class TestSecurityUtils:
         """Test security event logging without details"""
         event_type = "logout"
         user_id = 12345
-        
+
         SecurityUtils.log_security_event(event_type, user_id)
-        
+
         mock_logger.warning.assert_called_once()
 
     @patch('utils.security.logger')
@@ -421,9 +413,9 @@ class TestSecurityUtils:
         """Test security event logging without user_id"""
         event_type = "system_alert"
         details = {"message": "test alert"}
-        
+
         SecurityUtils.log_security_event(event_type, details=details)
-        
+
         mock_logger.warning.assert_called_once()
 
     def test_check_suspicious_activity(self):
@@ -431,7 +423,7 @@ class TestSecurityUtils:
         user_id = 12345
         action = "login"
         context = {"ip": "192.168.1.1"}
-        
+
         # Current implementation always returns False
         result = SecurityUtils.check_suspicious_activity(user_id, action, context)
         assert result is False
@@ -442,17 +434,17 @@ class TestSecurityUtils:
         assert len(SecurityUtils._sql_injection_patterns) == 3
         for pattern in SecurityUtils._sql_injection_patterns:
             assert isinstance(pattern, re.Pattern)
-        
+
         # Test XSS patterns
         assert len(SecurityUtils._xss_patterns) == 3
         for pattern in SecurityUtils._xss_patterns:
             assert isinstance(pattern, re.Pattern)
-        
+
         # Test path traversal patterns
         assert len(SecurityUtils._path_traversal_patterns) == 3
         for pattern in SecurityUtils._path_traversal_patterns:
             assert isinstance(pattern, re.Pattern)
-        
+
         # Test command injection patterns
         assert len(SecurityUtils._command_injection_patterns) == 3
         for pattern in SecurityUtils._command_injection_patterns:
@@ -472,7 +464,7 @@ class TestSecurityUtils:
         long_input = "a" * 10000
         sanitized = SecurityUtils.sanitize_input(long_input, max_length=100)
         assert len(sanitized) == 100
-        
+
         # Test with mixed malicious content
         mixed_input = "normal<script>alert('xss')</script>text; DROP TABLE users; --"
         sanitized = SecurityUtils.sanitize_input(mixed_input)
@@ -487,7 +479,7 @@ class TestSecurityUtils:
         # Test with various separators
         phone_with_separators = "+1 (234) 567-8901 ext. 123"
         assert SecurityUtils.validate_phone_number(phone_with_separators) is True
-        
+
         # Test with international format
         international_phone = "+44 20 7946 0958"
         assert SecurityUtils.validate_phone_number(international_phone) is True
@@ -497,7 +489,7 @@ class TestSecurityUtils:
         # Test with subdomains
         subdomain_email = "user@sub.domain.example.com"
         assert SecurityUtils.validate_email(subdomain_email) is True
-        
+
         # Test with numbers in domain
         numeric_domain = "user@domain123.com"
         assert SecurityUtils.validate_email(numeric_domain) is True
