@@ -6,170 +6,160 @@ Tests for UI module functionality including keyboards and inline buttons.
 import pytest
 from unittest.mock import Mock
 from ui.keyboards import (
-    get_main_menu_keyboard,
-    get_grade_keyboard,
-    get_major_keyboard,
-    get_province_keyboard,
-    get_city_keyboard,
-    get_edit_profile_keyboard,
-    get_course_keyboard,
-    get_payment_confirmation_keyboard,
-    get_admin_keyboard,
+    build_main_menu_keyboard,
+    build_grades_keyboard,
+    build_majors_keyboard,
+    build_provinces_keyboard,
+    build_cities_keyboard,
+    build_confirmation_keyboard,
+    build_register_keyboard,
+    build_back_keyboard,
 )
 
 
 def test_main_menu_keyboard():
     """Test main menu keyboard generation."""
-    keyboard = get_main_menu_keyboard()
+    keyboard = build_main_menu_keyboard()
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
     # Check that main menu buttons exist
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "📚 کلاس‌ها" in button_texts
-    assert "📖 کتاب" in button_texts
-    assert "📞 تماس" in button_texts
-    assert "👤 پروفایل" in button_texts
+    assert "🎓 دوره‌های رایگان" in button_texts
+    assert "💼 دوره‌های تخصصی" in button_texts
+    assert "🛒 سبد خرید من" in button_texts
+    assert "👤 پروفایل من" in button_texts
 
 
-def test_grade_keyboard():
+def test_grades_keyboard():
     """Test grade selection keyboard."""
-    keyboard = get_grade_keyboard()
+    grades = ["دهم", "یازدهم", "دوازدهم"]
+    keyboard = build_grades_keyboard(grades)
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
     # Check that all grades are present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "دهم" in button_texts
-    assert "یازدهم" in button_texts
-    assert "دوازدهم" in button_texts
+    assert "🎓 دهم" in button_texts
+    assert "🎓 یازدهم" in button_texts
+    assert "🎓 دوازدهم" in button_texts
 
 
-def test_major_keyboard():
+def test_majors_keyboard():
     """Test major selection keyboard."""
-    keyboard = get_major_keyboard()
+    majors = ["ریاضی", "تجربی", "انسانی", "هنر"]
+    keyboard = build_majors_keyboard(majors)
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
     # Check that all majors are present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "ریاضی" in button_texts
-    assert "تجربی" in button_texts
-    assert "انسانی" in button_texts
-    assert "هنر" in button_texts
+    assert "📚 ریاضی" in button_texts
+    assert "📚 تجربی" in button_texts
+    assert "📚 انسانی" in button_texts
+    assert "📚 هنر" in button_texts
 
 
-def test_province_keyboard():
+def test_provinces_keyboard():
     """Test province selection keyboard."""
-    keyboard = get_province_keyboard()
+    provinces = ["تهران", "اصفهان", "خراسان رضوی"]
+    keyboard = build_provinces_keyboard(provinces)
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
     # Check that some common provinces are present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "تهران" in button_texts
-    assert "اصفهان" in button_texts
-    assert "خراسان رضوی" in button_texts
+    assert "🏛️ تهران" in button_texts
+    assert "🏛️ اصفهان" in button_texts
+    assert "🏛️ خراسان رضوی" in button_texts
 
 
-def test_city_keyboard():
+def test_cities_keyboard():
     """Test city selection keyboard for a specific province."""
-    # Test with Tehran province
-    keyboard = get_city_keyboard("تهران")
+    # Test with Tehran cities
+    cities = ["تهران", "شهریار", "ورامین"]
+    keyboard = build_cities_keyboard(cities)
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
-    # Check that Tehran cities are present
+    # Check that cities are present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "تهران" in button_texts
-
-    # Test with Isfahan province
-    keyboard = get_city_keyboard("اصفهان")
-    assert keyboard is not None
-
-    # Test with non-existent province (should handle gracefully)
-    keyboard = get_city_keyboard("غیرموجود")
-    assert keyboard is not None
+    assert "🏙️ تهران" in button_texts
+    assert "🏙️ شهریار" in button_texts
+    assert "🏙️ ورامین" in button_texts
 
 
-def test_edit_profile_keyboard():
-    """Test edit profile keyboard."""
-    keyboard = get_edit_profile_keyboard()
-
-    assert keyboard is not None
-    assert len(keyboard.inline_keyboard) > 0
-
-    # Check that edit options are present
-    button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "نام" in button_texts
-    assert "نام خانوادگی" in button_texts
-    assert "شماره تلفن" in button_texts
-    assert "پایه" in button_texts
-    assert "رشته" in button_texts
-    assert "استان" in button_texts
-    assert "شهر" in button_texts
-
-
-def test_course_keyboard():
-    """Test course selection keyboard."""
-    # Mock course data
-    mock_course = Mock()
-    mock_course.slug = "test-course"
-    mock_course.title = "دوره تست"
-    mock_course.type = "free"
-    mock_course.price = 0
-
-    keyboard = get_course_keyboard(mock_course)
-
-    assert keyboard is not None
-    assert len(keyboard.inline_keyboard) > 0
-
-    # Check that course action buttons are present
-    button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "ثبت‌نام" in button_texts or "خرید" in button_texts
-
-
-def test_payment_confirmation_keyboard():
-    """Test payment confirmation keyboard."""
-    keyboard = get_payment_confirmation_keyboard()
+def test_confirmation_keyboard():
+    """Test confirmation keyboard."""
+    keyboard = build_confirmation_keyboard()
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
     # Check that confirmation buttons are present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "تأیید" in button_texts or "تایید" in button_texts
-    assert "انصراف" in button_texts or "لغو" in button_texts
+    assert "✅ تایید" in button_texts
+    assert "🔙 بازگشت" in button_texts
 
 
-def test_admin_keyboard():
-    """Test admin keyboard."""
-    keyboard = get_admin_keyboard()
+def test_register_keyboard():
+    """Test registration keyboard."""
+    keyboard = build_register_keyboard()
 
     assert keyboard is not None
     assert len(keyboard.inline_keyboard) > 0
 
-    # Check that admin action buttons are present
+    # Check that registration button is present
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
-    assert "📊 آمار" in button_texts or "آمار" in button_texts
-    assert "📢 ارسال پیام" in button_texts or "ارسال پیام" in button_texts
+    assert "📝 ثبت‌نام" in button_texts
+
+
+def test_back_keyboard():
+    """Test back button keyboard."""
+    keyboard = build_back_keyboard()
+
+    assert keyboard is not None
+    assert len(keyboard.inline_keyboard) > 0
+
+    # Check that back button is present
+    button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
+    assert "🔙 بازگشت" in button_texts
+
+
+def test_back_keyboard_custom_callback():
+    """Test back button keyboard with custom callback data."""
+    custom_callback = "custom_back_action"
+    keyboard = build_back_keyboard(custom_callback)
+
+    assert keyboard is not None
+    assert len(keyboard.inline_keyboard) > 0
+
+    # Check that back button has custom callback
+    button = keyboard.inline_keyboard[0][0]
+    assert button.callback_data == custom_callback
 
 
 def test_keyboard_structure():
     """Test that all keyboards have proper structure."""
+    grades = ["دهم", "یازدهم"]
+    majors = ["ریاضی", "تجربی"]
+    provinces = ["تهران", "اصفهان"]
+    cities = ["تهران", "شهریار"]
+
     keyboards = [
-        get_main_menu_keyboard(),
-        get_grade_keyboard(),
-        get_major_keyboard(),
-        get_province_keyboard(),
-        get_city_keyboard("تهران"),
-        get_edit_profile_keyboard(),
-        get_admin_keyboard(),
+        build_main_menu_keyboard(),
+        build_grades_keyboard(grades),
+        build_majors_keyboard(majors),
+        build_provinces_keyboard(provinces),
+        build_cities_keyboard(cities),
+        build_confirmation_keyboard(),
+        build_register_keyboard(),
+        build_back_keyboard(),
     ]
 
     for keyboard in keyboards:
@@ -192,7 +182,7 @@ def test_keyboard_structure():
 
 def test_callback_data_format():
     """Test that callback data follows expected format."""
-    keyboard = get_main_menu_keyboard()
+    keyboard = build_main_menu_keyboard()
 
     for row in keyboard.inline_keyboard:
         for button in row:
@@ -209,23 +199,22 @@ def test_keyboard_accessibility():
     """Test that keyboards are accessible and don't crash."""
     # Test all keyboard functions with various inputs
     try:
-        get_main_menu_keyboard()
-        get_grade_keyboard()
-        get_major_keyboard()
-        get_province_keyboard()
-        get_city_keyboard("تهران")
-        get_city_keyboard("اصفهان")
-        get_city_keyboard("")  # Empty string
-        get_city_keyboard(None)  # None value
-        get_edit_profile_keyboard()
-        get_admin_keyboard()
+        build_main_menu_keyboard()
+        build_grades_keyboard(["دهم", "یازدهم"])
+        build_majors_keyboard(["ریاضی", "تجربی"])
+        build_provinces_keyboard(["تهران", "اصفهان"])
+        build_cities_keyboard(["تهران", "شهریار"])
+        build_confirmation_keyboard()
+        build_register_keyboard()
+        build_back_keyboard()
+        build_back_keyboard("custom_callback")
     except Exception as e:
         pytest.fail(f"Keyboard generation failed with error: {e}")
 
 
 def test_keyboard_localization():
     """Test that keyboards use Persian text appropriately."""
-    keyboard = get_main_menu_keyboard()
+    keyboard = build_main_menu_keyboard()
 
     # Check that Persian text is used
     button_texts = [btn.text for row in keyboard.inline_keyboard for btn in row]
@@ -233,3 +222,24 @@ def test_keyboard_localization():
     # Should contain Persian characters
     persian_chars = any(any('\u0600' <= char <= '\u06ff' for char in text) for text in button_texts)
     assert persian_chars, "Keyboards should contain Persian text"
+
+
+def test_empty_lists_handling():
+    """Test that keyboards handle empty lists gracefully."""
+    # Test with empty lists
+    empty_grades = build_grades_keyboard([])
+    empty_majors = build_majors_keyboard([])
+    empty_provinces = build_provinces_keyboard([])
+    empty_cities = build_cities_keyboard([])
+
+    # Should still create valid keyboards (just with back buttons)
+    assert empty_grades is not None
+    assert empty_majors is not None
+    assert empty_provinces is not None
+    assert empty_cities is not None
+
+    # Should have at least the back button
+    assert len(empty_grades.inline_keyboard) > 0
+    assert len(empty_majors.inline_keyboard) > 0
+    assert len(empty_provinces.inline_keyboard) > 0
+    assert len(empty_cities.inline_keyboard) > 0

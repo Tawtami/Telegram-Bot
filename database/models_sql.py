@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column,
     Integer,
@@ -31,9 +31,13 @@ class User(Base):
     city: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     grade: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
     field_of_study: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
 
 
@@ -41,7 +45,9 @@ class BannedUser(Base):
     __tablename__ = "banned_users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     telegram_user_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
 
 
 class ProfileChange(Base):
@@ -52,7 +58,9 @@ class ProfileChange(Base):
     old_value_enc: Mapped[str] = mapped_column(String(1024))
     new_value_enc: Mapped[str] = mapped_column(String(1024))
     changed_by: Mapped[int] = mapped_column(Integer)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
 
 
 class Course(Base):
@@ -80,9 +88,13 @@ class Purchase(Base):
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
     __table_args__ = (
         # Prevent duplicate product entries per user (single row updates status)
@@ -103,7 +115,9 @@ class Receipt(Base):
     )
     telegram_file_id: Mapped[str] = mapped_column(String(256))
     file_unique_id: Mapped[str] = mapped_column(String(128))
-    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
     duplicate_checked: Mapped[bool] = mapped_column(Integer, default=0)
     __table_args__ = (UniqueConstraint("file_unique_id", name="uq_file_unique_id"),)
 
@@ -114,7 +128,9 @@ class PurchaseAudit(Base):
     purchase_id: Mapped[int] = mapped_column(Integer, index=True)
     admin_id: Mapped[int] = mapped_column(Integer)
     action: Mapped[str] = mapped_column(String(16))  # approve|reject
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
 
 
 # ---------------------
@@ -130,7 +146,9 @@ class QuizQuestion(Base):
     question_text: Mapped[str] = mapped_column(String(2048))
     options: Mapped[dict] = mapped_column(JSON)  # {"choices": ["A","B",...]} (max 8)
     correct_index: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
     __table_args__ = (Index("ix_quiz_grade_diff", "grade", "difficulty"),)
 
 
@@ -143,7 +161,9 @@ class QuizAttempt(Base):
     )
     selected_index: Mapped[int] = mapped_column(Integer)
     correct: Mapped[int] = mapped_column(Integer, default=0)  # 0/1
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc), index=True
+    )
 
 
 class UserStats(Base):
@@ -159,5 +179,7 @@ class UserStats(Base):
     points: Mapped[int] = mapped_column(Integer, default=0, index=True)
     last_daily_award_date: Mapped[str] = mapped_column(String(10), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
     )
