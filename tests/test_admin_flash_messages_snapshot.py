@@ -67,7 +67,20 @@ async def test_admin_flash_messages_i18n(monkeypatch):
             # First GET to set csrf
             async with sess.get(f"{base}/admin?token=test-token") as r:
                 assert r.status == 200
-                csrf = sess.cookie_jar.filter_cookies(base).get("csrf").value
+                # Try multiple ways to extract CSRF cookie
+                cookies = sess.cookie_jar.filter_cookies(base)
+                csrf_cookie = cookies.get("csrf")
+                if csrf_cookie and hasattr(csrf_cookie, 'value'):
+                    csrf = csrf_cookie.value
+                else:
+                    # Fallback: extract from response headers
+                    set_cookie_headers = r.headers.getall("Set-Cookie", [])
+                    csrf = None
+                    for header in set_cookie_headers:
+                        if "csrf=" in header:
+                            csrf = header.split("csrf=")[1].split(";")[0]
+                            break
+                    assert csrf is not None, "CSRF cookie not found in response"
 
             # Approve to trigger success flash
             form = {
@@ -152,7 +165,20 @@ async def test_admin_flash_messages_reject_i18n(monkeypatch):
             # First GET to set csrf
             async with sess.get(f"{base}/admin?token=test-token") as r:
                 assert r.status == 200
-                csrf = sess.cookie_jar.filter_cookies(base).get("csrf").value
+                # Try multiple ways to extract CSRF cookie
+                cookies = sess.cookie_jar.filter_cookies(base)
+                csrf_cookie = cookies.get("csrf")
+                if csrf_cookie and hasattr(csrf_cookie, 'value'):
+                    csrf = csrf_cookie.value
+                else:
+                    # Fallback: extract from response headers
+                    set_cookie_headers = r.headers.getall("Set-Cookie", [])
+                    csrf = None
+                    for header in set_cookie_headers:
+                        if "csrf=" in header:
+                            csrf = header.split("csrf=")[1].split(";")[0]
+                            break
+                    assert csrf is not None, "CSRF cookie not found in response"
 
             # Reject to trigger success flash
             form = {
