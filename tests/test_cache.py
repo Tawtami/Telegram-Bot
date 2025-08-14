@@ -187,11 +187,11 @@ class TestSimpleCache:
     async def test_concurrent_access(self):
         """Test that cache handles concurrent access correctly"""
         cache = SimpleCache(ttl_seconds=3600)
-        
+
         async def concurrent_operations():
             await cache.set(f"key_{asyncio.current_task().get_name()}", "value")
             await cache.get(f"key_{asyncio.current_task().get_name()}")
-        
+
         tasks = [asyncio.create_task(concurrent_operations()) for _ in range(10)]
         await asyncio.gather(*tasks)
         assert len(await cache.get_keys()) == 10

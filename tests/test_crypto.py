@@ -57,7 +57,10 @@ class TestCryptoManager:
         expected_key = b"test_key_32_bytes_long_valid_key"
         assert manager._key == expected_key
 
-    @patch.dict(os.environ, {'ENCRYPTION_KEY': '746573745f6b65795f33325f62797465735f6c6f6e675f76616c69645f6b6579'})
+    @patch.dict(
+        os.environ,
+        {'ENCRYPTION_KEY': '746573745f6b65795f33325f62797465735f6c6f6e675f76616c69645f6b6579'},
+    )
     def test_load_key_from_env_hex(self):
         """Test loading key from environment variable (hex)"""
         manager = CryptoManager()
@@ -136,9 +139,9 @@ class TestCryptoManager:
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
-        
+
         ciphertext = manager.encrypt_text(plaintext)
-        
+
         assert isinstance(ciphertext, str)
         assert len(ciphertext) > 0
         # Verify it's base64 encoded
@@ -151,9 +154,9 @@ class TestCryptoManager:
         """Test encrypting None text"""
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
-        
+
         ciphertext = manager.encrypt_text(None)
-        
+
         assert isinstance(ciphertext, str)
         assert len(ciphertext) > 0
 
@@ -162,9 +165,9 @@ class TestCryptoManager:
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
         plaintext = b"Hello, World!"
-        
+
         ciphertext = manager.encrypt_text(plaintext)
-        
+
         assert isinstance(ciphertext, str)
         assert len(ciphertext) > 0
 
@@ -173,9 +176,9 @@ class TestCryptoManager:
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
         plaintext = {"key": "value", "number": 42}
-        
+
         ciphertext = manager.encrypt_text(plaintext)
-        
+
         assert isinstance(ciphertext, str)
         assert len(ciphertext) > 0
 
@@ -185,9 +188,9 @@ class TestCryptoManager:
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
         associated_data = b"context_data"
-        
+
         ciphertext = manager.encrypt_text(plaintext, associated_data)
-        
+
         assert isinstance(ciphertext, str)
         assert len(ciphertext) > 0
 
@@ -196,10 +199,10 @@ class TestCryptoManager:
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
-        
+
         ciphertext = manager.encrypt_text(plaintext)
         decrypted = manager.decrypt_text(ciphertext)
-        
+
         assert decrypted == plaintext
 
     def test_decrypt_text_with_associated_data(self):
@@ -208,35 +211,35 @@ class TestCryptoManager:
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
         associated_data = b"context_data"
-        
+
         ciphertext = manager.encrypt_text(plaintext, associated_data)
         decrypted = manager.decrypt_text(ciphertext, associated_data)
-        
+
         assert decrypted == plaintext
 
     def test_decrypt_text_empty_string(self):
         """Test decryption of empty string"""
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
-        
+
         decrypted = manager.decrypt_text("")
-        
+
         assert decrypted == ""
 
     def test_decrypt_text_none(self):
         """Test decryption of None"""
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
-        
+
         decrypted = manager.decrypt_text(None)
-        
+
         assert decrypted == ""
 
     def test_decrypt_text_invalid_base64(self):
         """Test decryption with invalid base64 (should handle gracefully)"""
         key = b"test_key_32_bytes_long_valid_key"
         manager = CryptoManager(key)
-        
+
         # This should not crash, even with invalid input
         try:
             decrypted = manager.decrypt_text("invalid_base64_string")
@@ -257,7 +260,7 @@ class TestCryptoManager:
             "",  # Empty string
             "Very long text " * 100,  # Long text
         ]
-        
+
         for plaintext in test_cases:
             ciphertext = manager.encrypt_text(plaintext)
             decrypted = manager.decrypt_text(ciphertext)
@@ -269,10 +272,10 @@ class TestCryptoManager:
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
         associated_data = b"context_data"
-        
+
         ciphertext = manager.encrypt_text(plaintext, associated_data)
         decrypted = manager.decrypt_text(ciphertext, associated_data)
-        
+
         assert decrypted == plaintext
 
     def test_encrypt_decrypt_roundtrip_without_associated_data(self):
@@ -281,9 +284,9 @@ class TestCryptoManager:
         manager = CryptoManager(key)
         plaintext = "Hello, World!"
         associated_data = b"context_data"
-        
+
         ciphertext = manager.encrypt_text(plaintext, associated_data)
-        
+
         # Decrypting without associated data should fail or return garbage
         try:
             decrypted = manager.decrypt_text(ciphertext)
