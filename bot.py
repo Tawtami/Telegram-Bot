@@ -1725,8 +1725,6 @@ async def run_webhook_mode(application: Application) -> None:
                     flash_html = (
                         f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else ""
                     )
-                    
-
 
                     # Build dynamic payment method options from config
                     try:
@@ -1951,7 +1949,7 @@ async def run_webhook_mode(application: Application) -> None:
                     </body></html>
                     """
                     resp = web.Response(text=body, content_type="text/html", charset="utf-8")
-                    
+
                     # Clear flash cookies after displaying them
                     if flash_msg:
                         try:
@@ -1959,7 +1957,7 @@ async def run_webhook_mode(application: Application) -> None:
                             resp.delete_cookie("flash_type", path="/")
                         except Exception:
                             pass
-                    
+
                     try:
                         resp.set_cookie(
                             "csrf",

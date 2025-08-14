@@ -71,23 +71,25 @@ async def test_admin_flash_messages_i18n(monkeypatch):
             from http.cookies import SimpleCookie
             from yarl import URL
             import aiohttp
-            
+
             # Create a session with flash cookies already set
             flash_cookies = SimpleCookie()
             flash_cookies['flash'] = 'با موفقیت تایید شد.'
             flash_cookies['flash_type'] = 'success'
-            
+
             # Create a new session with the flash cookies
             async with ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as flash_sess:
                 # Manually add the flash cookies
                 flash_sess.cookie_jar.update_cookies(flash_cookies, URL(base))
-                
+
                 # Now GET the admin page - it should display the flash message
                 async with flash_sess.get(f"{base}/admin?token=test-token") as r:
                     assert r.status == 200
                     html = await r.text()
                     print(f"Flash test response status: {r.status}")
-                    print(f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}")
+                    print(
+                        f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}"
+                    )
                     print(f"HTML contains 'flash': {'flash' in html}")
                     print(f"HTML contains 'با موفقیت تایید شد.': {'با موفقیت تایید شد.' in html}")
                     assert "با موفقیت تایید شد." in html
@@ -161,23 +163,25 @@ async def test_admin_flash_messages_reject_i18n(monkeypatch):
             from http.cookies import SimpleCookie
             from yarl import URL
             import aiohttp
-            
+
             # Create a session with flash cookies already set for reject message
             flash_cookies = SimpleCookie()
             flash_cookies['flash'] = 'با موفقیت رد شد.'
             flash_cookies['flash_type'] = 'success'
-            
+
             # Create a new session with the flash cookies
             async with ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True)) as flash_sess:
                 # Manually add the flash cookies
                 flash_sess.cookie_jar.update_cookies(flash_cookies, URL(base))
-                
+
                 # Now GET the admin page - it should display the flash message
                 async with flash_sess.get(f"{base}/admin?token=test-token") as r:
                     assert r.status == 200
                     html = await r.text()
                     print(f"Flash test response status: {r.status}")
-                    print(f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}")
+                    print(
+                        f"Flash test cookies sent: {dict(flash_sess.cookie_jar.filter_cookies(base))}"
+                    )
                     print(f"HTML contains 'flash': {'flash' in html}")
                     print(f"HTML contains 'با موفقیت رد شد.': {'با موفقیت رد شد.' in html}")
                     assert "با موفقیت رد شد." in html
