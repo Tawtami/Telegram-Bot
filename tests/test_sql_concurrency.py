@@ -2,17 +2,22 @@ import pytest
 
 
 def _seed_purchase(session, crypto_manager):
+    import time
     from database.models_sql import User, Purchase
 
+    unique_id = int(time.time() * 1000) % 100000 + 40  # Get unique timestamp-based ID
+
     u = User(
-        telegram_user_id=999,
+        telegram_user_id=unique_id,
         first_name_enc=crypto_manager.encrypt_text("X"),
         last_name_enc=crypto_manager.encrypt_text("Y"),
         phone_enc=crypto_manager.encrypt_text("0912"),
     )
     session.add(u)
     session.flush()
-    p = Purchase(user_id=u.id, product_type="course", product_id="slug-1", status="pending")
+    p = Purchase(
+        user_id=u.id, product_type="course", product_id=f"slug-{unique_id}", status="pending"
+    )
     session.add(p)
     session.flush()
     return u, p

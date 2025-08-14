@@ -195,9 +195,15 @@ def test_model_constraints(session):
     )
     session.add(user2)
 
-    # This should raise an integrity error in a real database
-    # For SQLite in-memory, we'll just test the model structure
-    assert user1.telegram_user_id == user2.telegram_user_id
+    # This should raise an integrity error due to unique constraint
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+    # Rollback to clean state for other tests
+    session.rollback()
 
 
 def test_model_defaults(session):
@@ -206,11 +212,14 @@ def test_model_defaults(session):
         telegram_user_id=555555555, first_name_enc="default_user", last_name_enc="default_last"
     )
 
-    # Test that created_at and updated_at are set automatically
+    # Add and flush to trigger default value generation
+    session.add(user)
+    session.flush()
+
+    # Test that created_at and updated_at are set automatically after flush
     assert user.created_at is not None
     assert user.updated_at is not None
 
-    session.add(user)
     session.commit()
 
     # Verify the user was saved

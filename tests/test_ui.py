@@ -165,11 +165,12 @@ def test_keyboard_structure():
     for keyboard in keyboards:
         assert keyboard is not None
         assert hasattr(keyboard, 'inline_keyboard')
-        assert isinstance(keyboard.inline_keyboard, list)
+        # inline_keyboard can be either a list or tuple
+        assert isinstance(keyboard.inline_keyboard, (list, tuple))
 
-        # Check that each row is a list of buttons
+        # Check that each row is a list or tuple of buttons
         for row in keyboard.inline_keyboard:
-            assert isinstance(row, list)
+            assert isinstance(row, (list, tuple))
             assert len(row) > 0
 
             # Check that each button has required attributes

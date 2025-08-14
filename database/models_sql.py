@@ -101,7 +101,6 @@ class Purchase(Base):
         UniqueConstraint("user_id", "product_type", "product_id", name="uq_user_product"),
         # Speed up common filters
         Index("ix_purchases_user_status", "user_id", "status"),
-        Index("ix_purchases_created_at", "created_at"),
         # Enforce that decisions include admin attribution
         # (status='pending') OR (admin_action_by IS NOT NULL AND admin_action_at IS NOT NULL)
     )

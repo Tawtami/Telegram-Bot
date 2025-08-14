@@ -37,7 +37,14 @@ def _build_db_url() -> str:
 
 
 _db_url = _build_db_url()
-is_postgres = _db_url.startswith("postgresql+") or _db_url.startswith("postgresql://")
+
+
+def _is_postgres_url(url: str) -> bool:
+    """Check if a URL is a PostgreSQL URL."""
+    return url.startswith("postgresql+") or url.startswith("postgresql://")
+
+
+is_postgres = _is_postgres_url(_db_url)
 # Engine configuration differs for SQLite to improve concurrency in tests
 if _db_url.startswith("sqlite"):
     ENGINE = create_engine(
