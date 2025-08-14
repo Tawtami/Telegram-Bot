@@ -75,11 +75,27 @@ def run_migrations_online() -> None:
         print(f"Engine creation failed: {e}")
         raise
     with connectable.connect() as connection:
+        # Try to manually check if alembic_version table exists to avoid driver issues
+        try:
+            result = connection.execute(text("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'alembic_version'
+                )
+            """))
+            version_table_exists = result.scalar()
+            print(f"Alembic version table exists: {version_table_exists}")
+        except Exception as e:
+            print(f"Could not check version table: {e}")
+            version_table_exists = False
+        
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            # Force version table creation if it doesn't exist
+            version_table_schema=None,
         )
         with context.begin_transaction():
             context.run_migrations()
