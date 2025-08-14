@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 from alembic import context
 
 # Alembic config
@@ -62,11 +62,28 @@ def run_migrations_online() -> None:
     if "postgresql" in get_url():
         configuration["sqlalchemy.driver"] = "psycopg_binary"
     
-    connectable = engine_from_config(
-        configuration,
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    # Try to create engine with more explicit configuration
+    try:
+        connectable = engine_from_config(
+            configuration,
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
+        
+        # Test connection before proceeding
+        with connectable.connect() as test_conn:
+            test_conn.execute(text("SELECT 1"))
+            print("Database connection test successful")
+            
+    except Exception as e:
+        print(f"Engine creation failed: {e}")
+        # Fallback: try with minimal configuration
+        from sqlalchemy import create_engine
+        connectable = create_engine(
+            get_url(),
+            poolclass=pool.NullPool,
+            echo=True  # Enable SQL logging for debugging
+        )
     
     with connectable.connect() as connection:
         context.configure(
