@@ -22,14 +22,14 @@ class Base(DeclarativeBase):
 def _build_db_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
     if url:
-        # Normalize to psycopg v3 (binary) driver if not explicitly specified
-        # e.g., 'postgres://...' or 'postgresql://...' -> 'postgresql+psycopg_binary://...'
+        # Normalize to psycopg2 driver if not explicitly specified
+        # e.g., 'postgres://...' or 'postgresql://...' -> 'postgresql+psycopg2://...'
         lowered = url.lower()
         if (
             lowered.startswith("postgres://") or lowered.startswith("postgresql://")
         ) and "+" not in url:
-            return url.replace("postgres://", "postgresql+psycopg_binary://").replace(
-                "postgresql://", "postgresql+psycopg_binary://"
+            return url.replace("postgres://", "postgresql+psycopg2://").replace(
+                "postgresql://", "postgresql+psycopg2://"
             )
         return url
     # Fallback to SQLite for development

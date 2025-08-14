@@ -100,16 +100,16 @@ jobs:
 
       - name: Wait for DB
         env:
-          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/testdb
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/testdb
         run: |
           python - <<'PY'
           import os, time
-          import psycopg
+          import psycopg2
           url = os.environ['DATABASE_URL']
-          raw = url.replace('+psycopg','')
+          raw = url.replace('+psycopg2','')
           for i in range(30):
               try:
-                  with psycopg.connect(raw, connect_timeout=3) as conn:
+                  with psycopg2.connect(raw, connect_timeout=3) as conn:
                       with conn.cursor() as cur:
                           cur.execute('SELECT 1')
                   print('DB ready')
@@ -123,6 +123,6 @@ jobs:
 
       - name: Run Alembic upgrade
         env:
-          DATABASE_URL: postgresql+psycopg://ci:ci@localhost:5432/testdb
+          DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/testdb
         run: |
           alembic upgrade head

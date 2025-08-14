@@ -82,7 +82,7 @@ python start.py
 
 ## 🗄️ Database (Production-ready)
 
-- Preferred: PostgreSQL via `DATABASE_URL` (e.g., `postgresql+psycopg://user:pass@host/db`)
+- Preferred: PostgreSQL via `DATABASE_URL` (e.g., `postgresql+psycopg2://user:pass@host/db`)
 - Dev fallback: SQLite at `data/app.db`
 
 Schema is defined in `database/models_sql.py`. Bootstrap locally:

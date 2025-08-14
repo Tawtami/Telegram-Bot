@@ -26,7 +26,7 @@ def init_db():
     - Perform lightweight, idempotent upgrades (e.g., BIGINT for telegram_user_id).
     """
 
-    # SQLAlchemy dialect names for psycopg are like 'postgresql+psycopg'
+    # SQLAlchemy dialect names for psycopg2 are like 'postgresql+psycopg2'
     is_postgres = ENGINE.dialect.name.startswith("postgresql")
 
     # Use a dedicated connection/transaction to serialize initialization on Postgres

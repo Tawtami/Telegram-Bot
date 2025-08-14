@@ -33,8 +33,9 @@ def get_url() -> str:
     if (
         lowered.startswith("postgres://") or lowered.startswith("postgresql://")
     ) and "+" not in url:
-        url = url.replace("postgres://", "postgresql+psycopg://").replace(
-            "postgresql://", "postgresql+psycopg://"
+        # Use psycopg2-binary instead of psycopg3 for better compatibility
+        url = url.replace("postgres://", "postgresql+psycopg2://").replace(
+            "postgresql://", "postgresql+psycopg2://"
         )
 
     # Debug logging
@@ -62,7 +63,11 @@ def run_migrations_online() -> None:
         from sqlalchemy import create_engine
 
         connectable = create_engine(
-            get_url(), poolclass=pool.NullPool, echo=True  # Enable SQL logging for debugging
+            get_url(),
+            poolclass=pool.NullPool,
+            echo=True,  # Enable SQL logging for debugging
+            # Add PostgreSQL-specific options for better compatibility
+            connect_args={"connect_timeout": 10, "application_name": "alembic_migration"},
         )
 
         # Test connection before proceeding
@@ -73,6 +78,7 @@ def run_migrations_online() -> None:
     except Exception as e:
         print(f"Engine creation failed: {e}")
         raise
+
     with connectable.connect() as connection:
         # Try to manually check if alembic_version table exists to avoid driver issues
         try:
@@ -99,6 +105,8 @@ def run_migrations_online() -> None:
             compare_server_default=True,
             # Force version table creation if it doesn't exist
             version_table_schema=None,
+            # Add transaction isolation level for PostgreSQL
+            transaction_per_migration=True,
         )
         with context.begin_transaction():
             context.run_migrations()
