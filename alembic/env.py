@@ -60,10 +60,9 @@ def run_migrations_online() -> None:
     # Create engine with minimal configuration to avoid driver issues
     try:
         from sqlalchemy import create_engine
+
         connectable = create_engine(
-            get_url(),
-            poolclass=pool.NullPool,
-            echo=True  # Enable SQL logging for debugging
+            get_url(), poolclass=pool.NullPool, echo=True  # Enable SQL logging for debugging
         )
 
         # Test connection before proceeding
@@ -77,18 +76,22 @@ def run_migrations_online() -> None:
     with connectable.connect() as connection:
         # Try to manually check if alembic_version table exists to avoid driver issues
         try:
-            result = connection.execute(text("""
+            result = connection.execute(
+                text(
+                    """
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
                     WHERE table_name = 'alembic_version'
                 )
-            """))
+            """
+                )
+            )
             version_table_exists = result.scalar()
             print(f"Alembic version table exists: {version_table_exists}")
         except Exception as e:
             print(f"Could not check version table: {e}")
             version_table_exists = False
-        
+
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
