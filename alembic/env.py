@@ -65,16 +65,15 @@ def run_migrations_online() -> None:
             poolclass=pool.NullPool,
             echo=True  # Enable SQL logging for debugging
         )
-        
+
         # Test connection before proceeding
         with connectable.connect() as test_conn:
             test_conn.execute(text("SELECT 1"))
             print("Database connection test successful")
-            
+
     except Exception as e:
         print(f"Engine creation failed: {e}")
         raise
-    
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
