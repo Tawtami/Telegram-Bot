@@ -65,7 +65,9 @@ class SecurityUtils:
 
         # Remove XSS patterns completely but preserve surrounding safe text
         # Strip <script>..</script> blocks FIRST (before SQL patterns) so inner content is removed too
-        text = re.sub(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(
+            r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", text, flags=re.IGNORECASE | re.DOTALL
+        )
         text = re.sub(r"javascript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
         text = re.sub(r"vbscript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
         # Also strip orphan script tags if present
