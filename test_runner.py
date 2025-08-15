@@ -80,23 +80,36 @@ def run_test_file(test_file_path):
         # Import the module
         module = importlib.import_module(module_name)
 
-        # Find all test functions
-        test_functions = []
+        # Find all test functions and class-based test methods
+        test_items = []  # list of tuples: (display_name, callable)
         for name, obj in inspect.getmembers(module):
             if inspect.isfunction(obj) and name.startswith('test_'):
-                test_functions.append((name, obj))
+                test_items.append((name, obj))
 
-        if not test_functions:
+        # Discover classes starting with Test and their test_ methods
+        for cls_name, cls_obj in inspect.getmembers(module, inspect.isclass):
+            if not cls_name.startswith('Test'):
+                continue
+            try:
+                instance = cls_obj()
+            except Exception:
+                instance = None
+            for meth_name, meth in inspect.getmembers(cls_obj, predicate=inspect.isfunction):
+                if meth_name.startswith('test_'):
+                    bound = meth if instance is None else getattr(instance, meth_name)
+                    test_items.append((f"{cls_name}.{meth_name}", bound))
+
+        if not test_items:
             print("⚠️ No test functions found")
             return True
 
-        print(f"Found {len(test_functions)} test functions")
+        print(f"Found {len(test_items)} test functions")
 
         # Run each test function
         passed = 0
         failed = 0
 
-        for test_name, test_func in test_functions:
+        for test_name, test_func in test_items:
             try:
                 print(f"  Running {test_name}...", end=" ")
 
