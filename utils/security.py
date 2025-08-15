@@ -260,11 +260,12 @@ class SecurityUtils:
     @classmethod
     def create_secure_session_token(cls, user_id: int, expires_in_hours: int = 24) -> str:
         """Create a secure session token"""
-        timestamp = datetime.utcnow().timestamp()
-        expires_at = timestamp + (expires_in_hours * 3600)
+        # Use integer seconds for deterministic tests
+        now_seconds = int(datetime.utcnow().timestamp())
+        expires_seconds = now_seconds + int(expires_in_hours * 3600)
 
-        # Create token data (integer seconds to avoid microsecond drift in tests)
-        token_data = f"{user_id}:{int(expires_at)}"
+        # Create token data with integer expiry to avoid microsecond drift
+        token_data = f"{user_id}:{expires_seconds}"
 
         # Generate HMAC signature
         signature = cls.generate_hmac(token_data, config.bot_token)
@@ -295,7 +296,8 @@ class SecurityUtils:
 
             # Check expiration (no extra tolerance; tests expect prompt expiry)
             expires_at = float(expires_at_str)
-            if datetime.utcnow().timestamp() >= expires_at:
+            # Compare using integer seconds to align with token creation
+            if int(datetime.utcnow().timestamp()) >= int(expires_at):
                 return None
 
             return int(user_id_str)
