@@ -293,10 +293,9 @@ class SecurityUtils:
             if not cls.verify_hmac(token_data, signature, config.bot_token):
                 return None
 
-            # Check expiration
+            # Check expiration (no extra tolerance; tests expect prompt expiry)
             expires_at = float(expires_at_str)
-            # Allow slight clock skew tolerance of 1 second in tests
-            if datetime.utcnow().timestamp() > (expires_at + 1.0):
+            if datetime.utcnow().timestamp() > expires_at:
                 return None
 
             return int(user_id_str)
