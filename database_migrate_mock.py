@@ -227,7 +227,40 @@ def _upgrade_schema_if_needed(conn):
 
 
 def _create_tables_individually(conn):
-    """Mock _create_tables_individually function accepting conn like real impl"""
+    """Mock _create_tables_individually function accepting conn like real impl
+
+    - Creates each table with checkfirst=True
+    - Attempts to create indexes with checkfirst=True and logs warning on failure
+    """
+    try:
+        tables = getattr(getattr(Base, 'metadata', Base), 'sorted_tables', [])
+    except Exception:
+        tables = []
+    # Create tables
+    for table in tables or []:
+        try:
+            table.create(bind=conn, checkfirst=True)
+        except Exception as e:
+            try:
+                name = getattr(table, 'name', 'unknown')
+                logger.warning(f"Table create skipped/failed for {name}: {e}")
+            except Exception:
+                pass
+    # Create indexes if present
+    for table in tables or []:
+        try:
+            indexes = getattr(table, 'indexes', [])
+        except Exception:
+            indexes = []
+        for idx in indexes or []:
+            try:
+                idx.create(bind=conn, checkfirst=True)
+            except Exception as e:
+                try:
+                    name = getattr(idx, 'name', 'unknown')
+                    logger.warning(f"Index create skipped/failed for {name}: {e}")
+                except Exception:
+                    pass
     return True
 
 
