@@ -189,9 +189,11 @@ def _upgrade_schema_if_needed(conn):
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
-        except Exception:
-            # Best-effort simulation; ignore errors here
-            pass
+        except Exception as e:
+            try:
+                logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
+            except Exception:
+                pass
     except Exception:
         pass
     return True
