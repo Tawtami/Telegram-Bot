@@ -53,9 +53,9 @@ class CryptoManager:
             try:
                 padded = key_env + ("=" * (-len(key_env) % 4))
                 decoded = base64.urlsafe_b64decode(padded)
-                # Round-trip to ensure it was really base64
+                # Accept as base64 only if round-trip matches AND decoded bytes are printable ASCII
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
-                if rt == key_env.rstrip("=") and len(decoded) >= 16:
+                if rt == key_env.rstrip("=") and len(decoded) >= 16 and all(32 <= b <= 126 for b in decoded):
                     return decoded
             except Exception:
                 pass
