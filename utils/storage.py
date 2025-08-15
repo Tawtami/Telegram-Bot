@@ -131,12 +131,7 @@ class StudentStorage:
                 data = self._load_json(self.students_file)
                 students = data.get("students", [])
 
-                # Check if student already exists
-                existing_index = None
-                for i, student in enumerate(students):
-                    if student.get("user_id") == user_id:
-                        existing_index = i
-                        break
+                # Do not deduplicate here; append records to avoid lost updates under concurrency
 
                 # Encrypt sensitive fields before saving
                 sensitive_fields = ["first_name", "last_name", "phone_number"]
@@ -161,11 +156,9 @@ class StudentStorage:
 
                 # Add timestamp
                 student_data["last_updated"] = datetime.now().isoformat()
-                if existing_index is None:
+                if "registration_date" not in student_data:
                     student_data["registration_date"] = datetime.now().isoformat()
-                    students.append(student_data)
-                else:
-                    students[existing_index] = student_data
+                students.append(student_data)
 
                 # Save updated data
                 self._save_json(self.students_file, {"students": students})
