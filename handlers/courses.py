@@ -305,10 +305,37 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     }
     key = query.data
     title, slug = slug_map.get(key, ("تک‌درس", "single_unknown"))
+    # Try enrich from data/courses.json if exists
+    try:
+        import json
+        from utils.cache import cache_manager
+        c = cache_manager.get_cache("courses")
+        all_courses = c._get_sync("all_courses")
+        if all_courses is None:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            c._set_sync("all_courses", all_courses, ttl=600)
+        # Find any paid course matching our slug key by course_id or title contains
+        course = next(
+            (co for co in all_courses if isinstance(co, dict) and co.get("course_type") == "paid" and (co.get("course_id") == slug or slug in (co.get("course_id") or ""))),
+            None,
+        )
+        if course:
+            price = course.get("price", 150000)
+            duration = course.get("duration", "۹۰ دقیقه")
+            desc = course.get("description", "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات.")
+        else:
+            price = 150000
+            duration = "۹۰ دقیقه"
+            desc = "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات."
+    except Exception:
+        price = 150000
+        duration = "۹۰ دقیقه"
+        desc = "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات."
     text = (
         f"🧠 {title}\n"
-        "۲۰–۲۵ جلسه، هر جلسه ۹۰ دقیقه، جلسه‌ای ۱۵۰ هزار تومان.\n"
-        "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات.\n\n"
+        f"۲۰–۲۵ جلسه، هر جلسه {duration}، جلسه‌ای {price:,} تومان.\n"
+        f"{desc}\n\n"
         "برای ادامه، پرداخت را انجام دهید و رسید را ارسال کنید."
     )
     kb = InlineKeyboardMarkup(
@@ -704,6 +731,7 @@ def build_course_handlers():
         CommandHandler("export_pending", admin_export_pending_csv),
         CommandHandler("export_free", admin_export_free_grade),
         CommandHandler("export_workshop", admin_export_workshop),
+        CommandHandler("export_paid", admin_export_paid),
     ]
 
 
@@ -874,6 +902,45 @@ async def admin_export_workshop(update: Update, context: ContextTypes.DEFAULT_TY
         document=io.BytesIO(buf.getvalue().encode("utf-8")),
         filename=f"workshop_{month}_{status}.csv",
         caption=f"📄 ثبت‌نام‌های همایش {month} ({status})",
+    )
+
+
+async def admin_export_paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Export paid registrations by slug. Usage: /export_paid <slug> [pending|approved]"""
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    if not context.args:
+        await update.effective_message.reply_text("فرمت: /export_paid <slug> [pending|approved]")
+        return
+    slug = context.args[0]
+    status = context.args[1] if len(context.args) > 1 and context.args[1] in ("pending", "approved") else "pending"
+    from database.models_sql import Purchase, User as DBUser
+    with session_scope() as session:
+        q = session.execute(
+            select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name)
+            .join(Purchase, Purchase.user_id == DBUser.id)
+            .where(
+                Purchase.product_type == "course",
+                Purchase.product_id == slug,
+                Purchase.status == status,
+            )
+            .order_by(Purchase.created_at.asc())
+        )
+        rows = list(q)
+    import csv, io
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["telegram_user_id", "full_name", "status", "slug"])
+    for r in rows:
+        full_name = " ".join(filter(None, [r.first_name or "", r.last_name or ""]))
+        writer.writerow([int(r.telegram_user_id or 0), full_name, status, slug])
+    buf.seek(0)
+    await update.effective_message.reply_document(
+        document=io.BytesIO(buf.getvalue().encode("utf-8")),
+        filename=f"paid_{slug}_{status}.csv",
+        caption=f"📄 ثبت‌نام‌های دوره {slug} ({status})",
     )
 
 
