@@ -5,6 +5,7 @@ import os
 try:
     from locust import HttpUser, task, between  # type: ignore
 except Exception:  # Fallback when locust isn't installed (used in CI mocks)
+
     class HttpUser:
         client = type("Client", (), {"get": lambda self, *a, **k: None})()
 

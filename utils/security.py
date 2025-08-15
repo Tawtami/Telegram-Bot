@@ -83,7 +83,12 @@ class SecurityUtils:
         # Remove command separators first
         text = re.sub(r"[|&;`]+|\$\(|\$\{", "", text)
         # Remove common shell command invocations but retain plain words
-        text = re.sub(r"\b(cat|ls|dir|rm|del|powershell|bash|sh|python|perl|ruby)\b", "", text, flags=re.IGNORECASE)
+        text = re.sub(
+            r"\b(cat|ls|dir|rm|del|powershell|bash|sh|python|perl|ruby)\b",
+            "",
+            text,
+            flags=re.IGNORECASE,
+        )
 
         # Trim whitespace
         text = text.strip()
