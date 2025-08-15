@@ -143,96 +143,58 @@ async def handle_free_courses(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @rate_limit_handler("default")
 async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle paid courses menu"""
+    """Handle paid courses menu (updated with full details and quick registrations)."""
     query = update.callback_query
     if not query:
         return
 
     await query.answer()
 
-    # Load paid courses with caching
-    import json
-    from utils.cache import cache_manager
-
-    c = cache_manager.get_cache("courses")
-    all_courses = c._get_sync("all_courses")
-    if all_courses is None:
-        try:
-            with open("data/courses.json", "r", encoding="utf-8") as f:
-                all_courses = json.load(f)
-        except Exception:
-            all_courses = []
-        c._set_sync("all_courses", all_courses, ttl=600)
-    paid_courses = [
-        course
-        for course in all_courses
-        if course.get("course_type") == "paid" and course.get("is_active")
-    ]
-
-    if not paid_courses:
-        await query.edit_message_text(
-            "💼 در حال حاضر دوره تخصصی‌ای موجود نیست.\n\n" "🔙 بازگشت به منوی اصلی:",
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
-            ),
-            parse_mode=ParseMode.HTML,
-        )
-        return
-
-    # Build course list with details and registration buttons
-    keyboard = []
-    message_text = "💼 دوره‌های تخصصی:\n\n"
-
-    for i, course in enumerate(paid_courses, 1):
-        message_text += f"{i}. {course['title']}\n"
-        message_text += f"📝 {course['description']}\n"
-
-        if "price" in course and course["price"] > 0:
-            message_text += f"💰 قیمت: {course['price']:,} تومان\n"
-        else:
-            message_text += f"💰 قیمت: تماس بگیرید\n"
-
-        if "duration" in course:
-            message_text += f"⏱️ مدت: {course['duration']}\n"
-        if "schedule" in course:
-            message_text += f"📅 زمان: {course['schedule']}\n"
-        if "start_date" in course:
-            message_text += f"🚀 شروع: {course['start_date']}\n"
-
-        # Add features if available
-        if "features" in course:
-            message_text += "✨ ویژگی‌ها:\n"
-            for feature in course["features"]:
-                message_text += f"• {feature}\n"
-
-        # Add modules if available
-        if "modules" in course:
-            message_text += "📚 محورهای دوره:\n"
-            for j, module in enumerate(course["modules"], 1):
-                message_text += f"{j}. {module}\n"
-
-        message_text += "\n"
-
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    text=f"📝 ثبت‌نام در {course['title']}",
-                    callback_data=f"register_course_paid_{course['course_id']}",
-                )
-            ]
-        )
-
-    message_text += "📞 برای ثبت‌نام و اطلاعات بیشتر:\n"
-    message_text += "📱 +989381530556\n"
-    message_text += "💬 @ostad_hatami\n"
-
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")])
-
-    await query.edit_message_text(
-        message_text,
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        disable_web_page_preview=True,
+    # Static, curated presentation for تخصصی based on provided content
+    text = (
+        "دوره‌های تخصصی:📚\n\n"
+        "1. نگرش ۴\n"
+        "✏️ بررسی چهار نگاه کلیدی، درس‌به‌درس، به کتاب‌های ریاضی در سه رشته تجربی، ریاضی و انسانی\n"
+        "💵 قیمت: تماس بگیرید\n"
+        "⏱️ مدت: آنلاین | ⏰ زمان: انعطاف‌پذیر\n"
+        "🚀 شروع: اول شهریور\n"
+        "✨ ویژگی‌ها:\n"
+        "• آموزش آفلاین (ویدئو + فایل)\n"
+        "• تمرین‌ها و سوالات منتخب\n"
+        "• رفع اشکال آنلاین و نیمه‌خصوصی\n"
+        "• مناسب برای مدارس برتر، سمپاد و دانش‌آموزان هدفمند\n"
+        "📚 محتوای دوره:\n"
+        "1) آموزش مفهومی در سطح کتاب درسی\n"
+        "2) آموزش عمیق و فراتر از کتاب\n"
+        "3) تحلیل نکات و اهداف کنکور سراسری در هر درس\n"
+        "4) بررسی سوالات و اهداف آزمون‌های آزمایشی موسسات معتبر\n\n"
+        "2. دوره جامع ریاضی کنکور\n"
+        "💵 هزینه: 500,000 تومان\n"
+        "⏱️ مدت: 40 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
+        "3. دوره حل مسائل پیشرفته\n"
+        "💵 هزینه: تماس بگیرید\n"
+        "⏰ زمان: انعطاف‌پذیر\n\n"
+        "4. دوره آنالیز ریاضی\n"
+        "💵 هزینه: 400,000 تومان\n"
+        "⏱️ مدت: 30 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
+        "5. دوره جبر خطی\n"
+        "💵 هزینه: 300,000 تومان\n"
+        "⏱️ مدت: 20 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
+        "برای ثبت‌نام و اطلاعات بیشتر:\n📱 +989381530556\n💬 @ostad_hatami"
     )
+
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 ثبت‌نام در نگرش ۴", callback_data="register_course_paid_negaresh4")],
+            [InlineKeyboardButton("📝 ثبت‌نام در دوره جامع ریاضی کنکور", callback_data="register_course_paid_konkur_full")],
+            [InlineKeyboardButton("📝 ثبت‌نام در دوره مسائل پیشرفته", callback_data="register_course_paid_advanced_problems")],
+            [InlineKeyboardButton("📝 ثبت‌نام در دوره آنالیز ریاضی", callback_data="register_course_paid_analysis")],
+            [InlineKeyboardButton("📝 ثبت‌نام در دوره جبر خطی", callback_data="register_course_paid_linear_algebra")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
+        ]
+    )
+
+    await query.edit_message_text(text, reply_markup=kb, disable_web_page_preview=True)
 
 
 @rate_limit_handler("default")
