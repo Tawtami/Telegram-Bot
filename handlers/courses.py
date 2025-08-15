@@ -701,6 +701,7 @@ def build_course_handlers():
         CommandHandler("pending", admin_list_pending),
         CommandHandler("approve", admin_approve),
         CommandHandler("reject", admin_reject),
+        CommandHandler("export_pending", admin_export_pending_csv),
     ]
 
 
@@ -724,6 +725,43 @@ async def admin_list_pending(update: Update, context: ContextTypes.DEFAULT_TYPE)
         for r in rows
     ]
     await update.effective_message.reply_text("درخواست‌های معلق:\n" + "\n".join(lines))
+
+
+async def admin_export_pending_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Export pending requests to CSV for admins (to prepare Skyroom accounts, etc.)."""
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    with session_scope() as session:
+        rows = get_pending_purchases(session, limit=1000)
+        ids = [r["user_id"] for r in rows]
+        users = {}
+        if ids:
+            q = session.execute(select(DBUser).where(DBUser.id.in_(ids))).scalars().all()
+            for u in q:
+                users[int(u.id)] = u
+    import csv, io
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["purchase_id", "user_id", "telegram_user_id", "full_name", "product_type", "product_id", "created_at"])
+    for r in rows:
+        u = users.get(int(r["user_id"]))
+        full_name = " ".join(filter(None, [getattr(u, "first_name", ""), getattr(u, "last_name", "")])) if u else ""
+        writer.writerow([
+            r["purchase_id"],
+            r["user_id"],
+            getattr(u, "telegram_user_id", 0) if u else 0,
+            full_name,
+            r["product_type"],
+            r["product_id"],
+            r["created_at"],
+        ])
+    buf.seek(0)
+    await update.effective_message.reply_document(
+        document=io.BytesIO(buf.getvalue().encode("utf-8")),
+        filename="pending_requests.csv",
+        caption="📄 درخواست‌های معلق (CSV)",
+    )
 
 
 async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
