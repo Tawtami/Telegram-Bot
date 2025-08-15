@@ -2389,6 +2389,7 @@ async def run_webhook_mode(application: Application) -> None:
                         raise
 
         # Determine bind host and port (PORT env overrides config for tests)
+        # Binding on 0.0.0.0 is required inside containers for webhook mode; loopback in tests
         bind_host = "127.0.0.1" if skip_webhook else "0.0.0.0"  # nosec B104
         try:
             _env_port = int(os.getenv("PORT", "0") or 0)
