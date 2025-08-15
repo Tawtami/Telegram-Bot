@@ -55,7 +55,11 @@ class CryptoManager:
                 decoded = base64.urlsafe_b64decode(padded)
                 # Accept as base64 only if round-trip matches AND decoded bytes are printable ASCII
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
-                if rt == key_env.rstrip("=") and len(decoded) >= 16 and all(32 <= b <= 126 for b in decoded):
+                if (
+                    rt == key_env.rstrip("=")
+                    and len(decoded) >= 16
+                    and all(32 <= b <= 126 for b in decoded)
+                ):
                     return decoded
             except Exception:
                 pass
