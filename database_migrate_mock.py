@@ -9,8 +9,56 @@ from unittest.mock import MagicMock
 
 
 # Mock functions
+def _get_text_clause():
+    try:
+        from sqlalchemy import text as _sa_text  # type: ignore
+
+        return _sa_text
+    except Exception:
+        class _SimpleText:
+            def __init__(self, s: str):
+                self.text = s
+
+        def _text(s: str):
+            return _SimpleText(s)
+
+        return _text
+
+
 def init_db():
-    """Mock init_db function"""
+    """Mock init_db function that emulates advisory lock and basic flow"""
+    text = _get_text_clause()
+    # Simulate context-managed connection
+    try:
+        conn_cm = ENGINE.connect()
+        conn = getattr(conn_cm, "__enter__", lambda: conn_cm)()
+    except Exception:
+        conn = MagicMock()
+
+    # Advisory lock (postgres)
+    try:
+        conn.execute(text("SELECT pg_advisory_lock(54193217)"))
+    except Exception:
+        pass
+
+    # Create tables
+    try:
+        Base.metadata.create_all(bind=conn)
+    except Exception:
+        pass
+
+    # Upgrade schema
+    try:
+        _upgrade_schema_if_needed(conn)  # type: ignore
+    except Exception:
+        pass
+
+    # Advisory unlock
+    try:
+        conn.execute(text("SELECT pg_advisory_unlock(54193217)"))
+    except Exception:
+        pass
+
     return True
 
 
