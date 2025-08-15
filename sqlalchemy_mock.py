@@ -20,11 +20,13 @@ class Base:
 # Mock SQLAlchemy exceptions
 class IntegrityError(Exception):
     """Mock IntegrityError exception"""
+
     pass
 
 
 class SQLAlchemyError(Exception):
     """Mock SQLAlchemyError exception"""
+
     pass
 
 
@@ -238,9 +240,28 @@ class Index:
 
 
 # Mock SQLAlchemy functions
-def select(*args, **kwargs):
-    """Mock select function"""
-    return MagicMock()
+class SelectQuery:
+    """Lightweight select/where expression that our DB mock can interpret"""
+
+    def __init__(self, model):
+        self.model = model
+        self.clauses = []  # list of tuples like (op, field, value)
+
+    def where(self, *predicates):
+        # Support multiple equality predicates represented as tuples ("eq", field, value)
+        for predicate in predicates:
+            if isinstance(predicate, tuple) and len(predicate) == 3 and predicate[0] == "eq":
+                self.clauses.append(predicate)
+        return self
+
+    def order_by(self, *args, **kwargs):
+        # Ignored in mock but kept for chaining compatibility
+        return self
+
+
+def select(model, *args, **kwargs):
+    """Return a SelectQuery understandable by database_mock.Session.execute"""
+    return SelectQuery(model)
 
 
 def update(*args, **kwargs):
@@ -251,6 +272,7 @@ def update(*args, **kwargs):
 def func(*args, **kwargs):
     """Mock func function"""
     return MagicMock()
+
 
 # Mock func.count specifically
 func.count = MagicMock()
@@ -276,12 +298,29 @@ class session_scope:
 
 # Add to sys.modules so imports work
 sys.modules['sqlalchemy'] = sys.modules[__name__]
-sys.modules['sqlalchemy.orm'] = MagicMock()
+
+
+# Provide a minimal orm module with sessionmaker returning our database session
+class orm_module:
+    @staticmethod
+    def sessionmaker(bind=None):
+        def _factory():
+            # Use the shared database_mock.Session so objects land in GLOBAL_DB_OBJECTS
+            import database_mock as _dbm
+
+            return _dbm.Session()
+
+        return _factory
+
+
+sys.modules['sqlalchemy.orm'] = orm_module
 sys.modules['sqlalchemy.ext.declarative'] = MagicMock()
+
 
 # Create a proper sqlalchemy.exc module
 class sqlalchemy_exc_module:
     IntegrityError = IntegrityError
     SQLAlchemyError = SQLAlchemyError
+
 
 sys.modules['sqlalchemy.exc'] = sqlalchemy_exc_module

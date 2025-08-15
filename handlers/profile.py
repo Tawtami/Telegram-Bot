@@ -64,7 +64,12 @@ async def set_province(update: Update, context: Any) -> None:
                 new_value=province,
                 changed_by=user_id,
             )
-        get_or_create_user(session, user_id, province=province, city="")
+            db_user.province = province
+            db_user.city = ""
+            session.flush()
+        else:
+            get_or_create_user(session, user_id, province=province, city="")
+            session.flush()
     # Prompt city next
     cities = config.cities_by_province.get(province, [])
     rows = [[InlineKeyboardButton(c, callback_data=f"set_city:{c}")] for c in cities]
@@ -128,7 +133,11 @@ async def set_city(update: Update, context: Any) -> None:
                 new_value=city,
                 changed_by=user_id,
             )
-        get_or_create_user(session, user_id, city=city)
+            db_user.city = city
+            session.flush()
+        else:
+            get_or_create_user(session, user_id, city=city)
+            session.flush()
     await query.edit_message_text(
         f"🏙 شهر {city} ثبت شد.",
         reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),
@@ -163,7 +172,11 @@ async def set_grade(update: Update, context: Any) -> None:
                 new_value=grade,
                 changed_by=user_id,
             )
-        get_or_create_user(session, user_id, grade=grade)
+            db_user.grade = grade
+            session.flush()
+        else:
+            get_or_create_user(session, user_id, grade=grade)
+            session.flush()
     await query.edit_message_text(
         f"📚 پایه {grade} ثبت شد.",
         reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),
@@ -198,7 +211,11 @@ async def set_major(update: Update, context: Any) -> None:
                 new_value=major,
                 changed_by=user_id,
             )
-        get_or_create_user(session, user_id, field_of_study=major)
+            db_user.field_of_study = major
+            session.flush()
+        else:
+            get_or_create_user(session, user_id, field_of_study=major)
+            session.flush()
     await query.edit_message_text(
         f"🎓 رشته {major} ثبت شد.",
         reply_markup=_kb([[InlineKeyboardButton("🔙 بازگشت", callback_data="menu_profile_edit")]]),

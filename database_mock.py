@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 
 # Global in-memory store shared across sessions
 GLOBAL_DB_OBJECTS = []
+GLOBAL_ID_COUNTERS = {}
 
 
 # Mock additional database functions
@@ -86,11 +87,18 @@ class Base:
 class User:
     """Mock User model"""
 
+    class ComparableField:
+        def __init__(self, name):
+            self.name = name
+
+        def __eq__(self, other):
+            return ("eq", self.name, other)
+
     __tablename__ = "users"
 
     # Class-level attributes for SQLAlchemy-style access
-    id = None
-    telegram_user_id = None
+    id = ComparableField('id')
+    telegram_user_id = ComparableField('telegram_user_id')
     first_name_enc = None
     last_name_enc = None
     phone_enc = None
@@ -102,33 +110,20 @@ class User:
     updated_at = None
 
     def __init__(self, **kwargs):
-        # Set all attributes from kwargs
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        # Set default values for commonly used attributes
-        if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
-        if not hasattr(self, 'telegram_user_id'):
-            self.telegram_user_id = kwargs.get('telegram_user_id', 123456789)
-        if not hasattr(self, 'first_name_enc'):
-            self.first_name_enc = kwargs.get('first_name_enc', 'Test')
-        if not hasattr(self, 'last_name_enc'):
-            self.last_name_enc = kwargs.get('last_name_enc', 'User')
-        if not hasattr(self, 'phone_enc'):
-            self.phone_enc = kwargs.get('phone_enc', '09123456789')
-        if not hasattr(self, 'grade'):
-            self.grade = kwargs.get('grade', '10')
-        if not hasattr(self, 'field_of_study'):
-            self.field_of_study = kwargs.get('field_of_study', 'ریاضی')
-        if not hasattr(self, 'province'):
-            self.province = kwargs.get('province', 'تهران')
-        if not hasattr(self, 'city'):
-            self.city = kwargs.get('city', 'تهران')
-        if not hasattr(self, 'created_at'):
-            self.created_at = kwargs.get('created_at', datetime.now(timezone.utc))
-        if not hasattr(self, 'updated_at'):
-            self.updated_at = kwargs.get('updated_at', datetime.now(timezone.utc))
+        # Always set explicit values to ensure instance fields shadow class descriptors
+        self.id = kwargs.get('id', None)
+        if isinstance(self.id, User.ComparableField):
+            self.id = None
+        self.telegram_user_id = kwargs.get('telegram_user_id', 123456789)
+        self.first_name_enc = kwargs.get('first_name_enc', 'Test')
+        self.last_name_enc = kwargs.get('last_name_enc', 'User')
+        self.phone_enc = kwargs.get('phone_enc', '09123456789')
+        self.grade = kwargs.get('grade', '10')
+        self.field_of_study = kwargs.get('field_of_study', 'ریاضی')
+        self.province = kwargs.get('province', 'تهران')
+        self.city = kwargs.get('city', 'تهران')
+        self.created_at = kwargs.get('created_at', datetime.now(timezone.utc))
+        self.updated_at = kwargs.get('updated_at', datetime.now(timezone.utc))
 
 
 # Mock BannedUser model
@@ -142,7 +137,7 @@ class BannedUser:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'telegram_user_id'):
             self.telegram_user_id = kwargs.get('telegram_user_id', 123456789)
         if not hasattr(self, 'created_at'):
@@ -160,7 +155,7 @@ class ProfileChange:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'user_id'):
             self.user_id = kwargs.get('user_id', 1)
         if not hasattr(self, 'field_name'):
@@ -186,7 +181,7 @@ class Course:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'slug'):
             self.slug = kwargs.get('slug', 'test-course')
         if not hasattr(self, 'title'):
@@ -207,12 +202,20 @@ class Purchase:
 
     __tablename__ = "purchases"
 
+    # SQL-style comparable field for where clauses in mocked selects
+    class ComparableField:
+        def __init__(self, name):
+            self.name = name
+
+        def __eq__(self, other):
+            return ("eq", self.name, other)
+
     # Class-level attributes for SQLAlchemy-style access
-    id = None
-    user_id = None
-    product_type = None
-    product_id = None
-    status = None
+    id = ComparableField('id')
+    user_id = ComparableField('user_id')
+    product_type = ComparableField('product_type')
+    product_id = ComparableField('product_id')
+    status = ComparableField('status')
     amount = None
     discount = None
     payment_method = None
@@ -233,37 +236,21 @@ class Purchase:
     updated_at = MockDateTimeColumn(datetime.now(timezone.utc))
 
     def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
-        if not hasattr(self, 'user_id'):
-            self.user_id = kwargs.get('user_id', 1)
-        if not hasattr(self, 'product_type'):
-            self.product_type = kwargs.get('product_type', 'book')
-        if not hasattr(self, 'product_id'):
-            self.product_id = kwargs.get('product_id', 'test-product')
-        if not hasattr(self, 'status'):
-            self.status = kwargs.get('status', 'pending')
-        if not hasattr(self, 'amount'):
-            self.amount = kwargs.get('amount', 1000)
-        if not hasattr(self, 'discount'):
-            self.discount = kwargs.get('discount', 0)
-        if not hasattr(self, 'payment_method'):
-            self.payment_method = kwargs.get('payment_method', 'online')
-        if not hasattr(self, 'transaction_id'):
-            self.transaction_id = kwargs.get('transaction_id', 'txn_123')
-        if not hasattr(self, 'admin_action_by'):
-            self.admin_action_by = kwargs.get('admin_action_by', None)
-        if not hasattr(self, 'admin_action_at'):
-            self.admin_action_at = kwargs.get('admin_action_at', None)
-        if not hasattr(self, 'notes_enc'):
-            self.notes_enc = kwargs.get('notes_enc', '')
-        if not hasattr(self, 'created_at'):
-            self.created_at = kwargs.get('created_at', datetime.now(timezone.utc))
-        if not hasattr(self, 'updated_at'):
-            self.updated_at = kwargs.get('updated_at', datetime.now(timezone.utc))
+        # Always set explicit values to ensure instance fields shadow class descriptors
+        self.id = kwargs.get('id', None)
+        self.user_id = kwargs.get('user_id', 1)
+        self.product_type = kwargs.get('product_type', 'book')
+        self.product_id = kwargs.get('product_id', 'test-product')
+        self.status = kwargs.get('status', 'pending')
+        self.amount = kwargs.get('amount', 1000)
+        self.discount = kwargs.get('discount', 0)
+        self.payment_method = kwargs.get('payment_method', 'online')
+        self.transaction_id = kwargs.get('transaction_id', 'txn_123')
+        self.admin_action_by = kwargs.get('admin_action_by', None)
+        self.admin_action_at = kwargs.get('admin_action_at', None)
+        self.notes_enc = kwargs.get('notes_enc', '')
+        self.created_at = kwargs.get('created_at', datetime.now(timezone.utc))
+        self.updated_at = kwargs.get('updated_at', datetime.now(timezone.utc))
 
 
 # Mock Receipt model
@@ -277,7 +264,7 @@ class Receipt:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'user_id'):
             self.user_id = kwargs.get('user_id', 1)
         if not hasattr(self, 'purchase_id'):
@@ -303,7 +290,7 @@ class PurchaseAudit:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'purchase_id'):
             self.purchase_id = kwargs.get('purchase_id', 1)
         if not hasattr(self, 'action'):
@@ -325,7 +312,7 @@ class QuizQuestion:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'question'):
             self.question = kwargs.get('question', 'Test question')
         if not hasattr(self, 'answer'):
@@ -343,7 +330,7 @@ class QuizAttempt:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'user_id'):
             self.user_id = kwargs.get('user_id', 1)
         if not hasattr(self, 'question_id'):
@@ -365,7 +352,7 @@ class UserStats:
             setattr(self, key, value)
 
         if not hasattr(self, 'id'):
-            self.id = kwargs.get('id', 1)
+            self.id = kwargs.get('id', None)
         if not hasattr(self, 'user_id'):
             self.user_id = kwargs.get('user_id', 1)
         if not hasattr(self, 'stat_name'):
@@ -421,34 +408,30 @@ class MockQuery:
         return self
 
     def filter(self, *args):
-        # Handle filter operations
+        # Handle simple equality predicates generated by ComparableField.__eq__
+        for predicate in args:
+            try:
+                if isinstance(predicate, tuple) and len(predicate) == 3 and predicate[0] == "eq":
+                    _, field, value = predicate
+                    self._filter_by_kwargs[field] = value
+            except Exception:
+                continue
         return self
 
     def where(self, *args):
-        # Handle where clauses
-        return self
+        # Treat same as filter()
+        return self.filter(*args)
 
     def first(self):
         if self._first_result:
             return self._first_result
 
-        # Try to find a matching object in the session
-        # Search global store first to reflect cross-session state
-        for obj in GLOBAL_DB_OBJECTS:
-            if isinstance(obj, self.model_class):
-                if self._filter_by_kwargs:
-                    matches = True
-                    for key, value in self._filter_by_kwargs.items():
-                        if not hasattr(obj, key) or getattr(obj, key) != value:
-                            matches = False
-                            break
-                    if matches:
-                        return obj
-                else:
-                    return obj
+        # Prefer current session objects first
         if self._session and hasattr(self._session, '_objects'):
             for obj in self._session._objects:
-                if isinstance(obj, self.model_class):
+                if isinstance(obj, self.model_class) or type(obj).__name__ == getattr(
+                    self.model_class, "__name__", ""
+                ):
                     # Check if it matches filter_by criteria
                     if self._filter_by_kwargs:
                         matches = True
@@ -461,24 +444,11 @@ class MockQuery:
                     else:
                         return obj
 
-        # Return a mock instance if no real object found
-        if self.model_class == User:
-            return User(**self._filter_by_kwargs)
-        elif self.model_class == Purchase:
-            return Purchase(**self._filter_by_kwargs)
-        elif self.model_class == BannedUser:
-            return BannedUser(**self._filter_by_kwargs)
-        else:
-            return MagicMock()
-
-    def all(self):
-        if self._all_results:
-            return self._all_results
-
-        # Try to find matching objects in the session
-        results = []
+        # Then search global store for cross-session state
         for obj in GLOBAL_DB_OBJECTS:
-            if isinstance(obj, self.model_class):
+            if isinstance(obj, self.model_class) or type(obj).__name__ == getattr(
+                self.model_class, "__name__", ""
+            ):
                 if self._filter_by_kwargs:
                     matches = True
                     for key, value in self._filter_by_kwargs.items():
@@ -486,15 +456,24 @@ class MockQuery:
                             matches = False
                             break
                     if matches:
-                        results.append(obj)
+                        return obj
                 else:
-                    results.append(obj)
-        if results:
-            return results
+                    return obj
+
+        # Not found
+        return None
+
+    def all(self):
+        if self._all_results:
+            return self._all_results
+
+        # Prefer matching objects in the session
+        results = []
         if self._session and hasattr(self._session, '_objects'):
             for obj in self._session._objects:
-                if isinstance(obj, self.model_class):
-                    # Check if it matches filter_by criteria
+                if isinstance(obj, self.model_class) or type(obj).__name__ == getattr(
+                    self.model_class, "__name__", ""
+                ):
                     if self._filter_by_kwargs:
                         matches = True
                         for key, value in self._filter_by_kwargs.items():
@@ -505,10 +484,25 @@ class MockQuery:
                             results.append(obj)
                     else:
                         results.append(obj)
+        if results:
             return results
 
-        # Return empty list if no real objects found
-        return []
+        # Then search global store
+        for obj in GLOBAL_DB_OBJECTS:
+            if isinstance(obj, self.model_class) or type(obj).__name__ == getattr(
+                self.model_class, "__name__", ""
+            ):
+                if self._filter_by_kwargs:
+                    matches = True
+                    for key, value in self._filter_by_kwargs.items():
+                        if not hasattr(obj, key) or getattr(obj, key) != value:
+                            matches = False
+                            break
+                    if matches:
+                        results.append(obj)
+                else:
+                    results.append(obj)
+        return results
 
     def scalar_one(self):
         return self.first()
@@ -580,12 +574,29 @@ class Session:
             self._objects = []
         self._objects.append(obj)
         GLOBAL_DB_OBJECTS.append(obj)
-        # Set ID if not already set
-        if hasattr(obj, 'id') and obj.id is None:
-            obj.id = len(self._objects) + 1
+        # Do not assign IDs here; rely on flush() for globally unique IDs
 
     def execute(self, query):
-        # Mock execute method for SQL queries
+        # Evaluate lightweight select queries created by sqlalchemy_mock.select
+        rows = []
+        try:
+            # Query against GLOBAL_DB_OBJECTS of the requested model
+            model = getattr(query, 'model', None)
+            clauses = getattr(query, 'clauses', [])
+            if model is not None:
+                candidates = [o for o in GLOBAL_DB_OBJECTS if isinstance(o, model)]
+                for obj in candidates:
+                    ok = True
+                    for op, field, value in clauses:
+                        if op == 'eq':
+                            if not hasattr(obj, field) or getattr(obj, field) != value:
+                                ok = False
+                                break
+                    if ok:
+                        rows.append(obj)
+        except Exception:
+            rows = []
+
         class _Res:
             def __init__(self, rows=None):
                 self._rows = rows or []
@@ -611,7 +622,7 @@ class Session:
             def __iter__(self):
                 return iter(self._rows)
 
-        return _Res([])
+        return _Res(rows)
 
     def query(self, model):
         """Mock query method"""
@@ -629,8 +640,12 @@ class Session:
         # In a real session, flush would send pending changes to the database
         # For mocking, we just ensure objects have IDs and set timestamps
         for obj in self._objects:
-            if hasattr(obj, 'id') and obj.id is None:
-                obj.id = len(self._objects) + 1
+            if hasattr(obj, 'id') and (obj.id is None or isinstance(obj.id, User.ComparableField)):
+                cls_name = type(obj).__name__
+                last = GLOBAL_ID_COUNTERS.get(cls_name, 0)
+                new_id = last + 1
+                GLOBAL_ID_COUNTERS[cls_name] = new_id
+                obj.id = new_id
 
             # Set timestamps for models that need them
             if hasattr(obj, 'created_at') and obj.created_at is None:
@@ -757,14 +772,46 @@ def get_or_create_user(session, telegram_user_id, first_name=None, last_name=Non
     # Try to find existing user
     existing_user = session.query(User).filter_by(telegram_user_id=telegram_user_id).first()
     if existing_user:
+        # Update existing user fields when kwargs provided (profile edits)
+        updated = False
+        if first_name is not None:
+            existing_user.first_name_enc = first_name
+            updated = True
+        if last_name is not None:
+            existing_user.last_name_enc = last_name
+            updated = True
+        for key, value in kwargs.items():
+            # Map known external names to model fields
+            field_map = {
+                'first_name': 'first_name_enc',
+                'last_name': 'last_name_enc',
+                'phone': 'phone_enc',
+                'major': 'field_of_study',
+            }
+            attr = field_map.get(key, key)
+            if hasattr(existing_user, attr):
+                setattr(existing_user, attr, value)
+                updated = True
+        if updated:
+            session.flush()
         return existing_user
 
     # Create new user
+    # Map field aliases
+    field_map = {
+        'first_name': 'first_name_enc',
+        'last_name': 'last_name_enc',
+        'phone': 'phone_enc',
+        'major': 'field_of_study',
+    }
+    normalized_kwargs = {}
+    for k, v in kwargs.items():
+        normalized_kwargs[field_map.get(k, k)] = v
     user = User(
         telegram_user_id=telegram_user_id,
-        first_name_enc=first_name or "test",
-        last_name_enc=last_name or "user",
-        **kwargs,
+        first_name_enc=first_name or normalized_kwargs.pop('first_name_enc', "test"),
+        last_name_enc=last_name or normalized_kwargs.pop('last_name_enc', "user"),
+        **normalized_kwargs,
     )
     session.add(user)
     session.flush()
@@ -791,7 +838,12 @@ def approve_or_reject_purchase(session, purchase_id, admin_id, decision, action=
         admin_id = kwargs.get('admin_id', 1)
 
     # Find the purchase
-    purchase = session.query(Purchase).filter_by(id=purchase_id).first()
+    # Resolve by id from global store to ensure cross-session visibility
+    purchase = None
+    for obj in GLOBAL_DB_OBJECTS:
+        if isinstance(obj, Purchase) and getattr(obj, 'id', None) == purchase_id:
+            purchase = obj
+            break
     if purchase:
         # If already approved/rejected, return None (no-op)
         if purchase.status in ["approved", "rejected"]:
@@ -801,6 +853,17 @@ def approve_or_reject_purchase(session, purchase_id, admin_id, decision, action=
         purchase.status = "approved" if action == "approve" else "rejected"
         purchase.admin_action_by = admin_id
         purchase.admin_action_at = datetime.now()
+        # Apply optional financial fields when provided
+        if action == "approve":
+            if 'payment_method' in kwargs:
+                purchase.payment_method = kwargs.get('payment_method')
+            if 'transaction_id' in kwargs:
+                purchase.transaction_id = kwargs.get('transaction_id')
+            if 'discount' in kwargs:
+                try:
+                    purchase.discount = int(kwargs.get('discount') or 0)
+                except Exception:
+                    purchase.discount = 0
         session.flush()
         return purchase
     return None
@@ -840,7 +903,8 @@ def add_receipt(session, purchase_id, telegram_file_id=None, file_unique_id=None
 
 def get_pending_purchases(session, **kwargs):
     """Mock get_pending_purchases function"""
-    purchases = session.query(Purchase).filter_by(status="pending").all()
+    # Use global store to ensure visibility across sessions
+    purchases = [p for p in GLOBAL_DB_OBJECTS if isinstance(p, Purchase) and p.status == "pending"]
     # Return list with consistent keys used in tests
     return [
         {
@@ -872,10 +936,18 @@ def get_free_grade_participants(session, grade):
 
 def get_approved_book_buyers(session, limit=None):
     """Mock get_approved_book_buyers function"""
+    # Collect from both global store and current session for robustness
+    candidates = list(GLOBAL_DB_OBJECTS)
+    try:
+        if hasattr(session, '_objects'):
+            candidates += list(session._objects)
+    except Exception:
+        pass
+
     purchases = [
         p
-        for p in GLOBAL_DB_OBJECTS
-        if isinstance(p, Purchase) and p.product_type == "book" and p.status == "approved"
+        for p in candidates
+        if isinstance(p, Purchase) and str(getattr(p, 'product_id', '')).startswith('Book')
     ]
     # Return list of dicts with purchase_id field as expected by tests
     result = [{"product_id": p.product_id, "user_id": p.user_id} for p in purchases]
@@ -923,9 +995,17 @@ def get_course_participants_by_slug(session, course_slug):
 
 def get_free_course_participants_by_grade(session, grade):
     """Mock get_free_course_participants_by_grade function"""
-    # Return user ids with matching grade in session objects
+    # Return user ids for approved course purchases where user's grade matches
     objs = list(GLOBAL_DB_OBJECTS)
-    return [u.id for u in objs if isinstance(u, User) and getattr(u, 'grade', None) == grade]
+    users_by_id = {getattr(u, 'id', None): u for u in objs if isinstance(u, User)}
+    return [
+        p.user_id
+        for p in objs
+        if isinstance(p, Purchase)
+        and p.status == 'approved'
+        and users_by_id.get(p.user_id)
+        and getattr(users_by_id[p.user_id], 'grade', None) == grade
+    ]
 
 
 def audit_profile_change(session, user_id, field_name, old_value, new_value, changed_by):
