@@ -39,7 +39,12 @@ def init_db():
     """
 
     # SQLAlchemy dialect names for psycopg2 are like 'postgresql+psycopg2'
-    is_postgres = ENGINE.dialect.name.startswith("postgresql")
+    # ENGINE.dialect.name can be MagicMock in tests; coerce to string safely
+    try:
+        dialect_name = str(getattr(ENGINE.dialect, 'name', ''))
+    except Exception:
+        dialect_name = ''
+    is_postgres = dialect_name.startswith("postgresql")
 
     # Use a dedicated connection/transaction to serialize initialization on Postgres
     with ENGINE.connect() as conn:
@@ -170,7 +175,7 @@ def _upgrade_schema_if_needed(conn):
 
     # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
     try:
-        if ENGINE.dialect.name.startswith("postgresql"):
+        if str(getattr(ENGINE.dialect, 'name', '')).startswith("postgresql"):
             # Add financial columns to purchases if missing
             try:
                 conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
@@ -271,7 +276,7 @@ def _upgrade_schema_if_needed(conn):
         logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
     # 3) Create recommended indexes if missing (Postgres)
     try:
-        if ENGINE.dialect.name.startswith("postgresql"):
+        if str(getattr(ENGINE.dialect, 'name', '')).startswith("postgresql"):
             # Users demography indexes
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
@@ -301,6 +306,10 @@ def _create_tables_individually(conn):
         try:
             table.create(bind=conn, checkfirst=True)
         except Exception as te:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             logger.warning(f"Table create skipped/failed for {table.name}: {te}")
     # Create remaining tables if any
     for table in Base.metadata.sorted_tables:
@@ -309,6 +318,10 @@ def _create_tables_individually(conn):
         try:
             table.create(bind=conn, checkfirst=True)
         except Exception as te:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             logger.warning(f"Table create skipped/failed for {table.name}: {te}")
     # Create indexes explicitly (checkfirst). This may be a no-op if the tables
     # were just created above.
@@ -317,6 +330,10 @@ def _create_tables_individually(conn):
             try:
                 idx.create(bind=conn, checkfirst=True)
             except Exception as ie:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
                 logger.warning(f"Index create skipped/failed for {idx.name}: {ie}")
 
     # Add constraints/checks that SQLAlchemy might not emit automatically

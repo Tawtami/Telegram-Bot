@@ -13,6 +13,7 @@ import os
 import base64
 import json
 from typing import Optional
+from config import config as config  # Allow tests to patch utils.crypto.config
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
@@ -31,11 +32,13 @@ class CryptoManager:
     def _load_key() -> bytes:
         key_env = os.getenv("ENCRYPTION_KEY", "").strip()
         if key_env:
-            # Try base64 (including missing padding) first
+            # Prefer canonical base64 only if round-trip matches (avoid misdetecting plain text)
             try:
                 padded = key_env + ("=" * (-len(key_env) % 4))
                 decoded = base64.urlsafe_b64decode(padded)
-                if len(decoded) >= 16:
+                # Round-trip to ensure it was really base64
+                rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
+                if rt == key_env.rstrip("=") and len(decoded) >= 16:
                     return decoded
             except Exception:
                 pass
@@ -65,8 +68,6 @@ class CryptoManager:
                 raise
 
         # Development fallback (derive from BOT_TOKEN) - ONLY for local/dev
-        from config import config
-
         token = (config.bot_token or "dev").encode("utf-8")
         # Simple KDF: take first 32 bytes of SHA256(token)
         import hashlib

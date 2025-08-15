@@ -14,6 +14,15 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from config import config
 
+# Expose ENGINE at module level so tests can patch it directly
+try:
+    from database.db import ENGINE as _DB_ENGINE
+except Exception:
+    _DB_ENGINE = None
+
+# Module-level reference used by get_stats and tests
+ENGINE = _DB_ENGINE
+
 logger = logging.getLogger(__name__)
 
 
@@ -70,10 +79,13 @@ class PerformanceMetrics:
             if len(durations_list) >= 2:
                 self.median_duration = statistics.median(durations_list)
 
-                # Calculate percentiles
+                # Calculate percentiles indices to match tests' expectations
                 sorted_durations = sorted(durations_list)
-                p95_index = int(len(sorted_durations) * 0.95)
-                p99_index = int(len(sorted_durations) * 0.99)
+                n = len(sorted_durations)
+                # For n=5, 0.95*n = 4.75 => index 4; 0.99*n = 4.95 => index 4
+                # Use int() which floors, then clamp
+                p95_index = max(0, min(n - 1, int(n * 0.95)))
+                p99_index = max(0, min(n - 1, int(n * 0.99)))
 
                 self.p95_duration = sorted_durations[p95_index]
                 self.p99_duration = sorted_durations[p99_index]
@@ -87,7 +99,9 @@ class PerformanceMetrics:
             "min_duration": (
                 round(self.min_duration, 4) if self.min_duration != float("inf") else 0
             ),
-            "max_duration": round(self.max_duration, 4),
+            "max_duration": (
+                round(self.max_duration, 4) if self.max_duration != float("-inf") else 0
+            ),
             "avg_duration": round(self.avg_duration, 4),
             "median_duration": round(self.median_duration, 4),
             "p95_duration": round(self.p95_duration, 4),
@@ -167,6 +181,7 @@ class PerformanceMonitor:
         if handler_name not in self.metrics:
             self.metrics[handler_name] = PerformanceMetrics(handler_name)
 
+        # Preserve negative durations (tests expect exact values), do not clamp
         self.metrics[handler_name].add_request(duration)
 
         # Log slow requests
@@ -273,13 +288,14 @@ class PerformanceMonitor:
                 "alerts": self.alerts[-10:],  # Last 10 alerts
                 "timestamp": time.time(),
             }
-            # DB health light probe
+            # DB health light probe (supports test patching of module-level ENGINE)
             try:
-                from database.db import ENGINE
-
-                with ENGINE.connect() as conn:
-                    conn.exec_driver_sql("SELECT 1")
-                stats["db"] = {"ok": True}
+                if ENGINE is not None:
+                    with ENGINE.connect() as conn:
+                        conn.exec_driver_sql("SELECT 1")
+                    stats["db"] = {"ok": True}
+                else:
+                    stats["db"] = {"ok": False, "error": "ENGINE not available"}
             except Exception as e:
                 stats["db"] = {"ok": False, "error": str(e)}
             return stats

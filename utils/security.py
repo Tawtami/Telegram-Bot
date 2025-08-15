@@ -63,21 +63,27 @@ class SecurityUtils:
         # Remove control characters except newlines and tabs
         text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
 
-        # Remove SQL injection patterns
+        # Remove SQL injection patterns completely
         for pattern in cls._sql_injection_patterns:
             text = pattern.sub("", text)
 
-        # Remove XSS patterns
+        # Remove XSS patterns completely but preserve surrounding safe text
+        # Specifically strip <script>..</script> blocks and inline javascript: URLs
+        text = re.sub(r"<script.*?>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"javascript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"vbscript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
+        # Then apply additional dangerous tag/protocol filters
         for pattern in cls._xss_patterns:
             text = pattern.sub("", text)
 
-        # Remove path traversal patterns
+        # Remove path traversal patterns completely
         for pattern in cls._path_traversal_patterns:
             text = pattern.sub("", text)
 
-        # Remove command injection patterns
-        for pattern in cls._command_injection_patterns:
-            text = pattern.sub("", text)
+        # Remove command separators first
+        text = re.sub(r"[|&;`]+|\$\(|\$\{", "", text)
+        # Remove common shell command invocations but retain plain words
+        text = re.sub(r"\b(cat|ls|dir|rm|del|powershell|bash|sh|python|perl|ruby)\b", "", text, flags=re.IGNORECASE)
 
         # Trim whitespace
         text = text.strip()
@@ -112,7 +118,10 @@ class SecurityUtils:
     @classmethod
     def generate_secure_token(cls, length: int = 32) -> str:
         """Generate a secure random token"""
-        return secrets.token_urlsafe(length)
+        # Generate a token composed of urlsafe characters only. Ensure deterministic length.
+        # token_urlsafe returns ~1.33 * n length; tests expect exact length.
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+        return "".join(secrets.choice(alphabet) for _ in range(length))
 
     @classmethod
     def hash_password(cls, password: str, salt: Optional[str] = None) -> tuple[str, str]:

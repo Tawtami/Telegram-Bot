@@ -16,7 +16,7 @@ from collections import defaultdict
 logger = logging.getLogger(__name__)
 
 
-class ErrorSeverity(Enum):
+class ErrorSeverity(str, Enum):
     """Error severity levels"""
 
     LOW = "low"
@@ -25,7 +25,7 @@ class ErrorSeverity(Enum):
     CRITICAL = "critical"
 
 
-class ErrorCategory(Enum):
+class ErrorCategory(str, Enum):
     """Error categories"""
 
     VALIDATION = "validation"
@@ -66,6 +66,7 @@ class ErrorHandler:
         self.recovery_strategies: Dict[ErrorCategory, Callable] = {}
         self.error_counters: Dict[str, int] = defaultdict(int)
         self._lock = asyncio.Lock()
+        self._id_counter: int = 0
 
         # Register default error handlers
         self._register_default_handlers()
@@ -88,8 +89,9 @@ class ErrorHandler:
         self.register_error_handler(ErrorCategory.SYSTEM, self._handle_system_error)
 
     def _generate_error_id(self) -> str:
-        """Generate unique error ID"""
-        return f"ERR_{int(time.time())}_{len(self.errors)}"
+        """Generate unique error ID (monotonic per process)"""
+        self._id_counter += 1
+        return f"ERR_{int(time.time())}_{self._id_counter}"
 
     def _classify_error(self, error: Exception) -> tuple[ErrorSeverity, ErrorCategory]:
         """Classify error based on type and message"""

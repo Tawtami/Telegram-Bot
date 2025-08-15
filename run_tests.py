@@ -86,10 +86,10 @@ def check_file_encoding(file_path):
 
 def run_comprehensive_tests():
     """Run comprehensive tests that don't require external dependencies"""
-    print("🔍 Running comprehensive tests...")
+    print("Running comprehensive tests...")
 
     # Test 1: Check all Python files compile
-    print("\n📝 Checking Python syntax...")
+    print("\nChecking Python syntax...")
     python_files = []
     for root, dirs, files in os.walk('.'):
         if 'venv' in root or '__pycache__' in root or '.git' in root:
@@ -119,56 +119,56 @@ def run_comprehensive_tests():
             encoding_issues.append(encoding_issue)
 
     if syntax_errors:
-        print("❌ Syntax errors found:")
+        print("Syntax errors found:")
         for error in syntax_errors:
             print(f"  {error}")
     else:
-        print("✅ All Python files compile successfully")
+        print("All Python files compile successfully")
 
     if import_issues:
-        print(f"\n⚠️ {len(import_issues)} files have external dependency requirements:")
+        print(f"\n{len(import_issues)} files have external dependency requirements:")
         for issue in import_issues[:5]:  # Show first 5
             print(f"  {issue}")
         if len(import_issues) > 5:
             print(f"  ... and {len(import_issues) - 5} more")
 
     if encoding_issues:
-        print(f"\n⚠️ {len(encoding_issues)} files have encoding issues:")
+        print(f"\n{len(encoding_issues)} files have encoding issues:")
         for issue in encoding_issues[:5]:  # Show first 5
             print(f"  {issue}")
         if len(encoding_issues) > 5:
             print(f"  ... and {len(encoding_issues) - 5} more")
 
     # Test 2: Check core modules can be imported
-    print("\n📦 Checking core module imports...")
+    print("\nChecking core module imports...")
     core_modules = ['core', 'config']
 
     import_errors = []
     for module in core_modules:
         try:
             importlib.import_module(module)
-            print(f"✅ {module} imported successfully")
+            print(f"OK: {module} imported successfully")
         except Exception as e:
             import_errors.append(f"{module}: {e}")
-            print(f"❌ {module} import failed: {e}")
+            print(f"FAIL: {module} import failed: {e}")
 
     # Test 3: Check for obvious issues in test files
-    print("\n🧪 Checking test files...")
+    print("\nChecking test files...")
     test_files = [f for f in python_files if 'test_' in f]
     print(f"Found {len(test_files)} test files")
 
     # Test 4: Check configuration
-    print("\n⚙️ Checking configuration...")
+    print("\nChecking configuration...")
     try:
         import config
 
-        print("✅ config.py loaded successfully")
+        print("config.py loaded successfully")
     except Exception as e:
-        print(f"❌ config.py load failed: {e}")
+        print(f"config.py load failed: {e}")
         import_errors.append(f"config: {e}")
 
     # Test 5: Check for common code quality issues
-    print("\n🔍 Checking code quality...")
+    print("\nChecking code quality...")
     quality_issues = []
 
     for file_path in python_files:
@@ -202,16 +202,16 @@ def run_comprehensive_tests():
             quality_issues.append(f"{file_path}: Error during quality check - {e}")
 
     if quality_issues:
-        print(f"⚠️ {len(quality_issues)} quality issues found:")
+        print(f"{len(quality_issues)} quality issues found:")
         for issue in quality_issues[:5]:  # Show first 5
             print(f"  {issue}")
         if len(quality_issues) > 5:
             print(f"  ... and {len(quality_issues) - 5} more")
     else:
-        print("✅ No obvious quality issues found")
+        print("No obvious quality issues found")
 
     # Test 6: Check for CI/CD specific issues
-    print("\n🚀 Checking CI/CD readiness...")
+    print("\nChecking CI/CD readiness...")
     ci_issues = []
 
     # Check if requirements.txt exists and is readable
@@ -219,7 +219,7 @@ def run_comprehensive_tests():
         try:
             with open('requirements.txt', 'r') as f:
                 requirements = f.read()
-            print("✅ requirements.txt exists and is readable")
+            print("requirements.txt exists and is readable")
         except Exception as e:
             ci_issues.append(f"requirements.txt: {e}")
     else:
@@ -227,7 +227,7 @@ def run_comprehensive_tests():
 
     # Check if pytest.ini exists
     if os.path.exists('pytest.ini'):
-        print("✅ pytest.ini exists")
+        print("pytest.ini exists")
     else:
         ci_issues.append("pytest.ini: Missing")
 
@@ -236,7 +236,7 @@ def run_comprehensive_tests():
     found_ci = False
     for ci_file in ci_files:
         if os.path.exists(ci_file):
-            print(f"✅ CI/CD config found: {ci_file}")
+            print(f"CI/CD config found: {ci_file}")
             found_ci = True
             break
 
@@ -244,29 +244,29 @@ def run_comprehensive_tests():
         ci_issues.append("No CI/CD configuration files found")
 
     if ci_issues:
-        print(f"⚠️ {len(ci_issues)} CI/CD issues found:")
+        print(f"{len(ci_issues)} CI/CD issues found:")
         for issue in ci_issues:
             print(f"  {issue}")
     else:
-        print("✅ CI/CD configuration looks good")
+        print("CI/CD configuration looks good")
 
     # Summary
     print("\n" + "=" * 60)
-    print("📊 COMPREHENSIVE TEST SUMMARY")
+    print("COMPREHENSIVE TEST SUMMARY")
     print("=" * 60)
 
     total_issues = len(syntax_errors) + len(import_errors) + len(quality_issues) + len(ci_issues)
 
     if syntax_errors:
-        print(f"❌ {len(syntax_errors)} syntax errors found")
+        print(f"{len(syntax_errors)} syntax errors found")
         return False
 
     if total_issues == 0:
-        print("✅ All tests passed! Code is ready for CI/CD")
+        print("All tests passed! Code is ready for CI/CD")
         return True
     else:
-        print(f"⚠️ {total_issues} issues found that should be addressed")
-        print("\n💡 To run full tests, install dependencies:")
+        print(f"{total_issues} issues found that should be addressed")
+        print("\nTo run full tests, install dependencies:")
         print("   pip install -r requirements.txt")
         print("   python -m pytest tests/")
         return False

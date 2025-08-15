@@ -13,13 +13,13 @@ def init_db():
     return True
 
 
-def _upgrade_schema_if_needed():
-    """Mock _upgrade_schema_if_needed function"""
+def _upgrade_schema_if_needed(conn):
+    """Mock _upgrade_schema_if_needed function accepting conn like real impl"""
     return True
 
 
-def _create_tables_individually():
-    """Mock _create_tables_individually function"""
+def _create_tables_individually(conn):
+    """Mock _create_tables_individually function accepting conn like real impl"""
     return True
 
 

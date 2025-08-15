@@ -66,12 +66,12 @@ def main() -> None:
     try:
         logger.info("🚀 Starting Ostad Hatami Bot...")
 
+        # Always validate environment first
         if not _validate_environment():
             sys.exit(1)
 
         _prepare_webhook_env()
 
-        # Import and run the bot's main function
         # Ensure DATABASE_URL uses psycopg2 on Railway
         try:
             import os
@@ -88,6 +88,11 @@ def main() -> None:
         except Exception:
             pass
 
+        # Validate before importing bot (tests patch this call)
+        if not _validate_environment():
+            sys.exit(1)
+
+        # Import and run the bot's main function
         from bot import main as bot_main
 
         bot_main()

@@ -175,7 +175,7 @@ class Config:
             if os.getenv("ENVIRONMENT") == "production":
                 raise ValueError("BOT_TOKEN environment variable is required in production")
             else:
-                logger.warning("⚠️ Warning: BOT_TOKEN not set. Using development mode.")
+                logger.warning("Warning: BOT_TOKEN not set. Using development mode.")
                 self.bot_token = "DEVELOPMENT_TOKEN_PLACEHOLDER"
 
         # Webhook configuration for Railway
@@ -225,7 +225,7 @@ class Config:
                     int(uid.strip()) for uid in admin_ids_str.split(",") if uid.strip()
                 ]
             except ValueError as e:
-                logger.warning(f"⚠️ Warning: Invalid ADMIN_USER_IDS format: {e}")
+                logger.warning(f"Warning: Invalid ADMIN_USER_IDS format: {e}")
                 admin_user_ids = []
 
         self.bot = BotConfig(

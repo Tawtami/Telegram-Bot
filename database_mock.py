@@ -718,6 +718,24 @@ class database_db_module:
 # Now that class is defined, attach it under the database package for patching paths like 'database.db.X'
 setattr(sys.modules['database'], 'db', database_db_module)
 
+# Also expose a 'migrate' submodule attribute on the database package for tests
+try:
+    # If a dedicated migrate mock module is already registered, bind it as attribute
+    _migrate_mod = sys.modules.get('database.migrate')
+    if _migrate_mod is None:
+        # Fallback: attempt to import local migrate mock if available
+        import database_migrate_mock as _migrate_mod  # type: ignore
+
+        sys.modules['database.migrate'] = _migrate_mod
+    setattr(sys.modules['database'], 'migrate', _migrate_mod)
+except Exception:
+    # As a last resort, attach a simple MagicMock module
+    from unittest.mock import MagicMock as _MM
+
+    _fallback = _MM()
+    sys.modules['database.migrate'] = _fallback
+    setattr(sys.modules['database'], 'migrate', _fallback)
+
 # Make the session_scope function available at module level
 __all__ = [
     'session_scope',

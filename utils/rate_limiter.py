@@ -5,6 +5,7 @@ Enhanced rate limiting system for Ostad Hatami Bot
 """
 
 import time
+import inspect
 import asyncio
 import logging
 from typing import Dict, List, Optional, Tuple
@@ -27,7 +28,9 @@ def rate_limit_handler(level: str = "default"):
         async def _wrapped(update, context, *args, **kwargs):
             try:
                 user_id = str(getattr(update.effective_user, "id", "0"))
-                allowed = await multi_rate_limiter.is_allowed(user_id, level=level)
+                # Support both async and sync mocks in tests
+                result = multi_rate_limiter.is_allowed(user_id, level=level)
+                allowed = await result if inspect.isawaitable(result) else bool(result)
                 if not allowed:
                     # Soft-fail: inform user politely without flooding
                     # Quietly ignore to avoid flooding the chat; user can retry.
