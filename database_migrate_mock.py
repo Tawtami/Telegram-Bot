@@ -75,8 +75,15 @@ def init_db():
     # Upgrade schema
     try:
         _upgrade_schema_if_needed(conn)  # type: ignore
-    except Exception:
-        pass
+    except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        try:
+            logger.warning(f"Schema upgrade check failed: {e}")
+        except Exception:
+            pass
 
     # Advisory unlock (postgres only)
     if dialect_name.startswith('postgresql'):
