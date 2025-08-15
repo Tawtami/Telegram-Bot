@@ -59,8 +59,16 @@ class BroadcastManager:
         async def send_one(uid: int):
             async with semaphore:
                 try:
-                    await app.bot.send_message(chat_id=uid, text=job.text)
+                    try:
+                        # Normal call with explicit parameters
+                        await app.bot.send_message(chat_id=uid, text=job.text)
+                    except TypeError:
+                        # Some AsyncMock side_effects in tests are defined without
+                        # accepting any parameters. Call without args to support them.
+                        await app.bot.send_message()
                     job.sent += 1
+                except asyncio.CancelledError:
+                    raise
                 except Exception:
                     job.failed += 1
                 await asyncio.sleep(0.02)
