@@ -185,11 +185,33 @@ async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     kb = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📝 ثبت‌نام در نگرش ۴", callback_data="register_course_paid_negaresh4")],
-            [InlineKeyboardButton("📝 ثبت‌نام در دوره جامع ریاضی کنکور", callback_data="register_course_paid_konkur_full")],
-            [InlineKeyboardButton("📝 ثبت‌نام در دوره مسائل پیشرفته", callback_data="register_course_paid_advanced_problems")],
-            [InlineKeyboardButton("📝 ثبت‌نام در دوره آنالیز ریاضی", callback_data="register_course_paid_analysis")],
-            [InlineKeyboardButton("📝 ثبت‌نام در دوره جبر خطی", callback_data="register_course_paid_linear_algebra")],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام در نگرش ۴", callback_data="register_course_paid_negaresh4"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام در دوره جامع ریاضی کنکور",
+                    callback_data="register_course_paid_konkur_full",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام در دوره مسائل پیشرفته",
+                    callback_data="register_course_paid_advanced_problems",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام در دوره آنالیز ریاضی", callback_data="register_course_paid_analysis"
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام در دوره جبر خطی", callback_data="register_course_paid_linear_algebra"
+                )
+            ],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
         ]
     )
