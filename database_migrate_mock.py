@@ -57,8 +57,20 @@ def init_db():
     # Create tables
     try:
         Base.metadata.create_all(bind=conn)
-    except Exception:
-        pass
+    except Exception as e:
+        # Rollback and fallback to per-table creation, log warning
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        try:
+            logger.warning(f"create_all failed, falling back to per-table creation: {e}")
+        except Exception:
+            pass
+        try:
+            _create_tables_individually(conn)  # type: ignore
+        except Exception:
+            pass
 
     # Upgrade schema
     try:
