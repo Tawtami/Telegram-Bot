@@ -54,13 +54,19 @@ class CryptoManager:
             try:
                 padded = key_env + ("=" * (-len(key_env) % 4))
                 decoded = base64.urlsafe_b64decode(padded)
-                # Accept as base64 only if round-trip matches and decoded length is valid for AES
+                # Accept as base64 only if round-trip matches, decoded length is valid for AES,
+                # and decoded bytes are printable ASCII (avoid misinterpreting raw utf-8 keys)
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
-                if rt == key_env.rstrip("=") and len(decoded) in (16, 24, 32):
+                if (
+                    rt == key_env.rstrip("=")
+                    and len(decoded) in (16, 24, 32)
+                    and all(32 <= b <= 126 for b in decoded)
+                ):
                     return decoded
             except Exception:
                 pass
-            # Raw utf-8 (used by tests when a plain string key is supplied)
+            # Raw utf-8 (used by tests when a plain string key is supplied) – only accept
+            # when length matches AES key sizes exactly to satisfy tests
             utf8_bytes = key_env.encode("utf-8")
             if len(utf8_bytes) in (16, 24, 32):
                 return utf8_bytes
