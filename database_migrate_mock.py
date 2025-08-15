@@ -127,9 +127,7 @@ def _upgrade_schema_if_needed(conn):
             ).scalar()
         except Exception as e:
             try:
-                logger.warning(
-                    f"Could not read/upgrade users.telegram_user_id column type: {e}"
-                )
+                logger.warning(f"Could not read/upgrade users.telegram_user_id column type: {e}")
             except Exception:
                 pass
             dt_row = None
