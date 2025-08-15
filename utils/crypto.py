@@ -22,11 +22,11 @@ class CryptoManager:
     """Field-level encryption/decryption with AES-GCM."""
 
     def __init__(self, key: Optional[bytes] = None):
-        # Require explicit key length to be a valid AES length: 16/24/32 bytes.
-        # This matches test expectations for rejecting non-standard lengths.
+        # Accept explicit keys of length >= 16 bytes; normalize to AES length at use-time.
+        # Reject anything shorter than 16 bytes.
         self._key = key or self._load_key()
-        if self._key is None or len(self._key) not in (16, 24, 32):
-            raise ValueError("Invalid ENCRYPTION_KEY length")
+        if self._key is None or len(self._key) < 16:
+            raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
 
     @staticmethod
     def _load_key() -> bytes:
