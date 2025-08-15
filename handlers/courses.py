@@ -702,6 +702,8 @@ def build_course_handlers():
         CommandHandler("approve", admin_approve),
         CommandHandler("reject", admin_reject),
         CommandHandler("export_pending", admin_export_pending_csv),
+        CommandHandler("export_free", admin_export_free_grade),
+        CommandHandler("export_workshop", admin_export_workshop),
     ]
 
 
@@ -779,6 +781,83 @@ async def admin_export_pending_csv(update: Update, context: ContextTypes.DEFAULT
         document=io.BytesIO(buf.getvalue().encode("utf-8")),
         filename="pending_requests.csv",
         caption="📄 درخواست‌های معلق (CSV)",
+    )
+
+
+async def admin_export_free_grade(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Export approved FREE course participants for a grade."""
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    if not context.args:
+        await update.effective_message.reply_text("فرمت: /export_free <پایه>")
+        return
+    grade = context.args[0]
+    from database.models_sql import Purchase, User as DBUser
+    with session_scope() as session:
+        q = session.execute(
+            select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name, Purchase.product_id)
+            .join(Purchase, Purchase.user_id == DBUser.id)
+            .where(
+                Purchase.product_type == "course",
+                Purchase.status == "approved",
+                DBUser.grade == grade,
+                Purchase.product_id.like("free_%"),
+            )
+            .order_by(Purchase.created_at.desc())
+        )
+        rows = list(q)
+    import csv, io
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["telegram_user_id", "full_name", "free_course_slug"])
+    for r in rows:
+        full_name = " ".join(filter(None, [r.first_name or "", r.last_name or ""]))
+        writer.writerow([int(r.telegram_user_id or 0), full_name, r.product_id])
+    buf.seek(0)
+    await update.effective_message.reply_document(
+        document=io.BytesIO(buf.getvalue().encode("utf-8")),
+        filename=f"free_grade_{grade}.csv",
+        caption=f"📄 رایگان‌های تاییدشده پایه {grade}",
+    )
+
+
+async def admin_export_workshop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Export workshop registrations (pending by default). Usage: /export_workshop <ماه> [status]"""
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    if not context.args:
+        await update.effective_message.reply_text("فرمت: /export_workshop <ماه> [pending|approved]")
+        return
+    month = " ".join(context.args[:-1]) if len(context.args) > 1 and context.args[-1] in ("pending", "approved") else " ".join(context.args)
+    status = context.args[-1] if context.args and context.args[-1] in ("pending", "approved") else "pending"
+    slug = f"workshop_{month}"
+    from database.models_sql import Purchase, User as DBUser
+    with session_scope() as session:
+        q = session.execute(
+            select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name)
+            .join(Purchase, Purchase.user_id == DBUser.id)
+            .where(
+                Purchase.product_type == "course",
+                Purchase.product_id == slug,
+                Purchase.status == status,
+            )
+            .order_by(Purchase.created_at.asc())
+        )
+        rows = list(q)
+    import csv, io
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["telegram_user_id", "full_name", "status", "slug"])
+    for r in rows:
+        full_name = " ".join(filter(None, [r.first_name or "", r.last_name or ""]))
+        writer.writerow([int(r.telegram_user_id or 0), full_name, status, slug])
+    buf.seek(0)
+    await update.effective_message.reply_document(
+        document=io.BytesIO(buf.getvalue().encode("utf-8")),
+        filename=f"workshop_{month}_{status}.csv",
+        caption=f"📄 ثبت‌نام‌های همایش {month} ({status})",
     )
 
 
