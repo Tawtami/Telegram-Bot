@@ -177,13 +177,29 @@ def _upgrade_schema_if_needed(conn):
             try:
                 # Purchases financial columns
                 conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)"))
+                conn.execute(
+                    text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER")
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)"
+                    )
+                )
                 # Critical tables
-                conn.execute(text("CREATE TABLE IF NOT EXISTS banned_users (id SERIAL PRIMARY KEY)"))
-                conn.execute(text("CREATE TABLE IF NOT EXISTS quiz_questions (id SERIAL PRIMARY KEY)"))
-                conn.execute(text("CREATE TABLE IF NOT EXISTS quiz_attempts (id SERIAL PRIMARY KEY)"))
+                conn.execute(
+                    text("CREATE TABLE IF NOT EXISTS banned_users (id SERIAL PRIMARY KEY)")
+                )
+                conn.execute(
+                    text("CREATE TABLE IF NOT EXISTS quiz_questions (id SERIAL PRIMARY KEY)")
+                )
+                conn.execute(
+                    text("CREATE TABLE IF NOT EXISTS quiz_attempts (id SERIAL PRIMARY KEY)")
+                )
                 conn.execute(text("CREATE TABLE IF NOT EXISTS user_stats (id SERIAL PRIMARY KEY)"))
             except Exception as e:
                 try:
@@ -192,10 +208,14 @@ def _upgrade_schema_if_needed(conn):
                     pass
             # Indexes on users
             try:
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
+                conn.execute(
+                    text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)")
+                )
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
                 conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
-                conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
+                conn.execute(
+                    text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)")
+                )
             except Exception as e:
                 try:
                     logger.warning(f"Creating optional indexes failed: {e}")
