@@ -29,12 +29,7 @@ class CryptoManager:
         self._key = key or self._load_key()
         if self._key is None:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
-        if isinstance(self._key, (bytes, bytearray)) and all(32 <= b <= 126 for b in self._key):
-            # Count visible strength as alnum plus '!'; ignore underscores to align with tests
-            visible_len = sum((c.isalnum() or c == '!') for c in (chr(b) for b in self._key))
-            if visible_len < 16:
-                raise ValueError("Invalid ENCRYPTION_KEY length")
-        elif len(self._key) < 16:
+        if len(self._key) not in (16, 24, 32):
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
 
     @staticmethod
@@ -53,19 +48,18 @@ class CryptoManager:
             try:
                 padded = key_env + ("=" * (-len(key_env) % 4))
                 decoded = base64.urlsafe_b64decode(padded)
-                # Accept as base64 only if round-trip matches AND decoded bytes are printable ASCII
+                # Accept as base64 only if round-trip matches and decoded length is valid for AES
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
                 if (
                     rt == key_env.rstrip("=")
-                    and len(decoded) >= 16
-                    and all(32 <= b <= 126 for b in decoded)
+                    and len(decoded) in (16, 24, 32)
                 ):
                     return decoded
             except Exception:
                 pass
             # Raw utf-8 (used by tests when a plain string key is supplied)
             utf8_bytes = key_env.encode("utf-8")
-            if len(utf8_bytes) >= 16:
+            if len(utf8_bytes) in (16, 24, 32):
                 return utf8_bytes
 
         # If we're in production/webhook mode, do NOT fallback – require ENCRYPTION_KEY
