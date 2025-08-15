@@ -313,7 +313,11 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     )
     kb = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}"
+                )
+            ],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_single")],
         ]
     )
@@ -381,7 +385,11 @@ async def handle_paid_comp_select(update: Update, context: ContextTypes.DEFAULT_
     )
     kb = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}"
+                )
+            ],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_comprehensive")],
         ]
     )
@@ -429,7 +437,11 @@ async def handle_workshop_select(update: Update, context: ContextTypes.DEFAULT_T
     )
     kb = InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [
+                InlineKeyboardButton(
+                    "📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}"
+                )
+            ],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_workshops")],
         ]
     )
