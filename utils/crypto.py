@@ -137,14 +137,20 @@ class CryptoManager:
     def decrypt_text(self, ciphertext_b64: str, associated_data: Optional[bytes] = None) -> str:
         if not ciphertext_b64:
             return ""
-        data = base64.urlsafe_b64decode(ciphertext_b64.encode("utf-8"))
-        nonce, ct = data[:12], data[12:]
-        aesgcm = AESGCM(self._aes_key())
-        pt = aesgcm.decrypt(nonce, ct, associated_data)
         try:
-            return pt.decode("utf-8")
+            data = base64.urlsafe_b64decode(ciphertext_b64.encode("utf-8"))
+            if len(data) <= 12:
+                return ""
+            nonce, ct = data[:12], data[12:]
+            aesgcm = AESGCM(self._aes_key())
+            pt = aesgcm.decrypt(nonce, ct, associated_data)
+            try:
+                return pt.decode("utf-8")
+            except Exception:
+                return pt.decode("utf-8", errors="ignore")
         except Exception:
-            return pt.decode("utf-8", errors="ignore")
+            # Graceful handling for invalid base64 or decrypt errors
+            return ""
 
 
 # Singleton instance (defer strict production requirement during unit tests by honoring a test flag)
