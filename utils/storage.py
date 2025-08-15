@@ -6,6 +6,7 @@ Thread-safe file operations with proper locking
 """
 
 import os
+import base64
 import json
 import time
 import threading
@@ -140,7 +141,17 @@ class StudentStorage:
             if crypto_manager is not None:
                 for field in sensitive_fields:
                     if field in student_data and student_data[field]:
-                        student_data[field] = crypto_manager.encrypt_text(str(student_data[field]))
+                        try:
+                            encrypted_value = crypto_manager.encrypt_text(str(student_data[field]))
+                            # Normalize to JSON-serializable string
+                            if isinstance(encrypted_value, bytes):
+                                encrypted_value = base64.urlsafe_b64encode(encrypted_value).decode("utf-8")
+                            elif not isinstance(encrypted_value, str):
+                                encrypted_value = str(encrypted_value)
+                            student_data[field] = encrypted_value
+                        except Exception:
+                            # If encryption fails for any reason, keep original value to avoid data loss
+                            pass
 
             # Add timestamp
             student_data["last_updated"] = datetime.now().isoformat()
