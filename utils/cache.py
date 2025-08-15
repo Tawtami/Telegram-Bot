@@ -45,9 +45,7 @@ class SimpleCache:
     """Enhanced in-memory cache with TTL and LRU eviction"""
 
     def __init__(self, ttl_seconds: Optional[int] = None, max_size: int = 1000):
-        self.ttl = (
-            config.performance.cache_ttl_seconds if ttl_seconds is None else ttl_seconds
-        )
+        self.ttl = config.performance.cache_ttl_seconds if ttl_seconds is None else ttl_seconds
         self.max_size = max_size
         self.cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self.stats = {"hits": 0, "misses": 0, "evictions": 0, "expired": 0}
