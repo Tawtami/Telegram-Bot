@@ -136,9 +136,7 @@ def _upgrade_schema_if_needed(conn):
                 )
             except Exception as e:
                 try:
-                    logger.warning(
-                        f"Could not alter users.telegram_user_id to BIGINT: {e}"
-                    )
+                    logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
                 except Exception:
                     pass
     except Exception:
