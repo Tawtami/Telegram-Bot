@@ -9,6 +9,7 @@ Usage:
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 from database.db import session_scope
@@ -20,7 +21,7 @@ from sqlalchemy import select
 def run(dry_run: bool = True):
     students_file = Path("data/students.json")
     if not students_file.exists():
-        logger.warning("students.json not found; skipping")
+        logging.getLogger(__name__).warning("students.json not found; skipping")
         return
     data = json.loads(students_file.read_text(encoding="utf-8")) or {}
     students = data.get("students", [])
@@ -42,7 +43,7 @@ def run(dry_run: bool = True):
                 field_of_study=s.get("field"),
             )
         count += 1
-    logger.info(("Dry-run: " if dry_run else "Migrated: ") + str(count))
+    logging.getLogger(__name__).info(("Dry-run: " if dry_run else "Migrated: ") + str(count))
 
 
 def seed_quiz_from_json(json_path: str) -> int:
@@ -93,6 +94,6 @@ if __name__ == "__main__":
     args = ap.parse_args()
     if args.seed_quiz:
         n = seed_quiz_from_json(args.seed_quiz)
-        logger.info(f"Inserted {n} quiz questions")
+        logging.getLogger(__name__).info(f"Inserted {n} quiz questions")
     else:
         run(dry_run=args.dry_run)

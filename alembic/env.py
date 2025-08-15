@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from logging.config import fileConfig
 from sqlalchemy import pool, text
 from alembic import context
@@ -9,6 +10,7 @@ from alembic import context
 config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+logger = logging.getLogger(__name__)
 
 # Import project metadata
 import sys

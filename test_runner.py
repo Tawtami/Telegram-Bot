@@ -106,12 +106,16 @@ def run_test_file(test_file_path):
 
                 # Provide mock fixtures if needed
                 kwargs = {}
-                if 'monkeypatch' in params:
-                    kwargs['monkeypatch'] = pytest_mock.monkeypatch()
-                if 'caplog' in params:
-                    kwargs['caplog'] = pytest_mock.caplog()
-                if 'tmp_path' in params:
-                    kwargs['tmp_path'] = pytest_mock.tmp_path()
+                # Provide simple fallbacks if pytest_mock isn't available in this context
+                try:
+                    if 'monkeypatch' in params:
+                        kwargs['monkeypatch'] = pytest_mock.monkeypatch()
+                    if 'caplog' in params:
+                        kwargs['caplog'] = pytest_mock.caplog()
+                    if 'tmp_path' in params:
+                        kwargs['tmp_path'] = pytest_mock.tmp_path()
+                except NameError:
+                    pass
                 if 'session' in params:
                     # Import and create a mock session from our database_mock
                     import database_mock
