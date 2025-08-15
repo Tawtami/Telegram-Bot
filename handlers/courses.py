@@ -730,6 +730,7 @@ async def admin_list_pending(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def admin_export_pending_csv(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Export pending requests to CSV for admins (to prepare Skyroom accounts, etc.)."""
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     with session_scope() as session:
@@ -741,21 +742,38 @@ async def admin_export_pending_csv(update: Update, context: ContextTypes.DEFAULT
             for u in q:
                 users[int(u.id)] = u
     import csv, io
+
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["purchase_id", "user_id", "telegram_user_id", "full_name", "product_type", "product_id", "created_at"])
+    writer.writerow(
+        [
+            "purchase_id",
+            "user_id",
+            "telegram_user_id",
+            "full_name",
+            "product_type",
+            "product_id",
+            "created_at",
+        ]
+    )
     for r in rows:
         u = users.get(int(r["user_id"]))
-        full_name = " ".join(filter(None, [getattr(u, "first_name", ""), getattr(u, "last_name", "")])) if u else ""
-        writer.writerow([
-            r["purchase_id"],
-            r["user_id"],
-            getattr(u, "telegram_user_id", 0) if u else 0,
-            full_name,
-            r["product_type"],
-            r["product_id"],
-            r["created_at"],
-        ])
+        full_name = (
+            " ".join(filter(None, [getattr(u, "first_name", ""), getattr(u, "last_name", "")]))
+            if u
+            else ""
+        )
+        writer.writerow(
+            [
+                r["purchase_id"],
+                r["user_id"],
+                getattr(u, "telegram_user_id", 0) if u else 0,
+                full_name,
+                r["product_type"],
+                r["product_id"],
+                r["created_at"],
+            ]
+        )
     buf.seek(0)
     await update.effective_message.reply_document(
         document=io.BytesIO(buf.getvalue().encode("utf-8")),
