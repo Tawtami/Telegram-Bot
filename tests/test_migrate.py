@@ -1446,7 +1446,7 @@ class TestMigrate:
         import sys
 
         # Run the migrate.py script directly
-        result = subprocess.run(
+        result = subprocess.run(  # nosec B603 - intentional subprocess usage in test
             [sys.executable, 'database/migrate.py'], capture_output=True, text=True, timeout=10
         )
 
@@ -1462,7 +1462,7 @@ class TestMigrate:
         # Mock init_db to avoid actual execution
         with patch('database.migrate.init_db') as mock_init_db:
             # Execute the main block code directly
-            exec(
+            exec(  # nosec B102 - intentional exec in test to trigger __main__ block
                 """
 if __name__ == "__main__":
     init_db()

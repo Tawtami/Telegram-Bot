@@ -103,8 +103,8 @@ class TestSecurityUtils:
 
         # Test system directories
         assert any(pattern.search("/etc/passwd") for pattern in patterns)
-        assert any(pattern.search("/var/log") for pattern in patterns)
-        assert any(pattern.search("/tmp/file") for pattern in patterns)
+        assert any(pattern.search("/var/log") for pattern in patterns)  # nosec B108 - testing pattern
+        assert any(pattern.search("/tmp/file") for pattern in patterns)  # nosec B108 - testing pattern
         assert any(pattern.search("/home/user") for pattern in patterns)
 
         # Test Windows drives
