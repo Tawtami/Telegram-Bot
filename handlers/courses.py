@@ -142,80 +142,32 @@ async def handle_free_courses(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 @rate_limit_handler("default")
 async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle paid courses menu (updated with full details and quick registrations)."""
+    """Handle paid courses menu showing exactly the 4 categories required."""
     query = update.callback_query
     if not query:
         return
 
     await query.answer()
 
-    # Static, curated presentation for تخصصی based on provided content
     text = (
-        "دوره‌های تخصصی:📚\n\n"
-        "1. نگرش ۴\n"
-        "✏️ بررسی چهار نگاه کلیدی، درس‌به‌درس، به کتاب‌های ریاضی در سه رشته تجربی، ریاضی و انسانی\n"
-        "💵 قیمت: تماس بگیرید\n"
-        "⏱️ مدت: آنلاین | ⏰ زمان: انعطاف‌پذیر\n"
-        "🚀 شروع: اول شهریور\n"
-        "✨ ویژگی‌ها:\n"
-        "• آموزش آفلاین (ویدئو + فایل)\n"
-        "• تمرین‌ها و سوالات منتخب\n"
-        "• رفع اشکال آنلاین و نیمه‌خصوصی\n"
-        "• مناسب برای مدارس برتر، سمپاد و دانش‌آموزان هدفمند\n"
-        "📚 محتوای دوره:\n"
-        "1) آموزش مفهومی در سطح کتاب درسی\n"
-        "2) آموزش عمیق و فراتر از کتاب\n"
-        "3) تحلیل نکات و اهداف کنکور سراسری در هر درس\n"
-        "4) بررسی سوالات و اهداف آزمون‌های آزمایشی موسسات معتبر\n\n"
-        "2. دوره جامع ریاضی کنکور\n"
-        "💵 هزینه: 500,000 تومان\n"
-        "⏱️ مدت: 40 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
-        "3. دوره حل مسائل پیشرفته\n"
-        "💵 هزینه: تماس بگیرید\n"
-        "⏰ زمان: انعطاف‌پذیر\n\n"
-        "4. دوره آنالیز ریاضی\n"
-        "💵 هزینه: 400,000 تومان\n"
-        "⏱️ مدت: 30 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
-        "5. دوره جبر خطی\n"
-        "💵 هزینه: 300,000 تومان\n"
-        "⏱️ مدت: 20 ساعت | ⏰ زمان: انعطاف‌پذیر\n\n"
-        "برای ثبت‌نام و اطلاعات بیشتر:\n📱 +989381530556\n💬 @ostad_hatami"
+        "دوره‌های تخصصی:\n\n"
+        "1) کلاس‌های تک‌درس — ۲۰ تا ۲۵ جلسه، هر جلسه ۹۰ دقیقه — جلسه‌ای ۱۵۰ هزار ت (پرداخت کامل قبل از شروع)\n\n"
+        "2) کلاس خصوصی آنلاین — پایه‌های ۱۰ تا ۱۲ (ریاضی/تجربی) — هزینه با هماهنگی استاد\n\n"
+        "3) دوره جامع پایه تا کنکور — ۴۰ جلسه (۹۰ دقیقه) — جلسه‌ای ۱۵۰ هزار ت\n\n"
+        "4) همایش/کارگاه‌های ماهانه — ثبت‌نام ۱۰۰ هزار ت (موضوع هر ماه بعداً اعلام می‌شود)\n"
     )
 
     kb = InlineKeyboardMarkup(
         [
-            [
-                InlineKeyboardButton(
-                    "📝 ثبت‌نام در نگرش ۴", callback_data="register_course_paid_negaresh4"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📝 ثبت‌نام در دوره جامع ریاضی کنکور",
-                    callback_data="register_course_paid_konkur_full",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📝 ثبت‌نام در دوره مسائل پیشرفته",
-                    callback_data="register_course_paid_advanced_problems",
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📝 ثبت‌نام در دوره آنالیز ریاضی", callback_data="register_course_paid_analysis"
-                )
-            ],
-            [
-                InlineKeyboardButton(
-                    "📝 ثبت‌نام در دوره جبر خطی", callback_data="register_course_paid_linear_algebra"
-                )
-            ],
+            [InlineKeyboardButton("کلاس‌های تک‌درس", callback_data="paid_single")],
+            [InlineKeyboardButton("کلاس خصوصی", callback_data="paid_private")],
+            [InlineKeyboardButton("دوره جامع تا کنکور", callback_data="paid_comprehensive")],
+            [InlineKeyboardButton("همایش/کارگاه ماهانه", callback_data="paid_workshops")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
         ]
     )
 
-    await query.edit_message_text(text, reply_markup=kb, disable_web_page_preview=True)
+    await query.edit_message_text(text, reply_markup=kb)
 
 
 @rate_limit_handler("default")
@@ -290,15 +242,15 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     title, slug = slug_map.get(key, ("تک‌درس", "single_unknown"))
     # Try enrich from data/courses.json if exists
     try:
-        import json
-        from utils.cache import cache_manager
+    import json
+    from utils.cache import cache_manager
 
-        c = cache_manager.get_cache("courses")
-        all_courses = c._get_sync("all_courses")
-        if all_courses is None:
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
-            c._set_sync("all_courses", all_courses, ttl=600)
+        c._set_sync("all_courses", all_courses, ttl=600)
         # Find any paid course matching our slug key by course_id or title contains
         course = next(
             (
@@ -391,7 +343,7 @@ async def handle_paid_comp_select(update: Update, context: ContextTypes.DEFAULT_
         title = "دوره جامع پایه تا کنکور (بخش تجربی)"
         desc = "پوشش کامل مباحث ریاضی تجربی در ۴۰ جلسه"
         slug = "comp_exp"
-    else:
+        else:
         title = "دوره جامع پایه تا کنکور (بخش ریاضی)"
         desc = "پوشش مباحث ریاضی ۱، حسابان ۱ و حسابان ۲ در ۴۰ جلسه"
         slug = "comp_math"
