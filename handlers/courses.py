@@ -53,8 +53,7 @@ async def handle_courses_overview(update: Update, context: ContextTypes.DEFAULT_
     kb = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("🎓 دوره‌های رایگان", callback_data="courses_free")],
-            [InlineKeyboardButton("💼 دوره‌های تخصصی (منو)", callback_data="paid_menu")],
-            [InlineKeyboardButton("📋 لیست دوره‌های تخصصی", callback_data="courses_paid")],
+            [InlineKeyboardButton("💼 دوره‌های تخصصی", callback_data="courses_paid")],
             [InlineKeyboardButton("📖 کتاب انفجار خلاقیت", callback_data="book_info")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
         ]
