@@ -72,7 +72,9 @@ class CryptoManager:
         try:
             # Use the module-level config (so tests can patch utils.crypto.config)
             webhook_enabled_attr = getattr(getattr(config, "webhook", None), "enabled", False)
-            is_webhook_enabled = bool(webhook_enabled_attr) if isinstance(webhook_enabled_attr, bool) else False
+            is_webhook_enabled = (
+                bool(webhook_enabled_attr) if isinstance(webhook_enabled_attr, bool) else False
+            )
             is_production_env = os.getenv("ENVIRONMENT", "").lower() == "production"
             if is_webhook_enabled or is_production_env:
                 raise ValueError(
