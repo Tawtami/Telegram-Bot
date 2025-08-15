@@ -113,7 +113,16 @@ def _upgrade_schema_if_needed(conn):
         tables = getattr(getattr(Base, 'metadata', Base), 'sorted_tables', [])
     except Exception:
         tables = []
-    for table in tables or []:
+    # Safely materialize iterable to handle mocks that raise during iteration
+    try:
+        tables_iterable = list(tables or [])
+    except Exception as e:
+        try:
+            logger.warning(f"Could not iterate tables: {e}")
+        except Exception:
+            pass
+        tables_iterable = []
+    for table in tables_iterable:
         try:
             table.create(bind=conn, checkfirst=True)
         except Exception as e:
