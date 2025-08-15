@@ -15,6 +15,7 @@ def _get_text_clause():
 
         return _sa_text
     except Exception:
+
         class _SimpleText:
             def __init__(self, s: str):
                 self.text = s
