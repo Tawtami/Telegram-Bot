@@ -32,8 +32,8 @@ class StudentStorage:
         self.courses_file = self.data_dir / "courses.json"
         self.purchases_file = self.data_dir / "purchases.json"
         self.banned_file = self.data_dir / "banned.json"
-        # Use a thread lock to guard file writes (PTB handlers run concurrently)
-        self.lock = threading.Lock()
+        # Use a re-entrant lock to guard file writes and read-modify-write sequences
+        self.lock = threading.RLock()
         self._cache: Dict[str, Any] = {}
         self._cache_ttl = 300  # 5 minutes
         self._last_cache_update: Dict[str, float] = {}
@@ -126,8 +126,10 @@ class StudentStorage:
                 logger.error(f"Invalid user_id: {student_data['user_id']}")
                 return False
 
-            data = self._load_json(self.students_file)
-            students = data.get("students", [])
+            # Perform read-modify-write under the same lock for thread safety
+            with self.lock:
+                data = self._load_json(self.students_file)
+                students = data.get("students", [])
 
             # Check if student already exists
             existing_index = None
@@ -155,18 +157,18 @@ class StudentStorage:
                             # If encryption fails for any reason, keep original value to avoid data loss
                             pass
 
-            # Add timestamp
-            student_data["last_updated"] = datetime.now().isoformat()
-            if existing_index is None:
-                student_data["registration_date"] = datetime.now().isoformat()
-                students.append(student_data)
-            else:
-                students[existing_index] = student_data
+                # Add timestamp
+                student_data["last_updated"] = datetime.now().isoformat()
+                if existing_index is None:
+                    student_data["registration_date"] = datetime.now().isoformat()
+                    students.append(student_data)
+                else:
+                    students[existing_index] = student_data
 
-            # Save updated data
-            self._save_json(self.students_file, {"students": students})
-            logger.info(f"Student data saved/updated for user {user_id}")
-            return True
+                # Save updated data
+                self._save_json(self.students_file, {"students": students})
+                logger.info(f"Student data saved/updated for user {user_id}")
+                return True
 
         except Exception as e:
             logger.error(f"Error saving student data: {e}")
