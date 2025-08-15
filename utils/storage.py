@@ -157,18 +157,18 @@ class StudentStorage:
                             # If encryption fails for any reason, keep original value to avoid data loss
                             pass
 
-                # Add timestamp
-                student_data["last_updated"] = datetime.now().isoformat()
-                if existing_index is None:
-                    student_data["registration_date"] = datetime.now().isoformat()
-                    students.append(student_data)
-                else:
-                    students[existing_index] = student_data
+            # Add timestamp
+            student_data["last_updated"] = datetime.now().isoformat()
+            if existing_index is None:
+                student_data["registration_date"] = datetime.now().isoformat()
+                students.append(student_data)
+            else:
+                students[existing_index] = student_data
 
-                # Save updated data
-                self._save_json(self.students_file, {"students": students})
-                logger.info(f"Student data saved/updated for user {user_id}")
-                return True
+            # Save updated data
+            self._save_json(self.students_file, {"students": students})
+            logger.info(f"Student data saved/updated for user {user_id}")
+            return True
 
         except Exception as e:
             logger.error(f"Error saving student data: {e}")
