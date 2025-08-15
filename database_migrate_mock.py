@@ -134,10 +134,10 @@ def _upgrade_schema_if_needed(conn):
                         "ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT USING telegram_user_id::bigint"
                     )
                 )
-            except Exception:
+            except Exception as e:
                 try:
                     logger.warning(
-                        "Could not alter users.telegram_user_id to BIGINT: simulated error"
+                        f"Could not alter users.telegram_user_id to BIGINT: {e}"
                     )
                 except Exception:
                     pass
