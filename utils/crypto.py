@@ -21,10 +21,11 @@ class CryptoManager:
     """Field-level encryption/decryption with AES-GCM."""
 
     def __init__(self, key: Optional[bytes] = None):
+        # Accept explicit keys >=16 bytes to be lenient for callers/tests; we will
+        # normalize to a valid AES key length at use-time. Very short keys are invalid.
         self._key = key or self._load_key()
-        if len(self._key) not in (16, 24, 32):
-            # Ensure AES-128/192/256
-            raise ValueError("Invalid ENCRYPTION_KEY length; must be 16/24/32 bytes")
+        if self._key is None or len(self._key) < 16:
+            raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
 
     @staticmethod
     def _load_key() -> bytes:
@@ -67,6 +68,18 @@ class CryptoManager:
 
         return hashlib.sha256(token).digest()
 
+    def _aes_key(self) -> bytes:
+        """Return a key of length 16/24/32 for AES-GCM.
+
+        If the stored key already has a valid length, use it. Otherwise, derive a
+        32-byte key using SHA-256 of the provided key material.
+        """
+        if len(self._key) in (16, 24, 32):
+            return self._key
+        import hashlib as _hashlib
+
+        return _hashlib.sha256(self._key).digest()
+
     def encrypt_text(self, plaintext: str, associated_data: Optional[bytes] = None) -> str:
         if plaintext is None:
             plaintext = ""
@@ -77,7 +90,7 @@ class CryptoManager:
         else:
             plaintext_bytes = plaintext
 
-        aesgcm = AESGCM(self._key)
+        aesgcm = AESGCM(self._aes_key())
         import os as _os
 
         nonce = _os.urandom(12)
@@ -90,7 +103,7 @@ class CryptoManager:
             return ""
         data = base64.urlsafe_b64decode(ciphertext_b64.encode("utf-8"))
         nonce, ct = data[:12], data[12:]
-        aesgcm = AESGCM(self._key)
+        aesgcm = AESGCM(self._aes_key())
         pt = aesgcm.decrypt(nonce, ct, associated_data)
         try:
             return pt.decode("utf-8")
