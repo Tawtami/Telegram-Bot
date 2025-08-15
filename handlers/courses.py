@@ -309,6 +309,7 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     try:
         import json
         from utils.cache import cache_manager
+
         c = cache_manager.get_cache("courses")
         all_courses = c._get_sync("all_courses")
         if all_courses is None:
@@ -317,7 +318,13 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
             c._set_sync("all_courses", all_courses, ttl=600)
         # Find any paid course matching our slug key by course_id or title contains
         course = next(
-            (co for co in all_courses if isinstance(co, dict) and co.get("course_type") == "paid" and (co.get("course_id") == slug or slug in (co.get("course_id") or ""))),
+            (
+                co
+                for co in all_courses
+                if isinstance(co, dict)
+                and co.get("course_type") == "paid"
+                and (co.get("course_id") == slug or slug in (co.get("course_id") or ""))
+            ),
             None,
         )
         if course:
@@ -908,14 +915,20 @@ async def admin_export_workshop(update: Update, context: ContextTypes.DEFAULT_TY
 async def admin_export_paid(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Export paid registrations by slug. Usage: /export_paid <slug> [pending|approved]"""
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     if not context.args:
         await update.effective_message.reply_text("فرمت: /export_paid <slug> [pending|approved]")
         return
     slug = context.args[0]
-    status = context.args[1] if len(context.args) > 1 and context.args[1] in ("pending", "approved") else "pending"
+    status = (
+        context.args[1]
+        if len(context.args) > 1 and context.args[1] in ("pending", "approved")
+        else "pending"
+    )
     from database.models_sql import Purchase, User as DBUser
+
     with session_scope() as session:
         q = session.execute(
             select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name)
