@@ -28,8 +28,9 @@ def init_db():
     try:
         conn_cm = ENGINE.connect()
         conn = getattr(conn_cm, "__enter__", lambda: conn_cm)()
-    except Exception:
-        conn = MagicMock()
+    except Exception as e:
+        # Propagate connection failures to match real behavior/tests
+        raise e
     # Also resolve the explicit patched path if provided by tests
     try:
         patched_cm = getattr(ENGINE, "connect")
