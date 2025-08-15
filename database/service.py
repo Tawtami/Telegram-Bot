@@ -110,6 +110,25 @@ def audit_profile_change(
             changed_by=changed_by,
         )
     )
+    # Also append a simple JSON line record for external auditing (non-fatal)
+    try:
+        import json
+        from pathlib import Path
+        rec = {
+            "ts": dt.datetime.utcnow().isoformat(),
+            "user_id": int(user_id),
+            "field": field_name,
+            "old": old_value or "",
+            "new": new_value or "",
+            "by": int(changed_by),
+        }
+        data_dir = Path("data")
+        data_dir.mkdir(exist_ok=True)
+        with (data_dir / "profile_changes.json").open("a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        # Never fail main flow due to file I/O
+        pass
 
 
 # ---------------------

@@ -20,6 +20,7 @@ from database.service import get_course_participants_by_slug
 from database.service import get_daily_question, submit_answer
 from sqlalchemy import select
 from database.models_sql import User as DBUser
+from database.service import approve_or_reject_purchase, get_pending_purchases
 
 logger = logging.getLogger(__name__)
 
@@ -392,44 +393,36 @@ async def handle_course_registration(update: Update, context: ContextTypes.DEFAU
     )
 
     if course_type == "free":
-        # Register free course in SQL as approved purchase
+        # Register free course in SQL as PENDING (awaiting admin approval)
         try:
+            from utils.admin_notify import notify_admins
+            from config import config as app_config
             with session_scope() as session:
                 u = get_or_create_user(session, query.from_user.id)
-                create_purchase(
+                p = create_purchase(
                     session,
                     user_id=u.id,
                     product_type="course",
                     product_id=course_id,
-                    status="approved",
+                    status="pending",
                 )
-            # JSON reflection removed; SQL is the source of truth
             course_title = course["title"] if course else "دوره رایگان"
+            # Inform user
             await query.edit_message_text(
-                f"✅ ثبت‌نام شما در {course_title} با موفقیت انجام شد!\n\n"
-                f"📅 زمان: {course.get('schedule', 'به زودی اعلام می‌شود')}\n"
-                f"📍 پلتفرم: {course.get('platform', 'اسکای‌روم')}\n\n"
-                "🎓 این دوره کاملاً رایگان است و نیازی به پرداخت ندارد.",
+                f"📝 درخواست ثبت‌نام شما در {course_title} ثبت شد و منتظر تأیید ادمین است.\n\n"
+                "پس از تأیید، اطلاعات ورود اسکای‌روم از طریق ربات به شما اعلام می‌شود.",
                 reply_markup=build_main_menu_keyboard(),
             )
-            # Push updated participant list to admins
+            # Notify admins
             try:
-                from config import config as app_config
-
-                with session_scope() as session:
-                    uids = get_course_participants_by_slug(session, course_id, status="approved")
-                lines = [str(uid) for uid in uids]
-                from utils.performance_monitor import monitor
-
-                try:
-                    monitor.increment_hourly("participant_pushes")
-                except Exception:
-                    pass
-                await send_paginated_list(
+                await notify_admins(
                     context,
                     app_config.bot.admin_user_ids,
-                    f"🎓 فهرست شرکت‌کنندگان دوره رایگان {course_title}",
-                    lines,
+                    (
+                        "🔔 درخواست جدید دوره رایگان\n"
+                        f"کاربر: {query.from_user.id}\n"
+                        f"دوره: {course_id}"
+                    ),
                 )
             except Exception:
                 pass
@@ -471,7 +464,7 @@ async def handle_course_registration(update: Update, context: ContextTypes.DEFAU
 
 def build_course_handlers():
     """Build and return course handlers for registration in bot.py"""
-    from telegram.ext import CallbackQueryHandler
+    from telegram.ext import CallbackQueryHandler, CommandHandler
 
     return [
         CallbackQueryHandler(handle_courses_overview, pattern=r"^courses_overview$"),
@@ -481,7 +474,86 @@ def build_course_handlers():
         CallbackQueryHandler(handle_course_registration, pattern=r"^register_course_"),
         CallbackQueryHandler(handle_daily_quiz, pattern=r"^daily_quiz$"),
         CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
+        # Admin commands
+        CommandHandler("pending", admin_list_pending),
+        CommandHandler("approve", admin_approve),
+        CommandHandler("reject", admin_reject),
     ]
+
+
+# ---------------------
+# Admin helpers (approve free registrations)
+# ---------------------
+
+
+async def admin_list_pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    with session_scope() as session:
+        rows = get_pending_purchases(session, limit=200)
+    if not rows:
+        await update.effective_message.reply_text("درخواست معلقی وجود ندارد.")
+        return
+    lines = [f"#{r['purchase_id']} | {r['user_id']} | {r['product_type']} | {r['product_id']}" for r in rows]
+    await update.effective_message.reply_text("درخواست‌های معلق:\n" + "\n".join(lines))
+
+
+async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    if not context.args:
+        await update.effective_message.reply_text("فرمت: /approve <purchase_id>")
+        return
+    try:
+        pid = int(context.args[0])
+    except Exception:
+        await update.effective_message.reply_text("شناسه نامعتبر است.")
+        return
+    with session_scope() as session:
+        p = approve_or_reject_purchase(session, pid, update.effective_user.id, "approve")
+    if not p:
+        await update.effective_message.reply_text("عدم موفقیت در تأیید (شاید قبلاً رسیدگی شده).")
+        return
+    # Inform user with Skyroom convention
+    try:
+        # Fetch user's name for username
+        with session_scope() as session:
+            u = session.execute(select(DBUser).where(DBUser.id == p.user_id)).scalar_one_or_none()
+        full_name = " ".join(filter(None, [getattr(u, 'first_name', ''), getattr(u, 'last_name', '')])) or "کاربر"
+        await context.bot.send_message(
+            chat_id=int(getattr(u, 'telegram_user_id', 0)),
+            text=(
+                "✅ ثبت‌نام شما تأیید شد.\n"
+                f"👤 نام کاربری اسکای‌روم: {full_name}\n"
+                f"🔑 رمز عبور اسکای‌روم: {int(getattr(u, 'telegram_user_id', 0))}\n"
+                "ℹ️ در صورت نیاز، رمز را می‌توانید بعداً تغییر دهید."
+            ),
+        )
+    except Exception:
+        pass
+    await update.effective_message.reply_text("✅ تأیید شد و به کاربر اطلاع داده شد.")
+
+
+async def admin_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    from config import config as app_config
+    if update.effective_user.id not in app_config.bot.admin_user_ids:
+        return
+    if not context.args:
+        await update.effective_message.reply_text("فرمت: /reject <purchase_id>")
+        return
+    try:
+        pid = int(context.args[0])
+    except Exception:
+        await update.effective_message.reply_text("شناسه نامعتبر است.")
+        return
+    with session_scope() as session:
+        p = approve_or_reject_purchase(session, pid, update.effective_user.id, "reject")
+    if not p:
+        await update.effective_message.reply_text("عدم موفقیت در رد (شاید قبلاً رسیدگی شده).")
+        return
+    await update.effective_message.reply_text("⛔️ رد شد.")
 
 
 # ---------------------
