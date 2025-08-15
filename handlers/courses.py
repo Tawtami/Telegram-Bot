@@ -298,7 +298,12 @@ async def handle_paid_private(update: Update, context: ContextTypes.DEFAULT_TYPE
         "📞 +989381530556\n"
         "💬 @ostad_hatami"
     )
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")]]))
+    await query.edit_message_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")]]
+        ),
+    )
 
 
 @rate_limit_handler("default")
