@@ -158,8 +158,7 @@ class StudentStorage:
                 student_data["last_updated"] = datetime.now().isoformat()
                 if "registration_date" not in student_data:
                     student_data["registration_date"] = datetime.now().isoformat()
-                # Remove any existing record for this user to ensure update wins
-                students = [s for s in students if s.get("user_id") != user_id]
+                # Append new record; duplicates may exist under concurrency
                 students.append(student_data)
 
                 # Save updated data
@@ -175,9 +174,14 @@ class StudentStorage:
         """Get student data by user ID"""
         try:
             data = self._load_json(self.students_file)
-            # Prefer the most recent record if duplicates exist
-            for student in reversed(data.get("students", [])):
-                if student.get("user_id") == user_id:
+            # Prefer the most recent record if duplicates exist, and ensure type-safe compare
+            students_list = list(data.get("students", []))
+            for student in reversed(students_list):
+                try:
+                    sid = int(student.get("user_id"))
+                except Exception:
+                    sid = student.get("user_id")
+                if sid == user_id:
                     # Decrypt sensitive fields on read
                     if crypto_manager is not None:
                         for field in ("first_name", "last_name", "phone_number"):
