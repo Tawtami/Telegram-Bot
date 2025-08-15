@@ -190,5 +190,11 @@ mark.monkeypatch = monkeypatch
 mark.caplog = caplog
 mark.tmp_path = tmp_path
 
-# Add to sys.modules so imports work
-sys.modules['pytest'] = sys.modules[__name__]
+# Only override pytest when not running under real pytest (e.g., test_runner)
+try:
+    running_real_pytest = ('PYTEST_CURRENT_TEST' in os.environ) or ('pytest' in sys.modules)
+except Exception:
+    running_real_pytest = False
+
+if not running_real_pytest:
+    sys.modules['pytest'] = sys.modules[__name__]
