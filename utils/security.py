@@ -295,7 +295,7 @@ class SecurityUtils:
 
             # Check expiration (no extra tolerance; tests expect prompt expiry)
             expires_at = float(expires_at_str)
-            if datetime.utcnow().timestamp() > expires_at:
+            if datetime.utcnow().timestamp() >= expires_at:
                 return None
 
             return int(user_id_str)
