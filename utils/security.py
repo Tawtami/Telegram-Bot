@@ -63,19 +63,19 @@ class SecurityUtils:
         # Remove control characters except newlines and tabs
         text = re.sub(r"[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "", text)
 
-        # Remove SQL injection patterns completely
-        for pattern in cls._sql_injection_patterns:
-            text = pattern.sub("", text)
-
         # Remove XSS patterns completely but preserve surrounding safe text
-        # Specifically strip <script>..</script> blocks and inline javascript: URLs
-        text = re.sub(r"<script.*?>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        # Strip <script>..</script> blocks FIRST (before SQL patterns) so inner content is removed too
+        text = re.sub(r"<\s*script[^>]*>.*?<\s*/\s*script\s*>", "", text, flags=re.IGNORECASE | re.DOTALL)
         text = re.sub(r"javascript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
         text = re.sub(r"vbscript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
         # Also strip orphan script tags if present
         text = text.replace("<script>", "").replace("</script>", "")
         # Then apply additional dangerous tag/protocol filters
         for pattern in cls._xss_patterns:
+            text = pattern.sub("", text)
+
+        # Remove SQL injection patterns completely (after XSS removal)
+        for pattern in cls._sql_injection_patterns:
             text = pattern.sub("", text)
 
         # Remove path traversal patterns completely
@@ -91,6 +91,9 @@ class SecurityUtils:
             text,
             flags=re.IGNORECASE,
         )
+
+        # Clean up any leftover empty angle brackets produced by prior substitutions
+        text = text.replace("<>", "").replace("</>", "")
 
         # Trim whitespace
         text = text.strip()
