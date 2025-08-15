@@ -131,44 +131,44 @@ class StudentStorage:
                 data = self._load_json(self.students_file)
                 students = data.get("students", [])
 
-            # Check if student already exists
-            existing_index = None
-            for i, student in enumerate(students):
-                if student.get("user_id") == user_id:
-                    existing_index = i
-                    break
+                # Check if student already exists
+                existing_index = None
+                for i, student in enumerate(students):
+                    if student.get("user_id") == user_id:
+                        existing_index = i
+                        break
 
-            # Encrypt sensitive fields before saving
-            sensitive_fields = ["first_name", "last_name", "phone_number"]
-            if crypto_manager is not None:
-                for field in sensitive_fields:
-                    if field in student_data and student_data[field]:
-                        try:
-                            encrypted_value = crypto_manager.encrypt_text(str(student_data[field]))
-                            # Normalize to JSON-serializable string
-                            if isinstance(encrypted_value, bytes):
-                                encrypted_value = base64.urlsafe_b64encode(encrypted_value).decode(
-                                    "utf-8"
-                                )
-                            elif not isinstance(encrypted_value, str):
-                                encrypted_value = str(encrypted_value)
-                            student_data[field] = encrypted_value
-                        except Exception:
-                            # If encryption fails for any reason, keep original value to avoid data loss
-                            pass
+                # Encrypt sensitive fields before saving
+                sensitive_fields = ["first_name", "last_name", "phone_number"]
+                if crypto_manager is not None:
+                    for field in sensitive_fields:
+                        if field in student_data and student_data[field]:
+                            try:
+                                encrypted_value = crypto_manager.encrypt_text(str(student_data[field]))
+                                # Normalize to JSON-serializable string
+                                if isinstance(encrypted_value, bytes):
+                                    encrypted_value = base64.urlsafe_b64encode(encrypted_value).decode(
+                                        "utf-8"
+                                    )
+                                elif not isinstance(encrypted_value, str):
+                                    encrypted_value = str(encrypted_value)
+                                student_data[field] = encrypted_value
+                            except Exception:
+                                # If encryption fails for any reason, keep original value to avoid data loss
+                                pass
 
-            # Add timestamp
-            student_data["last_updated"] = datetime.now().isoformat()
-            if existing_index is None:
-                student_data["registration_date"] = datetime.now().isoformat()
-                students.append(student_data)
-            else:
-                students[existing_index] = student_data
+                # Add timestamp
+                student_data["last_updated"] = datetime.now().isoformat()
+                if existing_index is None:
+                    student_data["registration_date"] = datetime.now().isoformat()
+                    students.append(student_data)
+                else:
+                    students[existing_index] = student_data
 
-            # Save updated data
-            self._save_json(self.students_file, {"students": students})
-            logger.info(f"Student data saved/updated for user {user_id}")
-            return True
+                # Save updated data
+                self._save_json(self.students_file, {"students": students})
+                logger.info(f"Student data saved/updated for user {user_id}")
+                return True
 
         except Exception as e:
             logger.error(f"Error saving student data: {e}")
