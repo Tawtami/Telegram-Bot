@@ -53,7 +53,8 @@ async def handle_courses_overview(update: Update, context: ContextTypes.DEFAULT_
     kb = InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("🎓 دوره‌های رایگان", callback_data="courses_free")],
-            [InlineKeyboardButton("💼 دوره‌های تخصصی", callback_data="courses_paid")],
+            [InlineKeyboardButton("💼 دوره‌های تخصصی (منو)", callback_data="paid_menu")],
+            [InlineKeyboardButton("📋 لیست دوره‌های تخصصی", callback_data="courses_paid")],
             [InlineKeyboardButton("📖 کتاب انفجار خلاقیت", callback_data="book_info")],
             [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
         ]
@@ -231,6 +232,117 @@ async def handle_paid_courses(update: Update, context: ContextTypes.DEFAULT_TYPE
         message_text,
         reply_markup=InlineKeyboardMarkup(keyboard),
         disable_web_page_preview=True,
+    )
+
+
+@rate_limit_handler("default")
+async def handle_paid_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """High-level paid menu splitting into 4 options."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    text = (
+        "💼 دوره‌های تخصصی:\n\n"
+        "1) کلاس‌های آموزشی تک‌درس (تجربی/ریاضی) — مخصوص امتحان نهایی و آزمون‌های آزمایشی\n"
+        "2) کلاس‌های خصوصی آنلاین ریاضی — هماهنگی مستقیم با استاد\n"
+        "3) دوره جامع پایه تا کنکور — ۴۰ جلسه (۱۵۰هزار/جلسه)\n"
+        "4) همایش‌های کارگاه‌های ماهانه — موضوع هر ماه بعداً اعلام می‌شود\n"
+    )
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("1) تک‌درس", callback_data="paid_single")],
+            [InlineKeyboardButton("2) خصوصی آنلاین", callback_data="paid_private")],
+            [InlineKeyboardButton("3) دوره جامع", callback_data="paid_comprehensive")],
+            [InlineKeyboardButton("4) همایش ماهانه", callback_data="paid_workshops")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
+        ]
+    )
+    await query.edit_message_text(text, reply_markup=kb)
+
+
+@rate_limit_handler("default")
+async def handle_paid_single(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("تجربی: ریاضی ۱", callback_data="paid_single_exp_math1")],
+            [InlineKeyboardButton("تجربی: ریاضی ۲", callback_data="paid_single_exp_math2")],
+            [InlineKeyboardButton("تجربی: ریاضی ۳", callback_data="paid_single_exp_math3")],
+            [InlineKeyboardButton("ریاضی: ریاضی ۱", callback_data="paid_single_math_math1")],
+            [InlineKeyboardButton("ریاضی: حسابان ۱", callback_data="paid_single_math_hesa1")],
+            [InlineKeyboardButton("ریاضی: حسابان ۲", callback_data="paid_single_math_hesa2")],
+            [InlineKeyboardButton("ریاضی: گسسته ۳", callback_data="paid_single_math_dis3")],
+            [InlineKeyboardButton("ریاضی: هندسه ۳", callback_data="paid_single_math_geo3")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")],
+        ]
+    )
+    await query.edit_message_text(
+        "کلاس‌های تک‌درس (۲۰–۲۵ جلسه، ۹۰ دقیقه، ۱۵۰هزار/جلسه) — مخصوص امتحان نهایی/آزمون‌های آزمایشی",
+        reply_markup=kb,
+    )
+
+
+@rate_limit_handler("default")
+async def handle_paid_private(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    text = (
+        "کلاس‌های خصوصی آنلاین ریاضی:\n"
+        "هماهنگی مستقیم با استاد:\n"
+        "📞 +989381530556\n"
+        "💬 @ostad_hatami"
+    )
+    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")]]))
+
+
+@rate_limit_handler("default")
+async def handle_paid_comprehensive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("بخش تجربی", callback_data="paid_comp_exp")],
+            [InlineKeyboardButton("بخش ریاضی", callback_data="paid_comp_math")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")],
+        ]
+    )
+    await query.edit_message_text(
+        "دوره جامع پایه تا کنکور — ۴۰ جلسه (۹۰ دقیقه)، ۱۵۰هزار/جلسه",
+        reply_markup=kb,
+    )
+
+
+@rate_limit_handler("default")
+async def handle_paid_workshops(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    months = [
+        "مهر ۱۴۰۴",
+        "آبان ۱۴۰۴",
+        "آذر ۱۴۰۴",
+        "دی ۱۴۰۴",
+        "بهمن ۱۴۰۴",
+        "اسفند ۱۴۰۴",
+        "فروردین ۱۴۰۵",
+        "اردیبهشت ۱۴۰۵",
+        "خرداد ۱۴۰۵",
+        "تیر ۱۴۰۵",
+    ]
+    rows = [[InlineKeyboardButton(m, callback_data=f"workshop:{m}")] for m in months]
+    rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")])
+    await query.edit_message_text(
+        "همایش‌های ماهانه (موضوع هر ماه متعاقباً اعلام می‌شود):",
+        reply_markup=InlineKeyboardMarkup(rows),
     )
 
 
@@ -475,6 +587,11 @@ def build_course_handlers():
         CallbackQueryHandler(handle_course_registration, pattern=r"^register_course_"),
         CallbackQueryHandler(handle_daily_quiz, pattern=r"^daily_quiz$"),
         CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
+        CallbackQueryHandler(handle_paid_menu, pattern=r"^paid_menu$"),
+        CallbackQueryHandler(handle_paid_single, pattern=r"^paid_single$"),
+        CallbackQueryHandler(handle_paid_private, pattern=r"^paid_private$"),
+        CallbackQueryHandler(handle_paid_comprehensive, pattern=r"^paid_comprehensive$"),
+        CallbackQueryHandler(handle_paid_workshops, pattern=r"^paid_workshops$"),
         # Admin commands
         CommandHandler("pending", admin_list_pending),
         CommandHandler("approve", admin_approve),
