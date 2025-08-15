@@ -23,9 +23,16 @@ class CryptoManager:
 
     def __init__(self, key: Optional[bytes] = None):
         # Accept explicit keys of length >= 16 bytes; normalize to AES length at use-time.
-        # Reject anything shorter than 16 bytes.
+        # Reject anything shorter than 16 bytes. For human-readable ASCII keys, require at least
+        # 16 alphanumeric characters (ignoring punctuation like '_' or '!') to avoid weak keys.
         self._key = key or self._load_key()
-        if self._key is None or len(self._key) < 16:
+        if self._key is None:
+            raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
+        if isinstance(self._key, (bytes, bytearray)) and all(32 <= b <= 126 for b in self._key):
+            alnum_len = sum(chr(b).isalnum() for b in self._key)
+            if alnum_len < 16:
+                raise ValueError("Invalid ENCRYPTION_KEY length")
+        elif len(self._key) < 16:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
 
     @staticmethod
