@@ -71,6 +71,7 @@ class Chat:
 # Mock telegram.constants module
 class ParseMode:
     """Mock ParseMode constants"""
+
     HTML = "HTML"
     MARKDOWN = "MARKDOWN"
     MARKDOWN_V2 = "MARKDOWN_V2"

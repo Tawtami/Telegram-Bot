@@ -115,6 +115,7 @@ def run_test_file(test_file_path):
                 if 'session' in params:
                     # Import and create a mock session from our database_mock
                     import database_mock
+
                     kwargs['session'] = database_mock.Session()
 
                 # Check if test function is async

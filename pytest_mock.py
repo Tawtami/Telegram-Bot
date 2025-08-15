@@ -39,6 +39,7 @@ class Mark:
                 import inspect
 
                 if inspect.iscoroutinefunction(func):
+
                     async def _skipped(*args, **kwargs):
                         return None
 
