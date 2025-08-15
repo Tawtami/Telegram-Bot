@@ -114,6 +114,7 @@ def audit_profile_change(
     try:
         import json
         from pathlib import Path
+
         rec = {
             "ts": dt.datetime.utcnow().isoformat(),
             "user_id": int(user_id),

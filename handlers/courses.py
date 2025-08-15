@@ -397,6 +397,7 @@ async def handle_course_registration(update: Update, context: ContextTypes.DEFAU
         try:
             from utils.admin_notify import notify_admins
             from config import config as app_config
+
             with session_scope() as session:
                 u = get_or_create_user(session, query.from_user.id)
                 p = create_purchase(
@@ -488,6 +489,7 @@ def build_course_handlers():
 
 async def admin_list_pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     with session_scope() as session:
@@ -495,12 +497,16 @@ async def admin_list_pending(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not rows:
         await update.effective_message.reply_text("درخواست معلقی وجود ندارد.")
         return
-    lines = [f"#{r['purchase_id']} | {r['user_id']} | {r['product_type']} | {r['product_id']}" for r in rows]
+    lines = [
+        f"#{r['purchase_id']} | {r['user_id']} | {r['product_type']} | {r['product_id']}"
+        for r in rows
+    ]
     await update.effective_message.reply_text("درخواست‌های معلق:\n" + "\n".join(lines))
 
 
 async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     if not context.args:
@@ -521,7 +527,10 @@ async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fetch user's name for username
         with session_scope() as session:
             u = session.execute(select(DBUser).where(DBUser.id == p.user_id)).scalar_one_or_none()
-        full_name = " ".join(filter(None, [getattr(u, 'first_name', ''), getattr(u, 'last_name', '')])) or "کاربر"
+        full_name = (
+            " ".join(filter(None, [getattr(u, 'first_name', ''), getattr(u, 'last_name', '')]))
+            or "کاربر"
+        )
         await context.bot.send_message(
             chat_id=int(getattr(u, 'telegram_user_id', 0)),
             text=(
@@ -538,6 +547,7 @@ async def admin_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def admin_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     if not context.args:
