@@ -287,6 +287,40 @@ async def handle_paid_single(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 @rate_limit_handler("default")
+async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show detail and register button for a selected single-lesson course."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    slug_map = {
+        "paid_single_exp_math1": ("ریاضی ۱ (تجربی)", "exp_math1"),
+        "paid_single_exp_math2": ("ریاضی ۲ (تجربی)", "exp_math2"),
+        "paid_single_exp_math3": ("ریاضی ۳ (تجربی)", "exp_math3"),
+        "paid_single_math_math1": ("ریاضی ۱ (ریاضی)", "math_math1"),
+        "paid_single_math_hesa1": ("حسابان ۱", "hesaban1"),
+        "paid_single_math_hesa2": ("حسابان ۲", "hesaban2"),
+        "paid_single_math_dis3": ("گسسته ۳", "discrete3"),
+        "paid_single_math_geo3": ("هندسه ۳", "geometry3"),
+    }
+    key = query.data
+    title, slug = slug_map.get(key, ("تک‌درس", "single_unknown"))
+    text = (
+        f"🧠 {title}\n"
+        "۲۰–۲۵ جلسه، هر جلسه ۹۰ دقیقه، جلسه‌ای ۱۵۰ هزار تومان.\n"
+        "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات.\n\n"
+        "برای ادامه، پرداخت را انجام دهید و رسید را ارسال کنید."
+    )
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_single")],
+        ]
+    )
+    await query.edit_message_text(text, reply_markup=kb)
+
+
+@rate_limit_handler("default")
 async def handle_paid_private(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if not query:
@@ -326,6 +360,35 @@ async def handle_paid_comprehensive(update: Update, context: ContextTypes.DEFAUL
 
 
 @rate_limit_handler("default")
+async def handle_paid_comp_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    is_exp = query.data == "paid_comp_exp"
+    if is_exp:
+        title = "دوره جامع پایه تا کنکور (بخش تجربی)"
+        desc = "پوشش کامل مباحث ریاضی تجربی در ۴۰ جلسه"
+        slug = "comp_exp"
+    else:
+        title = "دوره جامع پایه تا کنکور (بخش ریاضی)"
+        desc = "پوشش مباحث ریاضی ۱، حسابان ۱ و حسابان ۲ در ۴۰ جلسه"
+        slug = "comp_math"
+    text = (
+        f"📚 {title}\n{desc}\n"
+        "هر جلسه ۹۰ دقیقه، جلسه‌ای ۱۵۰ هزار تومان.\n\n"
+        "برای ادامه، پرداخت را انجام دهید و رسید را ارسال کنید."
+    )
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_comprehensive")],
+        ]
+    )
+    await query.edit_message_text(text, reply_markup=kb)
+
+
+@rate_limit_handler("default")
 async def handle_paid_workshops(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if not query:
@@ -349,6 +412,28 @@ async def handle_paid_workshops(update: Update, context: ContextTypes.DEFAULT_TY
         "همایش‌های ماهانه (موضوع هر ماه متعاقباً اعلام می‌شود):",
         reply_markup=InlineKeyboardMarkup(rows),
     )
+
+
+@rate_limit_handler("default")
+async def handle_workshop_select(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    month = query.data.split(":", 1)[1]
+    slug = f"workshop_{month}"
+    text = (
+        f"📅 همایش {month}\n"
+        "موضوع هر ماه متعاقباً اعلام خواهد شد.\n\n"
+        "ثبت‌نام: ۱۰۰ هزار تومان. پس از پرداخت، رسید را ارسال کنید."
+    )
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 ثبت‌نام (نمایش اطلاعات پرداخت)", callback_data=f"register_course_paid_{slug}")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="paid_workshops")],
+        ]
+    )
+    await query.edit_message_text(text, reply_markup=kb)
 
 
 @rate_limit_handler("default")
@@ -594,9 +679,12 @@ def build_course_handlers():
         CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
         CallbackQueryHandler(handle_paid_menu, pattern=r"^paid_menu$"),
         CallbackQueryHandler(handle_paid_single, pattern=r"^paid_single$"),
+        CallbackQueryHandler(handle_paid_single_select, pattern=r"^paid_single_"),
         CallbackQueryHandler(handle_paid_private, pattern=r"^paid_private$"),
         CallbackQueryHandler(handle_paid_comprehensive, pattern=r"^paid_comprehensive$"),
+        CallbackQueryHandler(handle_paid_comp_select, pattern=r"^paid_comp_(exp|math)$"),
         CallbackQueryHandler(handle_paid_workshops, pattern=r"^paid_workshops$"),
+        CallbackQueryHandler(handle_workshop_select, pattern=r"^workshop:"),
         # Admin commands
         CommandHandler("pending", admin_list_pending),
         CommandHandler("approve", admin_approve),
