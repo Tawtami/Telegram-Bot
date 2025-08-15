@@ -143,6 +143,31 @@ def _upgrade_schema_if_needed(conn):
                     logger.warning(f"Could not alter users.telegram_user_id to BIGINT: {e}")
                 except Exception:
                     pass
+        # Check purchases.admin_action_by
+        try:
+            dt_row2 = conn.execute(
+                text(
+                    "SELECT data_type FROM information_schema.columns WHERE table_name='purchases' AND column_name='admin_action_by'"
+                )
+            ).scalar()
+        except Exception as e:
+            try:
+                logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
+            except Exception:
+                pass
+            dt_row2 = None
+        if dt_row2 and str(dt_row2).lower() in ("integer", "int4"):
+            try:
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ALTER COLUMN admin_action_by TYPE BIGINT USING admin_action_by::bigint"
+                    )
+                )
+            except Exception as e:
+                try:
+                    logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
+                except Exception:
+                    pass
     except Exception:
         pass
     return True
