@@ -43,7 +43,14 @@ def init_db():
 
     # Advisory lock (postgres only)
     try:
-        dialect_name = str(getattr(getattr(ENGINE, 'dialect', None), 'name', '')).lower()
+        name_attr = getattr(getattr(ENGINE, 'dialect', None), 'name', None)
+        if name_attr is None:
+            # For edge-case tests, propagate AttributeError when name is None
+            raise AttributeError('ENGINE.dialect.name is None')
+        dialect_name = str(name_attr).lower()
+    except AttributeError:
+        # Let AttributeError bubble up
+        raise
     except Exception:
         dialect_name = ''
     if dialect_name.startswith('postgresql'):
