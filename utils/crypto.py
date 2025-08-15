@@ -29,7 +29,7 @@ class CryptoManager:
         self._key = key or self._load_key()
         if self._key is None:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
-        # Accept any key length >= 16. AES key will be normalized lazily in _aes_key().
+        # Accept any explicit key length >= 16. AES key will be normalized lazily in _aes_key().
         if len(self._key) < 16:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
 
