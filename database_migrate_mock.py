@@ -173,8 +173,12 @@ def _upgrade_schema_if_needed(conn):
             # Purchases financial columns
             conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
             conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER"))
-            conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)"))
-            conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)"))
+            conn.execute(
+                text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)")
+            )
+            conn.execute(
+                text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)")
+            )
             # Critical tables
             conn.execute(text("CREATE TABLE IF NOT EXISTS banned_users (id SERIAL PRIMARY KEY)"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS quiz_questions (id SERIAL PRIMARY KEY)"))
