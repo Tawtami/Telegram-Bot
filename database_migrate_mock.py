@@ -97,7 +97,24 @@ def init_db():
 
 
 def _upgrade_schema_if_needed(conn):
-    """Mock _upgrade_schema_if_needed function accepting conn like real impl"""
+    """Mock _upgrade_schema_if_needed function accepting conn like real impl.
+
+    - Ensures tables are created with checkfirst=True
+    - Logs a warning when a table create fails (to match expectations)
+    """
+    try:
+        tables = getattr(getattr(Base, 'metadata', Base), 'sorted_tables', [])
+    except Exception:
+        tables = []
+    for table in tables or []:
+        try:
+            table.create(bind=conn, checkfirst=True)
+        except Exception as e:
+            try:
+                name = getattr(table, 'name', 'unknown')
+                logger.warning(f"Table create skipped/failed for {name}: {e}")
+            except Exception:
+                pass
     return True
 
 
