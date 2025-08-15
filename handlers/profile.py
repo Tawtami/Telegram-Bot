@@ -56,16 +56,28 @@ async def set_province(update: Update, context: Any) -> None:
     with session_scope() as session:
         db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
+            old_province = getattr(db_user, "province", None)
             audit_profile_change(
                 session,
                 user_id=db_user.id,
                 field_name="province",
-                old_value=None,
+                old_value=old_province,
                 new_value=province,
                 changed_by=user_id,
             )
+            # Also clear city when province changes and record audit for city reset
+            old_city = getattr(db_user, "city", None)
             db_user.province = province
             db_user.city = ""
+            if old_city:
+                audit_profile_change(
+                    session,
+                    user_id=db_user.id,
+                    field_name="city",
+                    old_value=old_city,
+                    new_value="",
+                    changed_by=user_id,
+                )
             session.flush()
         else:
             get_or_create_user(session, user_id, province=province, city="")
@@ -125,11 +137,12 @@ async def set_city(update: Update, context: Any) -> None:
             )
             return
         if db_user:
+            old_city = getattr(db_user, "city", None)
             audit_profile_change(
                 session,
                 user_id=db_user.id,
                 field_name="city",
-                old_value=None,
+                old_value=old_city,
                 new_value=city,
                 changed_by=user_id,
             )
@@ -164,11 +177,12 @@ async def set_grade(update: Update, context: Any) -> None:
     with session_scope() as session:
         db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
+            old_grade = getattr(db_user, "grade", None)
             audit_profile_change(
                 session,
                 user_id=db_user.id,
                 field_name="grade",
-                old_value=None,
+                old_value=old_grade,
                 new_value=grade,
                 changed_by=user_id,
             )
@@ -203,11 +217,12 @@ async def set_major(update: Update, context: Any) -> None:
     with session_scope() as session:
         db_user = session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
         if db_user:
+            old_major = getattr(db_user, "field_of_study", None)
             audit_profile_change(
                 session,
                 user_id=db_user.id,
-                field_name="field",
-                old_value=None,
+                field_name="major",
+                old_value=old_major,
                 new_value=major,
                 changed_by=user_id,
             )
@@ -270,11 +285,13 @@ def build_profile_edit_handlers() -> list:
                     session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
                 )
                 if db_user:
+                    old_first = getattr(db_user, "first_name", None)
+                    old_last = getattr(db_user, "last_name", None)
                     audit_profile_change(
                         session,
                         user_id=db_user.id,
                         field_name="first_name",
-                        old_value=None,
+                        old_value=old_first,
                         new_value=first_name_val,
                         changed_by=user_id,
                     )
@@ -282,7 +299,7 @@ def build_profile_edit_handlers() -> list:
                         session,
                         user_id=db_user.id,
                         field_name="last_name",
-                        old_value=None,
+                        old_value=old_last,
                         new_value=last_name_val,
                         changed_by=user_id,
                     )
@@ -305,11 +322,12 @@ def build_profile_edit_handlers() -> list:
                     session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
                 )
                 if db_user:
+                    old_phone = getattr(db_user, "phone", None)
                     audit_profile_change(
                         session,
                         user_id=db_user.id,
                         field_name="phone",
-                        old_value=None,
+                        old_value=old_phone,
                         new_value=phone_norm,
                         changed_by=user_id,
                     )

@@ -307,10 +307,8 @@ def build_menu_handlers():
             lines,
         )
 
-    handlers.extend(
-        [
-            CallbackQueryHandler(profile_edit_callback, pattern=r"^menu_profile_edit$"),
-            CommandHandler("profile_history", profile_history_cmd),
-        ]
-    )
+    handlers.extend([
+        # menu_profile_edit is provided by handlers.profile.build_profile_edit_handlers
+        CommandHandler("profile_history", profile_history_cmd),
+    ])
     return handlers
