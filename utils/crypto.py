@@ -21,40 +21,35 @@ class CryptoManager:
     """Field-level encryption/decryption with AES-GCM."""
 
     def __init__(self, key: Optional[bytes] = None):
-        # Accept explicit keys that meet common expectations in tests:
-        # - Exact AES lengths (16/24/32) are valid
-        # - Longer keys (>=16) that end with '!' are accepted and normalized
-        # - Anything shorter than 16 or other lengths without '!' are invalid
+        # Accept any explicit key length >= 16 bytes; normalize to a valid AES key
+        # length (16/24/32) at use-time. Reject keys shorter than 16 bytes.
         self._key = key or self._load_key()
-        if self._key is None:
+        if self._key is None or len(self._key) < 16:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
-
-        key_len = len(self._key)
-        if key_len in (16, 24, 32):
-            pass
-        elif key_len >= 16 and self._key.endswith(b"!"):
-            pass
-        else:
-            raise ValueError("Invalid ENCRYPTION_KEY length; must be 16/24/32 bytes")
 
     @staticmethod
     def _load_key() -> bytes:
         key_env = os.getenv("ENCRYPTION_KEY", "").strip()
         if key_env:
+            # Try base64 (including missing padding) first
             try:
-                # Support both raw bytes (hex/base64) and urlsafe b64
-                try:
-                    return base64.urlsafe_b64decode(key_env)
-                except Exception:
-                    pass
-                try:
-                    return bytes.fromhex(key_env)
-                except Exception:
-                    pass
-                return key_env.encode("utf-8")
+                padded = key_env + ("=" * (-len(key_env) % 4))
+                decoded = base64.urlsafe_b64decode(padded)
+                if len(decoded) >= 16:
+                    return decoded
             except Exception:
-                # If key parsing fails, return empty to trigger production check below
                 pass
+            # Try hex
+            try:
+                decoded_hex = bytes.fromhex(key_env)
+                if len(decoded_hex) >= 16:
+                    return decoded_hex
+            except Exception:
+                pass
+            # Raw utf-8 (used by tests when a plain string key is supplied)
+            utf8_bytes = key_env.encode("utf-8")
+            if len(utf8_bytes) >= 16:
+                return utf8_bytes
 
         # If we're in production/webhook mode, do NOT fallback – require ENCRYPTION_KEY
         try:
