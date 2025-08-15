@@ -40,11 +40,16 @@ def init_db():
     except Exception:
         pass
 
-    # Advisory lock (postgres)
+    # Advisory lock (postgres only)
     try:
-        conn.execute(text("SELECT pg_advisory_lock(54193217)"))
+        dialect_name = str(getattr(getattr(ENGINE, 'dialect', None), 'name', '')).lower()
     except Exception:
-        pass
+        dialect_name = ''
+    if dialect_name.startswith('postgresql'):
+        try:
+            conn.execute(text("SELECT pg_advisory_lock(54193217)"))
+        except Exception:
+            pass
 
     # Create tables
     try:
@@ -58,11 +63,12 @@ def init_db():
     except Exception:
         pass
 
-    # Advisory unlock
-    try:
-        conn.execute(text("SELECT pg_advisory_unlock(54193217)"))
-    except Exception:
-        pass
+    # Advisory unlock (postgres only)
+    if dialect_name.startswith('postgresql'):
+        try:
+            conn.execute(text("SELECT pg_advisory_unlock(54193217)"))
+        except Exception:
+            pass
 
     return True
 
