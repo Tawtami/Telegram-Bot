@@ -48,8 +48,11 @@ def init_db():
     if dialect_name.startswith('postgresql'):
         try:
             conn.execute(text("SELECT pg_advisory_lock(54193217)"))
-        except Exception:
-            pass
+        except Exception as e:
+            try:
+                logger.warning(f"Could not acquire advisory lock: {e}")
+            except Exception:
+                pass
 
     # Create tables
     try:
