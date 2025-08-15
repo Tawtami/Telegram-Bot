@@ -44,17 +44,17 @@ class StudentStorage:
 
         # Initialize students.json
         if not self.students_file.exists():
-            self._save_json(self.students_file, {"students": []})
+            self._save_json(self.students_file, {"students": []}, update_cache=False)
 
         # Do not initialize courses.json here; it is a data source list managed separately
 
         # Initialize purchases.json
         if not self.purchases_file.exists():
-            self._save_json(self.purchases_file, {"purchases": []})
+            self._save_json(self.purchases_file, {"purchases": []}, update_cache=False)
 
         # Initialize banned.json
         if not self.banned_file.exists():
-            self._save_json(self.banned_file, {"banned_user_ids": []})
+            self._save_json(self.banned_file, {"banned_user_ids": []}, update_cache=False)
 
     def _load_json(self, file_path: Path) -> Dict[str, Any]:
         """Load JSON file safely with caching"""
@@ -82,16 +82,17 @@ class StudentStorage:
             logger.error(f"Error reading {file_path}")
             return {}
 
-    def _save_json(self, file_path: Path, data: Dict[str, Any]):
-        """Save JSON file safely and update cache"""
+    def _save_json(self, file_path: Path, data: Dict[str, Any], update_cache: bool = True):
+        """Save JSON file safely and optionally update cache"""
         try:
             with self.lock:
                 with open(file_path, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
-                # Update cache
-                cache_key = str(file_path)
-                self._cache[cache_key] = data
-                self._last_cache_update[cache_key] = time.time()
+                # Update cache (optional, skip during initialization)
+                if update_cache:
+                    cache_key = str(file_path)
+                    self._cache[cache_key] = data
+                    self._last_cache_update[cache_key] = time.time()
         except Exception as e:
             logger.error(f"Error saving {file_path}: {e}")
             # Invalidate cache on error
