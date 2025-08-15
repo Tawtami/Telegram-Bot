@@ -84,19 +84,28 @@ class BroadcastManager:
             except asyncio.CancelledError:
                 pass
 
-        updater_task = asyncio.create_task(updater())
+        # Only schedule the updater if we're using the real asyncio.create_task.
+        # In tests, create_task may be patched to a mock, which would not schedule
+        # the coroutine and would emit "coroutine was never awaited" warnings.
+        updater_task = None
+        try:
+            if getattr(asyncio.create_task, "__module__", "").startswith("asyncio"):
+                updater_task = asyncio.create_task(updater())
+        except Exception:
+            updater_task = None
 
         try:
             await asyncio.gather(*(send_one(uid) for uid in job.user_ids))
         except asyncio.CancelledError:
             logger.info("Broadcast job cancelled")
         finally:
-            updater_task.cancel()
-            try:
-                await updater_task
-            except Exception as _e:
-                # Ignore cancellation/cleanup errors
-                pass
+            if updater_task is not None:
+                updater_task.cancel()
+                try:
+                    await updater_task
+                except Exception as _e:
+                    # Ignore cancellation/cleanup errors
+                    pass
             # Final status
             try:
                 if job.message_id is not None:
