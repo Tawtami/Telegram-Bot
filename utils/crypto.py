@@ -32,6 +32,11 @@ class CryptoManager:
         # Accept any explicit key length >= 16. AES key will be normalized lazily in _aes_key().
         if len(self._key) < 16:
             raise ValueError("Invalid ENCRYPTION_KEY length; must be at least 16 bytes")
+        # For printable ASCII-like keys, require at least 16 strong characters (alnum or '!')
+        if isinstance(self._key, (bytes, bytearray)) and all(32 <= b <= 126 for b in self._key):
+            visible_len = sum((c.isalnum() or c == '!') for c in (chr(b) for b in self._key))
+            if visible_len < 16:
+                raise ValueError("Invalid ENCRYPTION_KEY length")
 
     @staticmethod
     def _load_key() -> bytes:
