@@ -125,7 +125,13 @@ def _upgrade_schema_if_needed(conn):
                     "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='telegram_user_id'"
                 )
             ).scalar()
-        except Exception:
+        except Exception as e:
+            try:
+                logger.warning(
+                    f"Could not read/upgrade users.telegram_user_id column type: {e}"
+                )
+            except Exception:
+                pass
             dt_row = None
         if dt_row and str(dt_row).lower() in ("integer", "int4"):
             try:
