@@ -26,6 +26,9 @@ class CacheEntry:
 
     def is_expired(self) -> bool:
         """Check if entry is expired"""
+        # TTL <= 0 means expire immediately
+        if self.ttl <= 0:
+            return True
         return time.time() - self.created_at > self.ttl
 
     def access(self):
@@ -42,7 +45,9 @@ class SimpleCache:
     """Enhanced in-memory cache with TTL and LRU eviction"""
 
     def __init__(self, ttl_seconds: Optional[int] = None, max_size: int = 1000):
-        self.ttl = ttl_seconds or config.performance.cache_ttl_seconds
+        self.ttl = (
+            config.performance.cache_ttl_seconds if ttl_seconds is None else ttl_seconds
+        )
         self.max_size = max_size
         self.cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self.stats = {"hits": 0, "misses": 0, "evictions": 0, "expired": 0}
@@ -89,8 +94,8 @@ class SimpleCache:
         if len(self.cache) >= self.max_size:
             self._evict_lru()
 
-        # Create new entry
-        entry_ttl = ttl or self.ttl
+        # Create new entry (None means inherit default TTL; 0 or negative means expire immediately)
+        entry_ttl = self.ttl if ttl is None else ttl
         self.cache[key] = CacheEntry(value, entry_ttl)
 
     def _evict_lru(self):
