@@ -25,6 +25,37 @@ logger = logging.getLogger(__name__)
 
 
 @rate_limit_handler("default")
+async def handle_courses_overview(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Send a concise Farsi overview of all available programs and the book."""
+    query = update.callback_query
+    if query:
+        await query.answer()
+    text = (
+        "دوره‌های ما:\n\n"
+        "- دوره خلاقیت ریاضی (آنلاین، رایگان، جمعه عصرها) برای پایه ۱۰، ۱۱، ۱۲ (ریاضی/تجربی).\n"
+        "- کلاس‌های تک‌درس (۲۰–۲۵ جلسه، هر جلسه ۱۵۰ هزار ت) با پرداخت کامل قبل از شروع.\n"
+        "- کلاس خصوصی آنلاین (پایه ۱۰–۱۲، ریاضی/تجربی) — هزینه با هماهنگی استاد.\n"
+        "- دوره جامع پایه تا کنکور (۴۰ جلسه، هر جلسه ۱۵۰ هزار ت).\n"
+        "- همایش/کارگاه‌های ماهانه حل مسائل خاص (ثبت‌نام ۱۰۰ هزار ت).\n\n"
+        "برگزاری: اسکای‌روم | مدت هر جلسه: ۹۰ دقیقه.\n\n"
+        "کتاب «انفجار خلاقیت»: ۶۸۰ هزار ت | ارسال برای اعضای کانال رایگان.\n"
+        "برای خرید کتاب: گزینه «📖 کتاب انفجار خلاقیت» را بزنید."
+    )
+    kb = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🎓 دوره‌های رایگان", callback_data="courses_free")],
+            [InlineKeyboardButton("💼 دوره‌های تخصصی", callback_data="courses_paid")],
+            [InlineKeyboardButton("📖 کتاب انفجار خلاقیت", callback_data="book_info")],
+            [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
+        ]
+    )
+    if query:
+        await query.edit_message_text(text, reply_markup=kb)
+    else:
+        await update.effective_message.reply_text(text, reply_markup=kb)
+
+
+@rate_limit_handler("default")
 async def handle_free_courses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle free courses menu"""
     query = update.callback_query
@@ -435,6 +466,7 @@ def build_course_handlers():
     from telegram.ext import CallbackQueryHandler
 
     return [
+        CallbackQueryHandler(handle_courses_overview, pattern=r"^courses_overview$"),
         CallbackQueryHandler(handle_free_courses, pattern=r"^courses_free$"),
         CallbackQueryHandler(handle_paid_courses, pattern=r"^courses_paid$"),
         CallbackQueryHandler(handle_purchased_courses, pattern=r"^courses_purchased$"),

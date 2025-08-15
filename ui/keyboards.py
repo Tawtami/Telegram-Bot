@@ -55,6 +55,7 @@ def build_cities_keyboard(cities: List[str]) -> InlineKeyboardMarkup:
 def build_main_menu_keyboard() -> InlineKeyboardMarkup:
     """Get main menu keyboard"""
     rows = [
+        [InlineKeyboardButton(text="📋 معرفی دوره‌ها", callback_data="courses_overview")],
         [InlineKeyboardButton(text="🎓 دوره‌های رایگان", callback_data="courses_free")],
         [InlineKeyboardButton(text="💼 دوره‌های تخصصی", callback_data="courses_paid")],
         [InlineKeyboardButton(text="🛒 سبد خرید من", callback_data="courses_purchased")],
