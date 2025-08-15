@@ -89,7 +89,18 @@ class PerformanceMetrics:
                 # Tests expect for [1..5]: p95=4.0 (index 3) and p99=5.0 (index 4)
                 # Use floor on (n * p) but subtract 1 for p95 to select the previous item when not exact
                 import math as _math
-                p95_index = max(0, min(n - 1, int(n * 0.95) - 1 if (n * 0.95).is_integer() is False else int(n * 0.95) - 1))
+
+                p95_index = max(
+                    0,
+                    min(
+                        n - 1,
+                        (
+                            int(n * 0.95) - 1
+                            if (n * 0.95).is_integer() is False
+                            else int(n * 0.95) - 1
+                        ),
+                    ),
+                )
                 p95_index = max(0, min(n - 1, p95_index))
                 p99_index = max(0, min(n - 1, int(n * 0.99)))
 

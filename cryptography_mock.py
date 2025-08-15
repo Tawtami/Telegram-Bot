@@ -26,7 +26,7 @@ class AESGCM:
 
     def decrypt(self, nonce, ciphertext, associated_data=None):
         # Expect ciphertext as nonce || plaintext; strip first len(nonce) bytes
-        pt = ciphertext[len(nonce):]
+        pt = ciphertext[len(nonce) :]
         return pt
 
 
