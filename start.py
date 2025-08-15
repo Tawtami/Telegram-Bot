@@ -88,9 +88,10 @@ def main() -> None:
         except Exception:
             pass
 
-        # Validate before importing bot (tests patch this call)
+        # Single validation pass before importing bot (tests expect one call)
         if not _validate_environment():
             sys.exit(1)
+            return
 
         # Import and run the bot's main function
         from bot import main as bot_main

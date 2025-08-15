@@ -51,6 +51,8 @@ def setup_global_mocks():
     sys.modules['database.models_sql'] = database_mock
     sys.modules['database.db'] = database_mock.database_db_module
     sys.modules['database.service'] = database_mock.database_service_module
+    # Ensure our migrate mock is available under the real module path for isolated runner,
+    # but keep important attributes present so tests can patch/inspect
     sys.modules['database.migrate'] = database_migrate_mock
     sys.modules['yarl'] = yarl_mock
 

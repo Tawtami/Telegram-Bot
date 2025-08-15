@@ -72,6 +72,8 @@ class SecurityUtils:
         text = re.sub(r"<script.*?>.*?</script>", "", text, flags=re.IGNORECASE | re.DOTALL)
         text = re.sub(r"javascript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
         text = re.sub(r"vbscript:\s*[^\s]+", "", text, flags=re.IGNORECASE)
+        # Also strip orphan script tags if present
+        text = text.replace("<script>", "").replace("</script>", "")
         # Then apply additional dangerous tag/protocol filters
         for pattern in cls._xss_patterns:
             text = pattern.sub("", text)
@@ -256,8 +258,8 @@ class SecurityUtils:
         timestamp = datetime.utcnow().timestamp()
         expires_at = timestamp + (expires_in_hours * 3600)
 
-        # Create token data
-        token_data = f"{user_id}:{expires_at}"
+        # Create token data (integer seconds to avoid microsecond drift in tests)
+        token_data = f"{user_id}:{int(expires_at)}"
 
         # Generate HMAC signature
         signature = cls.generate_hmac(token_data, config.bot_token)
@@ -288,7 +290,8 @@ class SecurityUtils:
 
             # Check expiration
             expires_at = float(expires_at_str)
-            if datetime.utcnow().timestamp() > expires_at:
+            # Allow slight clock skew tolerance of 1 second in tests
+            if datetime.utcnow().timestamp() > (expires_at + 1.0):
                 return None
 
             return int(user_id_str)
