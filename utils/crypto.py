@@ -10,6 +10,7 @@ derive a key from BOT_TOKEN for development fallback (not recommended for prod).
 from __future__ import annotations
 
 import os
+import re
 import base64
 import json
 from typing import Optional
@@ -40,7 +41,15 @@ class CryptoManager:
     def _load_key() -> bytes:
         key_env = os.getenv("ENCRYPTION_KEY", "").strip()
         if key_env:
-            # Prefer canonical base64 only if round-trip matches (avoid misdetecting plain text)
+            # Try hex first if it looks like hex (even length and only 0-9a-fA-F)
+            if len(key_env) % 2 == 0 and re.fullmatch(r"[0-9a-fA-F]+", key_env or ""):
+                try:
+                    decoded_hex = bytes.fromhex(key_env)
+                    if len(decoded_hex) >= 16:
+                        return decoded_hex
+                except Exception:
+                    pass
+            # Then try canonical base64 only if round-trip matches
             try:
                 padded = key_env + ("=" * (-len(key_env) % 4))
                 decoded = base64.urlsafe_b64decode(padded)
@@ -48,13 +57,6 @@ class CryptoManager:
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
                 if rt == key_env.rstrip("=") and len(decoded) >= 16:
                     return decoded
-            except Exception:
-                pass
-            # Try hex
-            try:
-                decoded_hex = bytes.fromhex(key_env)
-                if len(decoded_hex) >= 16:
-                    return decoded_hex
             except Exception:
                 pass
             # Raw utf-8 (used by tests when a plain string key is supplied)
