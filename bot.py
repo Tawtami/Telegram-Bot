@@ -1480,7 +1480,8 @@ async def run_webhook_mode(application: Application) -> None:
 
                 try:
                     items = _query_purchases_filtered(stmt)
-                except Exception:
+                except Exception as e:
+                    logger.error(f"admin_list purchases query failed: {e}")
                     return web.Response(status=500, text="server error")
 
                 total = len(items)
