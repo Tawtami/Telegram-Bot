@@ -71,17 +71,19 @@ class CryptoManager:
         # If we're in production/webhook mode, do NOT fallback – require ENCRYPTION_KEY
         try:
             # Use the module-level config (so tests can patch utils.crypto.config)
-            if getattr(config, "webhook", None) and getattr(config.webhook, "enabled", False):
+            webhook_enabled_attr = getattr(getattr(config, "webhook", None), "enabled", False)
+            is_webhook_enabled = bool(webhook_enabled_attr) if isinstance(webhook_enabled_attr, bool) else False
+            is_production_env = os.getenv("ENVIRONMENT", "").lower() == "production"
+            if is_webhook_enabled or is_production_env:
                 raise ValueError(
                     "ENCRYPTION_KEY is required in production/webhook mode (no fallback allowed)"
                 )
-            if os.getenv("ENVIRONMENT", "").lower() == "production":
-                raise ValueError(
-                    "ENCRYPTION_KEY is required in production/webhook mode (no fallback allowed)"
-                )
-        except Exception:
-            # If any of the above signals production/webhook, propagate
+        except ValueError:
+            # Propagate the strict requirement in prod/webhook mode
             raise
+        except Exception:
+            # Any other error: do not block fallback in dev/test
+            pass
 
         # Development fallback (derive from BOT_TOKEN) - ONLY for local/dev
         # Ensure we coerce to string safely (tests may patch config with MagicMock)
