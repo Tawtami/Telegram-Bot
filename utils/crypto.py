@@ -50,10 +50,7 @@ class CryptoManager:
                 decoded = base64.urlsafe_b64decode(padded)
                 # Accept as base64 only if round-trip matches and decoded length is valid for AES
                 rt = base64.urlsafe_b64encode(decoded).decode("utf-8").rstrip("=")
-                if (
-                    rt == key_env.rstrip("=")
-                    and len(decoded) in (16, 24, 32)
-                ):
+                if rt == key_env.rstrip("=") and len(decoded) in (16, 24, 32):
                     return decoded
             except Exception:
                 pass
