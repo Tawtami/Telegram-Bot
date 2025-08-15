@@ -145,7 +145,9 @@ class StudentStorage:
                             encrypted_value = crypto_manager.encrypt_text(str(student_data[field]))
                             # Normalize to JSON-serializable string
                             if isinstance(encrypted_value, bytes):
-                                encrypted_value = base64.urlsafe_b64encode(encrypted_value).decode("utf-8")
+                                encrypted_value = base64.urlsafe_b64encode(encrypted_value).decode(
+                                    "utf-8"
+                                )
                             elif not isinstance(encrypted_value, str):
                                 encrypted_value = str(encrypted_value)
                             student_data[field] = encrypted_value
