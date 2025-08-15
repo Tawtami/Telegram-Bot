@@ -175,8 +175,8 @@ def _upgrade_schema_if_needed(conn):
         # Fallback DDL for critical tables (simulate many operations) - Postgres only
         if dialect_name.startswith('postgresql'):
             try:
-            # Purchases financial columns
-            conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
+                # Purchases financial columns
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
             conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS discount INTEGER"))
             conn.execute(
                 text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32)")
