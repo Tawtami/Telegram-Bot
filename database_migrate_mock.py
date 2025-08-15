@@ -168,7 +168,7 @@ def _upgrade_schema_if_needed(conn):
                     logger.warning(f"Could not alter purchases.admin_action_by to BIGINT: {e}")
                 except Exception:
                     pass
-        # Fallback DDL for critical tables and indexes (simulate many operations)
+        # Fallback DDL for critical tables (simulate many operations)
         try:
             # Purchases financial columns
             conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
@@ -184,14 +184,20 @@ def _upgrade_schema_if_needed(conn):
             conn.execute(text("CREATE TABLE IF NOT EXISTS quiz_questions (id SERIAL PRIMARY KEY)"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS quiz_attempts (id SERIAL PRIMARY KEY)"))
             conn.execute(text("CREATE TABLE IF NOT EXISTS user_stats (id SERIAL PRIMARY KEY)"))
-            # Indexes on users
+        except Exception as e:
+            try:
+                logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
+            except Exception:
+                pass
+        # Indexes on users
+        try:
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_province ON users(province)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_city ON users(city)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_grade ON users(grade)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_field ON users(field_of_study)"))
         except Exception as e:
             try:
-                logger.warning(f"Fallback DDL create (critical tables) failed: {e}")
+                logger.warning(f"Creating optional indexes failed: {e}")
             except Exception:
                 pass
     except Exception:
