@@ -115,6 +115,34 @@ def _upgrade_schema_if_needed(conn):
                 logger.warning(f"Table create skipped/failed for {name}: {e}")
             except Exception:
                 pass
+    # Simulate column type checks and potential upgrades for Postgres
+    try:
+        text = _get_text_clause()
+        # Check users.telegram_user_id
+        try:
+            dt_row = conn.execute(
+                text(
+                    "SELECT data_type FROM information_schema.columns WHERE table_name='users' AND column_name='telegram_user_id'"
+                )
+            ).scalar()
+        except Exception:
+            dt_row = None
+        if dt_row and str(dt_row).lower() in ("integer", "int4"):
+            try:
+                conn.execute(
+                    text(
+                        "ALTER TABLE users ALTER COLUMN telegram_user_id TYPE BIGINT USING telegram_user_id::bigint"
+                    )
+                )
+            except Exception:
+                try:
+                    logger.warning(
+                        "Could not alter users.telegram_user_id to BIGINT: simulated error"
+                    )
+                except Exception:
+                    pass
+    except Exception:
+        pass
     return True
 
 
