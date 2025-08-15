@@ -787,6 +787,7 @@ async def admin_export_pending_csv(update: Update, context: ContextTypes.DEFAULT
 async def admin_export_free_grade(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Export approved FREE course participants for a grade."""
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     if not context.args:
@@ -794,9 +795,12 @@ async def admin_export_free_grade(update: Update, context: ContextTypes.DEFAULT_
         return
     grade = context.args[0]
     from database.models_sql import Purchase, User as DBUser
+
     with session_scope() as session:
         q = session.execute(
-            select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name, Purchase.product_id)
+            select(
+                DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name, Purchase.product_id
+            )
             .join(Purchase, Purchase.user_id == DBUser.id)
             .where(
                 Purchase.product_type == "course",
@@ -808,6 +812,7 @@ async def admin_export_free_grade(update: Update, context: ContextTypes.DEFAULT_
         )
         rows = list(q)
     import csv, io
+
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["telegram_user_id", "full_name", "free_course_slug"])
@@ -825,15 +830,25 @@ async def admin_export_free_grade(update: Update, context: ContextTypes.DEFAULT_
 async def admin_export_workshop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Export workshop registrations (pending by default). Usage: /export_workshop <ماه> [status]"""
     from config import config as app_config
+
     if update.effective_user.id not in app_config.bot.admin_user_ids:
         return
     if not context.args:
         await update.effective_message.reply_text("فرمت: /export_workshop <ماه> [pending|approved]")
         return
-    month = " ".join(context.args[:-1]) if len(context.args) > 1 and context.args[-1] in ("pending", "approved") else " ".join(context.args)
-    status = context.args[-1] if context.args and context.args[-1] in ("pending", "approved") else "pending"
+    month = (
+        " ".join(context.args[:-1])
+        if len(context.args) > 1 and context.args[-1] in ("pending", "approved")
+        else " ".join(context.args)
+    )
+    status = (
+        context.args[-1]
+        if context.args and context.args[-1] in ("pending", "approved")
+        else "pending"
+    )
     slug = f"workshop_{month}"
     from database.models_sql import Purchase, User as DBUser
+
     with session_scope() as session:
         q = session.execute(
             select(DBUser.telegram_user_id, DBUser.first_name, DBUser.last_name)
@@ -847,6 +862,7 @@ async def admin_export_workshop(update: Update, context: ContextTypes.DEFAULT_TY
         )
         rows = list(q)
     import csv, io
+
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(["telegram_user_id", "full_name", "status", "slug"])
