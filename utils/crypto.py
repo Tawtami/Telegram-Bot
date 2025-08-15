@@ -88,13 +88,21 @@ class CryptoManager:
             pass
 
         # Development fallback (derive from BOT_TOKEN) - ONLY for local/dev
-        # Ensure we coerce to string safely (tests may patch config with MagicMock)
-        token_str = str(getattr(config, "bot_token", "") or "dev")
-        token = token_str.encode("utf-8")
+        # Handle patched/mocked config objects safely
+        try:
+            bot_token_val = getattr(config, "bot_token", None)
+        except Exception:
+            bot_token_val = None
+        if isinstance(bot_token_val, bytes) and bot_token_val:
+            token_bytes = bot_token_val
+        elif isinstance(bot_token_val, str) and bot_token_val:
+            token_bytes = bot_token_val.encode("utf-8")
+        else:
+            token_bytes = b"dev"
         # Simple KDF: take first 32 bytes of SHA256(token)
         import hashlib
 
-        return hashlib.sha256(token).digest()
+        return hashlib.sha256(token_bytes).digest()
 
     def _aes_key(self) -> bytes:
         """Return a key of length 16/24/32 for AES-GCM.
