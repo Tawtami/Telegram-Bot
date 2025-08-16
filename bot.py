@@ -2178,6 +2178,12 @@ th{{background:#0d1117;color:#c9d1d9;}}
                     admin_id = 0
                 if admin_id <= 0:
                     admin_id = (config.bot.admin_user_ids or [0])[0]
+                # Whitelist: only allow known admin ids
+                try:
+                    if admin_id not in (config.bot.admin_user_ids or []):
+                        admin_id = (config.bot.admin_user_ids or [0])[0]
+                except Exception:
+                    admin_id = (config.bot.admin_user_ids or [0])[0]
 
                 try:
                     with session_scope() as session:
