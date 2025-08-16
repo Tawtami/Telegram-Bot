@@ -136,6 +136,7 @@ def _parse_admin_filters(request):
     from_str = request.query.get("from", "").strip()
     to_str = request.query.get("to", "").strip()
     fmt = request.query.get("format", "").lower()
+    to_str = request.query.get("to", "").strip()
     page = max(0, int(request.query.get("page", "0") or 0))
     page_size = max(1, min(100, int(request.query.get("size", "20") or 20)))
 
@@ -173,6 +174,8 @@ def _parse_admin_filters(request):
         "fmt": fmt,
         "page": page,
         "page_size": page_size,
+        "to_admin": (int(to_str) if to_str.isdigit() else None),
+        "to_admin_str": to_str,
     }
 
 
@@ -1844,7 +1847,7 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<td>{r['product']}</td>"
                         f"<td>{r.get('created_at','')}</td>"
                         f"<td>{_receipt_badge(r['id'])}"
-                        f" <a class='btn' style='background:#1f6feb;margin-inline-start:6px' href='{qbase}&id={r['id']}&action=preview' title='پیش‌نمایش رسید'>🔍</a>"
+                        f" <a class='btn' style='background:#1f6feb;margin-inline-start:6px' href='{qbase}&id={r['id']}&action=preview&to={request.headers.get('X-Admin-Id','')}' title='پیش‌نمایش رسید'>🔍</a>"
                         f"</td>"
                         f"<td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
@@ -2168,7 +2171,13 @@ th{{background:#0d1117;color:#c9d1d9;}}
                     return web.Response(status=400, text="bad request")
 
                 # For audit purposes, attribute to first admin id
-                admin_id = (config.bot.admin_user_ids or [0])[0]
+                # Prefer target admin from query param `to`; fallback to first admin
+                try:
+                    admin_id = int(request.query.get("to", "0") or 0)
+                except ValueError:
+                    admin_id = 0
+                if admin_id <= 0:
+                    admin_id = (config.bot.admin_user_ids or [0])[0]
 
                 try:
                     with session_scope() as session:
