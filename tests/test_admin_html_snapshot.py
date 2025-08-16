@@ -8,8 +8,10 @@ from aiohttp import web
 @pytest.mark.asyncio
 async def test_admin_html_includes_receipt_preview():
     from bot import setup_handlers
+
     # Use the mock Application provided by telegram_mock via import side-effects
     from telegram_mock import MagicMock
+
     Application = MagicMock
     import aiohttp
 
