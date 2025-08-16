@@ -225,10 +225,24 @@ def _upgrade_schema_if_needed(conn):
                     pass
             # Receipt columns inline (optional)
             try:
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_file_id VARCHAR(256)"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_mime VARCHAR(64)"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_uploaded_at TIMESTAMP"))
-                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_notes VARCHAR(1024)"))
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_file_id VARCHAR(256)"
+                    )
+                )
+                conn.execute(
+                    text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_mime VARCHAR(64)")
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_uploaded_at TIMESTAMP"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_notes VARCHAR(1024)"
+                    )
+                )
             except Exception:
                 try:
                     conn.rollback()
