@@ -1788,12 +1788,15 @@ async def run_webhook_mode(application: Application) -> None:
                     from sqlalchemy import select as _select
                     from database.db import session_scope as _sess
                     from database.models_sql import Receipt as _Receipt
+
                     receipt_ids = set()
                     try:
                         with _sess() as _s:
                             for rr in rows:
                                 rid = _s.execute(
-                                    _select(_Receipt.id).where(_Receipt.purchase_id == rr["id"]).limit(1)
+                                    _select(_Receipt.id)
+                                    .where(_Receipt.purchase_id == rr["id"])
+                                    .limit(1)
                                 ).scalar()
                                 if rid:
                                     receipt_ids.add(rr["id"])
@@ -1801,7 +1804,11 @@ async def run_webhook_mode(application: Application) -> None:
                         pass
 
                     def _receipt_badge(rid: int) -> str:
-                        return "<span class='rcpt yes'>📎</span>" if rid in receipt_ids else "<span class='rcpt no'>—</span>"
+                        return (
+                            "<span class='rcpt yes'>📎</span>"
+                            if rid in receipt_ids
+                            else "<span class='rcpt no'>—</span>"
+                        )
 
                     html_rows = "".join(
                         f"<tr>"
