@@ -265,89 +265,92 @@ def _setup_app_mock():
 # Expose mocks under aiohttp namespace
 sys.modules['aiohttp'] = sys.modules[__name__]
 
+
 # Minimal aiohttp.web shim for tests expecting 'from aiohttp import web'
 class _Router:
-	def __init__(self):
-		self._routes = []
+    def __init__(self):
+        self._routes = []
 
-	def add_routes(self, routes):
-		try:
-			self._routes.extend(list(routes or []))
-		except Exception:
-			pass
+    def add_routes(self, routes):
+        try:
+            self._routes.extend(list(routes or []))
+        except Exception:
+            pass
 
-	def routes(self):
-		return list(self._routes)
+    def routes(self):
+        return list(self._routes)
 
-	def add_get(self, path, handler):
-		self._routes.append(MagicMock(path=path, method='GET', handler=handler))
+    def add_get(self, path, handler):
+        self._routes.append(MagicMock(path=path, method='GET', handler=handler))
 
-	def add_post(self, path, handler):
-		self._routes.append(MagicMock(path=path, method='POST', handler=handler))
+    def add_post(self, path, handler):
+        self._routes.append(MagicMock(path=path, method='POST', handler=handler))
 
 
 class _App:
-	def __init__(self):
-		self.router = _Router()
+    def __init__(self):
+        self.router = _Router()
 
 
 class _AppRunner:
-	def __init__(self, app):
-		self.app = app
+    def __init__(self, app):
+        self.app = app
 
-	async def setup(self):
-		return None
+    async def setup(self):
+        return None
 
 
 class _TCPSite:
-	def __init__(self, runner, host='127.0.0.1', port=0):
-		self._runner = runner
-		self._host = host
-		self._port = port
+    def __init__(self, runner, host='127.0.0.1', port=0):
+        self._runner = runner
+        self._host = host
+        self._port = port
 
-	async def start(self):
-		return None
+    async def start(self):
+        return None
 
 
 class _HTTPException(Exception):
-	pass
+    pass
 
 
 class _HTTPSeeOther(_HTTPException):
-	def __init__(self, location=''):
-		super().__init__('see other')
-		self.location = location
+    def __init__(self, location=''):
+        super().__init__('see other')
+        self.location = location
 
 
 def _json_response(payload, status=200):
-	import json as _json
+    import json as _json
 
-	r = MockClientResponse()
-	r.status = status
-	r._headers['Content-Type'] = 'application/json'
-	r._body = _json.dumps(payload).encode('utf-8')
-	return r
+    r = MockClientResponse()
+    r.status = status
+    r._headers['Content-Type'] = 'application/json'
+    r._body = _json.dumps(payload).encode('utf-8')
+    return r
 
 
-def _response(text=None, status=200, content_type='text/html', charset='utf-8', body=None, headers=None):
-	r = MockClientResponse()
-	r.status = status
-	r._headers['Content-Type'] = content_type
-	if headers:
-		for k, v in dict(headers).items():
-			r._headers[k] = v
-	if body is not None:
-		r._body = body if isinstance(body, (bytes, bytearray)) else str(body).encode('utf-8')
-	else:
-		r._body = (text or '').encode(charset)
-	return r
+def _response(
+    text=None, status=200, content_type='text/html', charset='utf-8', body=None, headers=None
+):
+    r = MockClientResponse()
+    r.status = status
+    r._headers['Content-Type'] = content_type
+    if headers:
+        for k, v in dict(headers).items():
+            r._headers[k] = v
+    if body is not None:
+        r._body = body if isinstance(body, (bytes, bytearray)) else str(body).encode('utf-8')
+    else:
+        r._body = (text or '').encode(charset)
+    return r
 
 
 class web:
-	Application = _App
-	AppRunner = _AppRunner
-	TCPSite = _TCPSite
-	Response = staticmethod(_response)
-	json_response = staticmethod(_json_response)
-	HTTPException = _HTTPException
-	HTTPSeeOther = _HTTPSeeOther
+    Application = _App
+    AppRunner = _AppRunner
+    TCPSite = _TCPSite
+    Response = staticmethod(_response)
+    json_response = staticmethod(_json_response)
+    HTTPException = _HTTPException
+    HTTPSeeOther = _HTTPSeeOther
