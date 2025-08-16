@@ -874,6 +874,7 @@ async def handle_course_registration_confirm(
         payment_text += "💰 مبلغ: تماس بگیرید\n\n"
 
     from utils.validators import Validator
+
     card_fmt = Validator.format_card_number(config.bot.payment_card_number)
     payment_text += (
         "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
