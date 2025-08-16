@@ -260,6 +260,7 @@ class ClientSession:
                 "<th>وضعیت</th>",
                 "<th>اقدام</th>",
                 "</tr></thead><tbody></tbody></table>",
+                "<div class='rcpt-preview'><a class='btn' href='/admin?action=preview&id=1'>🔍</a></div>",
             ]
             if flash_msg:
                 parts_html.append(f"<div class='flash {flash_type}'>{flash_msg}</div>")
