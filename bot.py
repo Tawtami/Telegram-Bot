@@ -752,7 +752,9 @@ async def profile_command(update: Update, context: Any) -> None:
                     select(
                         DBReceipt.telegram_file_id, DBPurchase.product_id, DBReceipt.submitted_at
                     )
-                ).fetchmany(0)  # force AttributeError in mock to trigger fallback
+                ).fetchmany(
+                    0
+                )  # force AttributeError in mock to trigger fallback
             if rows:  # pragma: no cover (real DB path)
                 lines = ["🧾 رسیدهای اخیر شما:"]
                 for fid, prod, ts in rows:
@@ -778,8 +780,10 @@ async def profile_command(update: Update, context: Any) -> None:
                 }
                 # Collect receipts that belong to user's purchases
                 receipts = [
-                    r for r in objs
-                    if isinstance(r, _dbm.Receipt) and getattr(r, "purchase_id", None) in purchases_by_id
+                    r
+                    for r in objs
+                    if isinstance(r, _dbm.Receipt)
+                    and getattr(r, "purchase_id", None) in purchases_by_id
                 ]
                 # Sort newest first by created_at if available
                 try:
@@ -789,7 +793,9 @@ async def profile_command(update: Update, context: Any) -> None:
                 if receipts:
                     lines = ["🧾 رسیدهای اخیر شما:"]
                     for r in receipts[:5]:
-                        prod = getattr(purchases_by_id.get(getattr(r, "purchase_id", None)), "product_id", "-")
+                        prod = getattr(
+                            purchases_by_id.get(getattr(r, "purchase_id", None)), "product_id", "-"
+                        )
                         ts = getattr(r, "created_at", None)
                         ts_s = ts.isoformat() if hasattr(ts, "isoformat") else ""
                         fid = getattr(r, "telegram_file_id", "")
@@ -800,7 +806,9 @@ async def profile_command(update: Update, context: Any) -> None:
                     any_receipts = [o for o in objs if isinstance(o, _dbm.Receipt)]
                     if any_receipts:
                         try:
-                            any_receipts.sort(key=lambda r: getattr(r, "created_at", None) or 0, reverse=True)
+                            any_receipts.sort(
+                                key=lambda r: getattr(r, "created_at", None) or 0, reverse=True
+                            )
                         except Exception:
                             pass
                         lines = ["🧾 رسیدهای اخیر شما:"]
