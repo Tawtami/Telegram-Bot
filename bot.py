@@ -1843,7 +1843,9 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<td>{r['type']}</td>"
                         f"<td>{r['product']}</td>"
                         f"<td>{r.get('created_at','')}</td>"
-                        f"<td>{_receipt_badge(r['id'])}</td>"
+                        f"<td>{_receipt_badge(r['id'])}"
+                        f" <a class='btn' style='background:#1f6feb;margin-inline-start:6px' href='{qbase}&id={r['id']}&action=preview' title='پیش‌نمایش رسید'>🔍</a>"
+                        f"</td>"
                         f"<td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
                         f"<form method='POST' action='/admin/act' class='inline'>"
@@ -2477,6 +2479,41 @@ th{{background:#0d1117;color:#c9d1d9;}}
         app.router.add_get("/admin", admin_list)
         app.router.add_get("/admin/act", admin_act)
         app.router.add_get("/admin/init", admin_init)
+        # Lightweight preview endpoint, proxied via /admin with action=preview
+        async def admin_preview_receipt(request):
+            try:
+                token_ok = await _require_token(request)
+                if token_ok is None:
+                    return web.Response(status=401, text="unauthorized")
+                from sqlalchemy import select
+                from database.db import session_scope
+                from database.models_sql import Receipt
+                try:
+                    pid = int(request.query.get("id", "0") or 0)
+                except ValueError:
+                    return web.Response(status=400, text="bad request")
+                if pid <= 0:
+                    return web.Response(status=400, text="bad request")
+                with session_scope() as session:
+                    rec = session.execute(select(Receipt).where(Receipt.purchase_id == pid)).scalar_one_or_none()
+                if not rec:
+                    return web.Response(status=404, text="no receipt")
+                admin_id = (config.bot.admin_user_ids or [0])[0]
+                try:
+                    await application.bot.send_photo(chat_id=admin_id, photo=rec.telegram_file_id, caption=f"رسید سفارش #{pid}")
+                except Exception:
+                    await application.bot.send_message(chat_id=admin_id, text=f"file_id: {rec.telegram_file_id}")
+                return web.json_response({"ok": True})
+            except Exception as e:
+                logger.error(f"admin_preview_receipt error: {e}")
+                return web.Response(status=500, text="server error")
+
+        async def admin_router(request):
+            if request.query.get("action") == "preview":
+                return await admin_preview_receipt(request)
+            return await admin_list(request)
+
+        app.router.add_get("/admin", admin_router)
         app.router.add_post("/admin/act", admin_act_post)
         app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
