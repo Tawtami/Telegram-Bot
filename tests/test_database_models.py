@@ -119,9 +119,7 @@ def test_purchase_model(session):
 def test_profile_change_model(session):
     """Test ProfileChange model."""
     # Create a user first
-    user = User(
-        telegram_user_id=222222222, first_name="change_user", last_name="change_last"
-    )
+    user = User(telegram_user_id=222222222, first_name="change_user", last_name="change_last")
     session.add(user)
     session.flush()
 
@@ -181,9 +179,7 @@ def test_model_relationships(session):
 def test_model_constraints(session):
     """Test model constraints and unique fields."""
     # Test unique telegram_user_id constraint
-    user1 = User(
-        telegram_user_id=444444444, first_name="unique_user1", last_name="unique_last1"
-    )
+    user1 = User(telegram_user_id=444444444, first_name="unique_user1", last_name="unique_last1")
     session.add(user1)
     session.commit()
 
@@ -208,9 +204,7 @@ def test_model_constraints(session):
 
 def test_model_defaults(session):
     """Test model default values."""
-    user = User(
-        telegram_user_id=555555555, first_name="default_user", last_name="default_last"
-    )
+    user = User(telegram_user_id=555555555, first_name="default_user", last_name="default_last")
 
     # Add and flush to trigger default value generation
     session.add(user)
