@@ -29,7 +29,8 @@ async def test_admin_html_includes_receipt_preview():
     site = aiohttp.web.TCPSite(runner, host="127.0.0.1", port=8081)
     await site.start()
     async with aiohttp.ClientSession() as session:
-        resp = await session.get("http://127.0.0.1:8081/admin", params={"fmt": "html"})
+        # In our aiohttp_mock, get() is sync and returns a response directly
+        resp = session.get("http://127.0.0.1:8081/admin", params={"fmt": "html"})
     assert resp.status in (200, 401)
     if resp.status == 200:
         text = await resp.text()
