@@ -728,9 +728,33 @@ async def profile_command(update: Update, context: Any) -> None:
             f"🏙 **شهر:** {db_user.city or '—'}\n"
             f"📚 **پایه تحصیلی:** {db_user.grade or '—'}\n"
             f"🎓 **رشته تحصیلی:** {db_user.field_of_study or '—'}\n"
+            f"🏠 **آدرس:** {(db_user.address or '—')}\n"
+            f"📮 **کد پستی:** {(db_user.postal_code or '—')}\n"
         )
 
         await update.message.reply_text(profile_text, parse_mode="Markdown")
+
+        # Show recent receipts (thumbnail/link)
+        try:
+            from sqlalchemy import select
+            from database.models_sql import Purchase as DBPurchase, Receipt as DBReceipt
+            from database.db import session_scope as _s
+            with _s() as s:
+                rows = s.execute(
+                    select(DBReceipt.telegram_file_id, DBPurchase.product_id, DBReceipt.submitted_at)
+                    .join(DBPurchase, DBPurchase.id == DBReceipt.purchase_id)
+                    .join(DBUser, DBUser.id == DBPurchase.user_id)
+                    .where(DBUser.telegram_user_id == user_id)
+                    .order_by(DBReceipt.submitted_at.desc())
+                ).fetchmany(5)
+            if rows:
+                lines = ["🧾 رسیدهای اخیر شما:"]
+                for fid, prod, ts in rows:
+                    ts_s = ts.isoformat() if ts else ""
+                    lines.append(f"• {prod} | {ts_s} | file_id: `{fid}`")
+                await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+        except Exception:
+            pass
 
     except Exception as e:
         logger.error(f"Error in profile_command: {e}")
@@ -1804,11 +1828,10 @@ async def run_webhook_mode(application: Application) -> None:
                         pass
 
                     def _receipt_badge(rid: int) -> str:
-                        return (
-                            "<span class='rcpt yes'>📎</span>"
-                            if rid in receipt_ids
-                            else "<span class='rcpt no'>—</span>"
-                        )
+                        if rid in receipt_ids:
+                            # Link to Telegram file via deep-link is not possible; show icon only
+                            return "<span class='rcpt yes' title='رسید موجود'>📎</span>"
+                        return "<span class='rcpt no' title='بدون رسید'>—</span>"
 
                     html_rows = "".join(
                         f"<tr>"
