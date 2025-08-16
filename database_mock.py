@@ -99,6 +99,11 @@ class User:
     # Class-level attributes for SQLAlchemy-style access
     id = ComparableField('id')
     telegram_user_id = ComparableField('telegram_user_id')
+    # Plain PII fields
+    first_name = None
+    last_name = None
+    phone = None
+    # Legacy encrypted fields (still present for compatibility in some tests)
     first_name_enc = None
     last_name_enc = None
     phone_enc = None
@@ -115,6 +120,11 @@ class User:
         if isinstance(self.id, User.ComparableField):
             self.id = None
         self.telegram_user_id = kwargs.get('telegram_user_id', 123456789)
+        # Prefer plain values when provided
+        self.first_name = kwargs.get('first_name', None)
+        self.last_name = kwargs.get('last_name', None)
+        self.phone = kwargs.get('phone', None)
+        # Keep enc fields for backward compatibility
         self.first_name_enc = kwargs.get('first_name_enc', 'Test')
         self.last_name_enc = kwargs.get('last_name_enc', 'User')
         self.phone_enc = kwargs.get('phone_enc', '09123456789')
