@@ -27,5 +27,3 @@ async def test_admin_html_includes_receipt_preview(aiohttp_client, monkeypatch):
         text = await resp.text()
         assert "🔍" in text
         assert "CSV" in text and "XLSX" in text
-
-

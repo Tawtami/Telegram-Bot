@@ -2479,6 +2479,7 @@ th{{background:#0d1117;color:#c9d1d9;}}
         app.router.add_get("/admin", admin_list)
         app.router.add_get("/admin/act", admin_act)
         app.router.add_get("/admin/init", admin_init)
+
         # Lightweight preview endpoint, proxied via /admin with action=preview
         async def admin_preview_receipt(request):
             try:
@@ -2488,6 +2489,7 @@ th{{background:#0d1117;color:#c9d1d9;}}
                 from sqlalchemy import select
                 from database.db import session_scope
                 from database.models_sql import Receipt
+
                 try:
                     pid = int(request.query.get("id", "0") or 0)
                 except ValueError:
@@ -2495,14 +2497,20 @@ th{{background:#0d1117;color:#c9d1d9;}}
                 if pid <= 0:
                     return web.Response(status=400, text="bad request")
                 with session_scope() as session:
-                    rec = session.execute(select(Receipt).where(Receipt.purchase_id == pid)).scalar_one_or_none()
+                    rec = session.execute(
+                        select(Receipt).where(Receipt.purchase_id == pid)
+                    ).scalar_one_or_none()
                 if not rec:
                     return web.Response(status=404, text="no receipt")
                 admin_id = (config.bot.admin_user_ids or [0])[0]
                 try:
-                    await application.bot.send_photo(chat_id=admin_id, photo=rec.telegram_file_id, caption=f"رسید سفارش #{pid}")
+                    await application.bot.send_photo(
+                        chat_id=admin_id, photo=rec.telegram_file_id, caption=f"رسید سفارش #{pid}"
+                    )
                 except Exception:
-                    await application.bot.send_message(chat_id=admin_id, text=f"file_id: {rec.telegram_file_id}")
+                    await application.bot.send_message(
+                        chat_id=admin_id, text=f"file_id: {rec.telegram_file_id}"
+                    )
                 return web.json_response({"ok": True})
             except Exception as e:
                 logger.error(f"admin_preview_receipt error: {e}")
