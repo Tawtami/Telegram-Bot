@@ -10,7 +10,9 @@ from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
 import logging
+import time
 from config import config
+from datetime import datetime, timedelta
 from database.db import session_scope
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
@@ -242,15 +244,15 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     title, slug = slug_map.get(key, ("تک‌درس", "single_unknown"))
     # Try enrich from data/courses.json if exists
     try:
-    import json
-    from utils.cache import cache_manager
+        import json
+        from utils.cache import cache_manager
 
-    c = cache_manager.get_cache("courses")
-    all_courses = c._get_sync("all_courses")
-    if all_courses is None:
+        c = cache_manager.get_cache("courses")
+        all_courses = c._get_sync("all_courses")
+        if all_courses is None:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
-        c._set_sync("all_courses", all_courses, ttl=600)
+            c._set_sync("all_courses", all_courses, ttl=600)
         # Find any paid course matching our slug key by course_id or title contains
         course = next(
             (
@@ -266,18 +268,43 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
             price = course.get("price", 150000)
             duration = course.get("duration", "۹۰ دقیقه")
             desc = course.get("description", "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات.")
+            schedule = course.get("schedule", "برنامه به‌زودی اعلام می‌شود")
+            sessions = course.get("sessions", "۲۰–۲۵ جلسه")
+            platform = course.get("platform", "اسکای‌روم")
+            notes = course.get("notes", "پرداخت کامل قبل از شروع دوره")
         else:
             price = 150000
             duration = "۹۰ دقیقه"
             desc = "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات."
+            schedule = "برنامه به‌زودی اعلام می‌شود"
+            sessions = "۲۰–۲۵ جلسه"
+            platform = "اسکای‌روم"
+            notes = "پرداخت کامل قبل از شروع دوره"
     except Exception:
         price = 150000
         duration = "۹۰ دقیقه"
         desc = "مخصوص امتحان نهایی و آزمون‌های آزمایشی مؤسسات."
+        schedule = "برنامه به‌زودی اعلام می‌شود"
+        sessions = "۲۰–۲۵ جلسه"
+        platform = "اسکای‌روم"
+        notes = "پرداخت کامل قبل از شروع دوره"
+    # Clamp negative/None price to 0 and format safely
+    try:
+        _price_single = int(price or 0)
+    except Exception:
+        _price_single = 0
+    _price_single = max(_price_single, 0)
+    price_text = (
+        f"💰 جلسه‌ای {_price_single:,} ریال" if _price_single > 0 else "💰 هزینه: تماس بگیرید"
+    )
     text = (
         f"🧠 {title}\n"
-        f"۲۰–۲۵ جلسه، هر جلسه {duration}، جلسه‌ای {price:,} تومان.\n"
-        f"{desc}\n\n"
+        f"📚 {sessions} | ⏰ {duration}\n"
+        f"{price_text}\n"
+        f"📅 {schedule}\n"
+        f"🌐 {platform}\n"
+        f"📝 {desc}\n"
+        f"📌 {notes}\n\n"
         "برای ادامه، پرداخت را انجام دهید و رسید را ارسال کنید."
     )
     kb = InlineKeyboardMarkup(
@@ -303,7 +330,8 @@ async def handle_paid_private(update: Update, context: ContextTypes.DEFAULT_TYPE
         "کلاس‌های خصوصی آنلاین ریاضی:\n"
         "هماهنگی مستقیم با استاد:\n"
         "📞 +989381530556\n"
-        "💬 @ostad_hatami"
+        "💬 @ostad_hatami\n\n"
+        "هزینه کلاس خصوصی: تماس بگیرید (بر اساس زمان و درس انتخابی)."
     )
     await query.edit_message_text(
         text,
@@ -343,13 +371,55 @@ async def handle_paid_comp_select(update: Update, context: ContextTypes.DEFAULT_
         title = "دوره جامع پایه تا کنکور (بخش تجربی)"
         desc = "پوشش کامل مباحث ریاضی تجربی در ۴۰ جلسه"
         slug = "comp_exp"
-        else:
+    else:
         title = "دوره جامع پایه تا کنکور (بخش ریاضی)"
         desc = "پوشش مباحث ریاضی ۱، حسابان ۱ و حسابان ۲ در ۴۰ جلسه"
         slug = "comp_math"
+    # Try enrich from data
+    try:
+        import json
+        from utils.cache import cache_manager
+
+        c = cache_manager.get_cache("courses")
+        all_courses = c._get_sync("all_courses")
+        if all_courses is None:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            c._set_sync("all_courses", all_courses, ttl=600)
+        course = next(
+            (co for co in all_courses if isinstance(co, dict) and co.get("course_id") == slug),
+            None,
+        )
+        price = (course.get("price") if course else 150000) or 150000
+        duration = (course.get("duration") if course else "۹۰ دقیقه") or "۹۰ دقیقه"
+        schedule = (
+            course.get("schedule") if course else "اعلام برنامه پس از ثبت‌نام"
+        ) or "اعلام برنامه پس از ثبت‌نام"
+        sessions = (course.get("sessions") if course else "۴۰ جلسه") or "۴۰ جلسه"
+        platform = (course.get("platform") if course else "اسکای‌روم") or "اسکای‌روم"
+        notes = (
+            course.get("notes") if course else "پرداخت جلسه‌ای ۱۵۰هزار تومان"
+        ) or "پرداخت جلسه‌ای ۱۵۰هزار تومان"
+    except Exception:
+        price = 150000
+        duration = "۹۰ دقیقه"
+        schedule = "اعلام برنامه پس از ثبت‌نام"
+        sessions = "۴۰ جلسه"
+        platform = "اسکای‌روم"
+        notes = "پرداخت جلسه‌ای ۱۵۰هزار تومان"
+    # Clamp negative/None price to 0 and format safely
+    try:
+        _price_comp = int(price or 0)
+    except Exception:
+        _price_comp = 0
+    _price_comp = max(_price_comp, 0)
     text = (
-        f"📚 {title}\n{desc}\n"
-        "هر جلسه ۹۰ دقیقه، جلسه‌ای ۱۵۰ هزار تومان.\n\n"
+        f"📚 {title}\n{desc}\n" f"{sessions} | ⏰ {duration}\n" f"💰 جلسه‌ای {_price_comp:,} ریال\n"
+        if _price_comp > 0
+        else "💰 هزینه: تماس بگیرید\n"
+        f"📅 {schedule}\n"
+        f"🌐 {platform}\n"
+        f"📌 {notes}\n\n"
         "برای ادامه، پرداخت را انجام دهید و رسید را ارسال کنید."
     )
     kb = InlineKeyboardMarkup(
@@ -371,24 +441,68 @@ async def handle_paid_workshops(update: Update, context: ContextTypes.DEFAULT_TY
     if not query:
         return
     await query.answer()
-    months = [
-        "مهر ۱۴۰۴",
-        "آبان ۱۴۰۴",
-        "آذر ۱۴۰۴",
-        "دی ۱۴۰۴",
-        "بهمن ۱۴۰۴",
-        "اسفند ۱۴۰۴",
-        "فروردین ۱۴۰۵",
-        "اردیبهشت ۱۴۰۵",
-        "خرداد ۱۴۰۵",
-        "تیر ۱۴۰۵",
-    ]
+    # Single source of truth for months
+    from utils.workshops import get_workshop_months
+
+    months = get_workshop_months()
     rows = [[InlineKeyboardButton(m, callback_data=f"workshop:{m}")] for m in months]
     rows.append([InlineKeyboardButton("🔙 بازگشت", callback_data="paid_menu")])
-    await query.edit_message_text(
-        "همایش‌های ماهانه (موضوع هر ماه متعاقباً اعلام می‌شود):",
-        reply_markup=InlineKeyboardMarkup(rows),
-    )
+
+    # Derive dynamic duration/price from JSON for parent menu
+    duration_line = ""
+    price_line = ""
+    try:
+        import json
+        from utils.cache import cache_manager
+
+        c = cache_manager.get_cache("courses")
+        all_courses = c._get_sync("all_courses")
+        if all_courses is None:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            c._set_sync("all_courses", all_courses, ttl=600)
+
+        # Collect workshop entries
+        workshop_entries = []
+        for m in months:
+            cid = f"workshop_{m}"
+            co = next(
+                (x for x in all_courses if isinstance(x, dict) and x.get("course_id") == cid),
+                None,
+            )
+            if co:
+                workshop_entries.append(co)
+
+        # Duration: show if all the same and non-empty
+        durations = [str(co.get("duration") or "").strip() for co in workshop_entries]
+        uniq_durations = {d for d in durations if d}
+        if len(uniq_durations) == 1:
+            duration_line = f"\n⏰ {next(iter(uniq_durations))}"
+
+        # Price: show thousands sep; if multiple unique positives, show range; otherwise contact
+        prices = []
+        for co in workshop_entries:
+            try:
+                pv = int(co.get("price") or 0)
+            except Exception:
+                pv = 0
+            prices.append(max(pv, 0))
+        pos_prices = [p for p in prices if p > 0]
+        if pos_prices:
+            pmin, pmax = min(pos_prices), max(pos_prices)
+            if pmin == pmax:
+                price_line = f"\nثبت‌نام: {pmin:,} ریال"
+            else:
+                price_line = f"\nثبت‌نام: {pmin:,}–{pmax:,} ریال"
+        else:
+            price_line = "\nثبت‌نام: تماس بگیرید"
+    except Exception:
+        # If anything goes wrong, keep minimal header
+        duration_line = ""
+        price_line = ""
+
+    header_text = "همایش‌های ماهانه — موضوع بعداً اعلام می‌شود" + duration_line + price_line
+    await query.edit_message_text(header_text, reply_markup=InlineKeyboardMarkup(rows))
 
 
 @rate_limit_handler("default")
@@ -399,10 +513,54 @@ async def handle_workshop_select(update: Update, context: ContextTypes.DEFAULT_T
     await query.answer()
     month = query.data.split(":", 1)[1]
     slug = f"workshop_{month}"
+    # Enrich from data if available
+    try:
+        import json
+        from utils.cache import cache_manager
+
+        c = cache_manager.get_cache("courses")
+        all_courses = c._get_sync("all_courses")
+        if all_courses is None:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+            c._set_sync("all_courses", all_courses, ttl=600)
+        course = next(
+            (co for co in all_courses if isinstance(co, dict) and co.get("course_id") == slug), None
+        )
+        # Normalize display title to use parentheses regardless of stored title
+        title = (course.get("title") if course else None) or f"همایش ماهانه ({month})"
+        # Prefer stored description, but normalize generic phrasing to our agreed style
+        desc = course.get("description") if course else None
+        default_desc = f"همایش ماهانه ({month}) — موضوع بعداً اعلام می‌شود."
+        if not desc:
+            desc = default_desc
+        else:
+            # If it's a generic placeholder (e.g., uses "متعاقباً" or similar), standardize it
+            if "متعاقباً" in desc or ("موضوع" in desc and "اعلام" in desc):
+                desc = default_desc
+        price = (course.get("price") if course else 100000) or 100000
+        duration = (course.get("duration") if course else "۹۰ دقیقه") or "۹۰ دقیقه"
+        schedule = (course.get("schedule") if course else "اعلام تاریخ دقیق") or "اعلام تاریخ دقیق"
+        platform = (course.get("platform") if course else "اسکای‌روم") or "اسکای‌روم"
+        notes = (
+            course.get("notes") if course else "ثبت‌نام: ۱۰۰ هزار تومان"
+        ) or "ثبت‌نام: ۱۰۰ هزار تومان"
+    except Exception:
+        title = f"همایش ماهانه ({month})"
+        desc = f"همایش ماهانه ({month}) — موضوع بعداً اعلام می‌شود."
+        price = 100000
+        duration = "۹۰ دقیقه"
+        schedule = "اعلام تاریخ دقیق"
+        platform = "اسکای‌روم"
+        notes = "ثبت‌نام: ۱۰۰ هزار تومان"
     text = (
-        f"📅 همایش {month}\n"
-        "موضوع هر ماه متعاقباً اعلام خواهد شد.\n\n"
-        "ثبت‌نام: ۱۰۰ هزار تومان. پس از پرداخت، رسید را ارسال کنید."
+        f"📅 {title}\n"
+        f"📝 {desc}\n"
+        f"⏰ {duration}\n"
+        f"💰 {price:,} ریال\n"
+        f"📅 {schedule}\n"
+        f"🌐 {platform}\n"
+        f"📌 {notes}"
     )
     kb = InlineKeyboardMarkup(
         [
@@ -557,6 +715,31 @@ async def handle_course_registration(update: Update, context: ContextTypes.DEFAU
         course_type, course_id = "paid", rest
     # no JSON storage
 
+    # Auto-expire stale pending request (>5 minutes) and debounce duplicate taps (<2 minutes)
+    pending = context.user_data.get("pending_course_request")
+    now_dt = datetime.utcnow()
+    if isinstance(pending, dict):
+        ts = pending.get("timestamp")
+        try:
+            # Support legacy float timestamp
+            if isinstance(ts, (int, float)):
+                ts_dt = datetime.utcfromtimestamp(float(ts))
+            else:
+                ts_dt = ts if isinstance(ts, datetime) else None
+        except Exception:
+            ts_dt = None
+        # Auto-clear if stale > 5 minutes
+        if ts_dt and now_dt - ts_dt > timedelta(minutes=5):
+            context.user_data.pop("pending_course_request", None)
+            pending = None
+        # Debounce duplicates within 2 minutes
+        elif (
+            ts_dt
+            and pending.get("course_id") == course_id
+            and (now_dt - ts_dt) < timedelta(minutes=2)
+        ):
+            return
+
     # Load course details from cache
     import json
     from utils.cache import cache_manager
@@ -616,34 +799,99 @@ async def handle_course_registration(update: Update, context: ContextTypes.DEFAU
                 reply_markup=build_main_menu_keyboard(),
             )
     else:
-        # Show payment info for paid course
+        # Ask for confirmation before showing payment info
         course_title = course["title"] if course else "دوره تخصصی"
-        course_price = course.get("price", 0) if course else 0
-
-        payment_text = f"💳 اطلاعات پرداخت برای {course_title}:\n\n"
-
-        if course_price > 0:
-            payment_text += f"💰 مبلغ: {course_price:,} تومان\n\n"
+        # Determine back target based on slug
+        if course_id.startswith("workshop_"):
+            back_target = "paid_workshops"
+        elif course_id in ("comp_exp", "comp_math"):
+            back_target = "paid_comprehensive"
         else:
-            payment_text += "💰 مبلغ: تماس بگیرید\n\n"
+            back_target = "paid_single"
 
-        payment_text += (
-            "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
-            f"{config.bot.payment_card_number}\n"
-            f"به نام: {config.bot.payment_payee_name}\n\n"
-            "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
-            "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد."
+        confirm_text = (
+            f"📝 ثبت‌نام در «{course_title}»\n\n"
+            f"آیا مطمئن هستید که می‌خواهید در «{course_title}» ثبت‌نام کنید؟"
         )
-
-        await query.edit_message_text(
-            payment_text,
-            reply_markup=InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🔙 انصراف", callback_data="back_to_menu")]]
-            ),
+        kb = InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton(
+                        "✅ تایید", callback_data=f"confirm_register_course_paid_{course_id}"
+                    )
+                ],
+                [InlineKeyboardButton("🔙 بازگشت", callback_data=back_target)],
+            ]
         )
+        await query.edit_message_text(confirm_text, reply_markup=kb)
+        # Save for next step with timestamp (data-driven structure)
+        context.user_data["pending_course_request"] = {
+            "course_id": course_id,
+            "timestamp": now_dt,
+        }
 
-        # Store course ID for payment verification
-        context.user_data["pending_course"] = course_id
+
+@rate_limit_handler("default")
+async def handle_course_registration_confirm(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """Show final payment info after user confirms registration for paid course."""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+    prefix = "confirm_register_course_paid_"
+    if not (query.data or "").startswith(prefix):
+        return
+    course_id = (query.data or "")[len(prefix) :]
+
+    # Load course details from cache
+    import json
+    from utils.cache import cache_manager
+
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
+        try:
+            with open("data/courses.json", "r", encoding="utf-8") as f:
+                all_courses = json.load(f)
+        except Exception:
+            all_courses = []
+        c._set_sync("all_courses", all_courses, ttl=600)
+    course = next(
+        (c for c in all_courses if isinstance(c, dict) and c.get("course_id") == course_id),
+        None,
+    )
+
+    course_title = course["title"] if course else "دوره تخصصی"
+    course_price = course.get("price", 0) if course else 0
+
+    payment_text = f"💳 اطلاعات پرداخت برای {course_title}:\n\n"
+
+    if course_price > 0:
+        payment_text += f"💰 مبلغ: {course_price:,} ریال\n\n"
+    else:
+        payment_text += "💰 مبلغ: تماس بگیرید\n\n"
+
+    payment_text += (
+        "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
+        f"{config.bot.payment_card_number}\n"
+        f"به نام: {config.bot.payment_payee_name}\n\n"
+        "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
+        "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.\n\n"
+        "ℹ️ در صورت هرگونه مشکل در پرداخت، با پشتیبانی تماس بگیرید."
+    )
+
+    await query.edit_message_text(
+        payment_text,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]]
+        ),
+    )
+
+    # Store course ID for payment verification & clear pending request state
+    context.user_data["pending_course"] = course_id
+    context.user_data.pop("pending_course_request", None)
 
 
 def build_course_handlers():
@@ -656,6 +904,10 @@ def build_course_handlers():
         CallbackQueryHandler(handle_paid_courses, pattern=r"^courses_paid$"),
         CallbackQueryHandler(handle_purchased_courses, pattern=r"^courses_purchased$"),
         CallbackQueryHandler(handle_course_registration, pattern=r"^register_course_"),
+        CallbackQueryHandler(
+            handle_course_registration_confirm,
+            pattern=r"^confirm_register_course_paid_",
+        ),
         CallbackQueryHandler(handle_daily_quiz, pattern=r"^daily_quiz$"),
         CallbackQueryHandler(handle_quiz_answer, pattern=r"^quiz:\d+:\d+$"),
         CallbackQueryHandler(handle_paid_menu, pattern=r"^paid_menu$"),
