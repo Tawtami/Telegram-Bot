@@ -193,43 +193,49 @@ class ClientSession:
             title_suffix = f" ({status_q})" if status_q else ""
             flash_msg = (q.get('flash', [''])[0] or '').strip()
             flash_type = (q.get('flash_type', ['success'])[0] or 'success').strip() or 'success'
-            html = (
-                "<html><head><meta charset='utf-8'></head><body>"
-                f"<h1>سفارش‌ها{title_suffix}</h1>"
-                "<form class='controls' method='GET'>"
-                "<label>وضعیت:"
-                "<select><option>همه</option><option>در انتظار</option>"
-                "<option>تایید شده</option><option>رد شده</option></select></label>"
-                "<label>نوع:"
-                "<select><option>همه</option><option>دوره</option><option>کتاب</option></select></label>"
-                "<label>شناسه کاربر:</label>"
-                "<input type='text' placeholder='شناسه تلگرام'/>"
-                "<label>محصول:</label>"
-                "<input type='text' placeholder='عنوان/شناسه'/>"
-                "<label>از:</label>"
-                "<label>تا:</label>"
-                "<label>سایز صفحه:</label>"
-                "<select><option>5</option><option>10</option><option>20</option></select>"
-                "<button type='submit'>اعمال فیلتر</button>"
-                f"<div class='meta'>مجموع نتایج: 0 | صفحه: {page_label}</div>"
-                f"<a href='{csv_href}'>CSV</a>"
-                f"<a href='{xlsx_href}'>XLSX</a>"
-                "<div class='pager'><a href='#'>قبلی</a> | <a href='#'>بعدی</a></div>"
-                "</form>"
-                "<table><thead><tr>"
-                "<th>شناسه</th>"
-                "<th>کاربر</th>"
-                "<th>نوع</th>"
-                "<th>محصول</th>"
-                "<th>ایجاد</th>"
-                "<th>وضعیت</th>"
-                "<th>اقدام</th>"
-                "</tr></thead><tbody></tbody></table>"
-                + (f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else "")
-                "<div class='flash success'>با موفقیت تایید شد.</div>"
-                "<div class='flash success'>با موفقیت رد شد.</div>"
-                "</body></html>"
+            parts = [
+                "<html><head><meta charset='utf-8'></head><body>",
+                f"<h1>سفارش‌ها{title_suffix}</h1>",
+                "<form class='controls' method='GET'>",
+                "<label>وضعیت:",
+                "<select><option>همه</option><option>در انتظار</option>",
+                "<option>تایید شده</option><option>رد شده</option></select></label>",
+                "<label>نوع:",
+                "<select><option>همه</option><option>دوره</option><option>کتاب</option></select></label>",
+                "<label>شناسه کاربر:</label>",
+                "<input type='text' placeholder='شناسه تلگرام'/>",
+                "<label>محصول:</label>",
+                "<input type='text' placeholder='عنوان/شناسه'/>",
+                "<label>از:</label>",
+                "<label>تا:</label>",
+                "<label>سایز صفحه:</label>",
+                "<select><option>5</option><option>10</option><option>20</option></select>",
+                "<button type='submit'>اعمال فیلتر</button>",
+                f"<div class='meta'>مجموع نتایج: 0 | صفحه: {page_label}</div>",
+                f"<a href='{csv_href}'>CSV</a>",
+                f"<a href='{xlsx_href}'>XLSX</a>",
+                "<div class='pager'><a href='#'>قبلی</a> | <a href='#'>بعدی</a></div>",
+                "</form>",
+                "<table><thead><tr>",
+                "<th>شناسه</th>",
+                "<th>کاربر</th>",
+                "<th>نوع</th>",
+                "<th>محصول</th>",
+                "<th>ایجاد</th>",
+                "<th>وضعیت</th>",
+                "<th>اقدام</th>",
+                "</tr></thead><tbody></tbody></table>",
+            ]
+            if flash_msg:
+                parts.append(f"<div class='flash {flash_type}'>{flash_msg}</div>")
+            parts.extend(
+                [
+                    "<div class='flash success'>با موفقیت تایید شد.</div>",
+                    "<div class='flash success'>با موفقیت رد شد.</div>",
+                    "</body></html>",
+                ]
             )
+            html = "".join(parts)
             response._body = html.encode('utf-8')
             # Simulate setting CSRF cookie via headers
             response._headers['Set-Cookie'] = [
