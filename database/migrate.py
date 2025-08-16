@@ -174,9 +174,16 @@ def _upgrade_schema_if_needed(conn):
     except Exception as e:
         logger.warning(f"Could not read/upgrade purchases.admin_action_by column type: {e}")
 
-    # 3) Fallback DDL for critical tables (Postgres): banned_users, quiz_*, user_stats
+    # 3) Fallback DDL for critical tables and column additions (Postgres)
     try:
         if str(getattr(ENGINE.dialect, 'name', '')).startswith("postgresql"):
+            # Users: add plain PII columns if missing
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_phone ON users(phone)"))
+
+            # Purchases: ensure financial columns and receipt columns
             # Add financial columns to purchases if missing
             try:
                 conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS amount INTEGER"))
@@ -211,6 +218,17 @@ def _upgrade_schema_if_needed(conn):
                         "ALTER TABLE purchases ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(128)"
                     )
                 )
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            # Receipt columns inline (optional)
+            try:
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_file_id VARCHAR(256)"))
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_mime VARCHAR(64)"))
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_uploaded_at TIMESTAMP"))
+                conn.execute(text("ALTER TABLE purchases ADD COLUMN IF NOT EXISTS receipt_notes VARCHAR(1024)"))
             except Exception:
                 try:
                     conn.rollback()

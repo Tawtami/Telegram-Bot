@@ -699,19 +699,26 @@ async def profile_command(update: Update, context: Any) -> None:
             )
             return
 
-        # Decrypt PII for display to the user only
-        try:
-            first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
-        except Exception:
-            first_name = ""
-        try:
-            last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
-        except Exception:
-            last_name = ""
-        try:
-            phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
-        except Exception:
-            phone = "ثبت نشده"
+        # Prefer plain columns; fallback to legacy encrypted values
+        first_name = (getattr(db_user, "first_name", None) or "").strip()
+        last_name = (getattr(db_user, "last_name", None) or "").strip()
+        phone = (getattr(db_user, "phone", None) or "").strip()
+        if not first_name:
+            try:
+                first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
+            except Exception:
+                first_name = ""
+        if not last_name:
+            try:
+                last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
+            except Exception:
+                last_name = ""
+        if not phone:
+            try:
+                phone = crypto_manager.decrypt_text(db_user.phone_enc) or ""
+            except Exception:
+                phone = ""
+        phone = phone or "ثبت نشده"
 
         profile_text = (
             "📋 **پروفایل شما:**\n\n"

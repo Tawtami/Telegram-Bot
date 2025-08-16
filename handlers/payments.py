@@ -62,12 +62,22 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=build_main_menu_keyboard(),
         )
         return
-    try:
-        first_name = crypto_manager.decrypt_text(db_user.first_name_enc) or ""
-        last_name = crypto_manager.decrypt_text(db_user.last_name_enc) or ""
-        phone = crypto_manager.decrypt_text(db_user.phone_enc) or "ثبت نشده"
-    except Exception:
-        first_name, last_name, phone = "", "", "ثبت نشده"
+    # Prefer plain columns; fall back to legacy encrypted fields for backward compatibility
+    first_name = (getattr(db_user, "first_name", None) or "").strip()
+    last_name = (getattr(db_user, "last_name", None) or "").strip()
+    phone = (getattr(db_user, "phone", None) or "").strip()
+    if not (first_name and last_name):
+        try:
+            first_name = first_name or (crypto_manager.decrypt_text(db_user.first_name_enc) or "")
+            last_name = last_name or (crypto_manager.decrypt_text(db_user.last_name_enc) or "")
+        except Exception:
+            pass
+    if not phone:
+        try:
+            phone = crypto_manager.decrypt_text(db_user.phone_enc) or ""
+        except Exception:
+            phone = ""
+    phone = phone or "ثبت نشده"
     student = {
         "first_name": first_name,
         "last_name": last_name,

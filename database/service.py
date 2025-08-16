@@ -53,6 +53,10 @@ def get_or_create_user(
     if user is None:
         user = User(
             telegram_user_id=telegram_user_id,
+            # Prefer plain columns; keep legacy enc filled for backward compatibility
+            first_name=(first_name or ""),
+            last_name=(last_name or ""),
+            phone=(phone or ""),
             first_name_enc=encrypt_text(first_name),
             last_name_enc=encrypt_text(last_name),
             phone_enc=encrypt_text(phone),
@@ -68,12 +72,15 @@ def get_or_create_user(
     # Update fields if provided
     changed = False
     if first_name is not None:
+        user.first_name = first_name
         user.first_name_enc = encrypt_text(first_name)
         changed = True
     if last_name is not None:
+        user.last_name = last_name
         user.last_name_enc = encrypt_text(last_name)
         changed = True
     if phone is not None:
+        user.phone = phone
         user.phone_enc = encrypt_text(phone)
         changed = True
     if province is not None:
