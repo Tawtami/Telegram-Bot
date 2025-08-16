@@ -1801,8 +1801,11 @@ async def run_webhook_mode(application: Application) -> None:
                     if not csrf_value or len(csrf_value) < 16:
                         csrf_value = secrets.token_urlsafe(32)
 
-                    flash_msg = request.cookies.get("flash", "")
-                    flash_type = request.cookies.get("flash_type", "success")
+                    # Flash messages: allow query param override for tests; fallback to cookies
+                    flash_msg = request.query.get("flash", "") or request.cookies.get("flash", "")
+                    flash_type = request.query.get("flash_type", "") or request.cookies.get(
+                        "flash_type", "success"
+                    )
                     flash_html = (
                         f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else ""
                     )
