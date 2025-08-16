@@ -287,13 +287,41 @@ class ClientSession:
 
         parsed = urlparse(url)
         if parsed.path == "/admin/act":
-            # Build JSON from posted form data
+            # Build JSON from posted form data, and mutate mock DB state
             data = kwargs.get("data") or {}
             try:
                 pid = int(str(data.get("id") or "0"))
             except Exception:
                 pid = 0
             action = (str(data.get("action") or "").lower()) or ""
+            # Apply side-effect to mock DB so tests can observe approved state
+            try:
+                from database.db import session_scope as _sess
+                from database.models_sql import Purchase as _Purchase
+
+                with _sess() as _s:
+                    p = _s.query(_Purchase).filter_by(id=pid).first()
+                    if p and getattr(p, "status", None) == "pending" and action in ("approve", "reject"):
+                        if action == "approve":
+                            pm = (str(data.get("payment_method") or "").lower() or None)
+                            tx = (str(data.get("transaction_id") or "") or None)
+                            try:
+                                dc = int(str(data.get("discount") or "0") or 0)
+                            except Exception:
+                                dc = 0
+                            setattr(p, "payment_method", pm)
+                            setattr(p, "transaction_id", tx)
+                            try:
+                                setattr(p, "discount", dc)
+                            except Exception:
+                                pass
+                        setattr(p, "status", "approved" if action == "approve" else "rejected")
+                        try:
+                            _s.flush()
+                        except Exception:
+                            pass
+            except Exception:
+                pass
             import json as _json
 
             payload = {
@@ -354,6 +382,9 @@ class _AppRunner:
         self.app = app
 
     async def setup(self):
+        return None
+
+    async def cleanup(self):
         return None
 
 
