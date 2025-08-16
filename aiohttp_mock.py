@@ -283,6 +283,28 @@ class ClientSession:
     def post(self, url, *args, **kwargs):
         """Mock post method - returns response object directly"""
         response = MockClientResponse()
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        if parsed.path == "/admin/act":
+            # Build JSON from posted form data
+            data = kwargs.get("data") or {}
+            try:
+                pid = int(str(data.get("id") or "0"))
+            except Exception:
+                pid = 0
+            action = (str(data.get("action") or "").lower()) or ""
+            import json as _json
+
+            payload = {
+                "ok": bool(pid and action in ("approve", "reject")),
+                "id": pid,
+                "action": action or None,
+            }
+            response._headers["Content-Type"] = "application/json"
+            response._body = _json.dumps(payload).encode("utf-8")
+            return response
+        # Default
         response._body = b"ok"
         return response
 
@@ -322,7 +344,8 @@ class _Router:
 
 
 class _App:
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        # Accept middlewares kwarg for compatibility
         self.router = _Router()
 
 
