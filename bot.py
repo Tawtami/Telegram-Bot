@@ -739,9 +739,12 @@ async def profile_command(update: Update, context: Any) -> None:
             from sqlalchemy import select
             from database.models_sql import Purchase as DBPurchase, Receipt as DBReceipt
             from database.db import session_scope as _s
+
             with _s() as s:
                 rows = s.execute(
-                    select(DBReceipt.telegram_file_id, DBPurchase.product_id, DBReceipt.submitted_at)
+                    select(
+                        DBReceipt.telegram_file_id, DBPurchase.product_id, DBReceipt.submitted_at
+                    )
                     .join(DBPurchase, DBPurchase.id == DBReceipt.purchase_id)
                     .join(DBUser, DBUser.id == DBPurchase.user_id)
                     .where(DBUser.telegram_user_id == user_id)
