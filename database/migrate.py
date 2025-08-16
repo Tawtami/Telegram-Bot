@@ -47,7 +47,8 @@ def init_db():
     is_postgres = dialect_name.startswith("postgresql")
 
     # Use a dedicated connection/transaction to serialize initialization on Postgres
-    with ENGINE.connect() as conn:
+    # Use a transactional connection so DDL changes are committed
+    with ENGINE.begin() as conn:
         locked = False
         try:
             if is_postgres:
