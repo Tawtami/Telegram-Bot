@@ -1784,21 +1784,47 @@ async def run_webhook_mode(application: Application) -> None:
                     def _ui_t(key: str, default: str) -> str:
                         return _ui.get(key, default)
 
+                    # Add receipt indicator via subquery (best-effort)
+                    from sqlalchemy import select as _select
+                    from database.db import session_scope as _sess
+                    from database.models_sql import Receipt as _Receipt
+                    receipt_ids = set()
+                    try:
+                        with _sess() as _s:
+                            for rr in rows:
+                                rid = _s.execute(
+                                    _select(_Receipt.id).where(_Receipt.purchase_id == rr["id"]).limit(1)
+                                ).scalar()
+                                if rid:
+                                    receipt_ids.add(rr["id"])
+                    except Exception:
+                        pass
+
+                    def _receipt_badge(rid: int) -> str:
+                        return "<span class='rcpt yes'>📎</span>" if rid in receipt_ids else "<span class='rcpt no'>—</span>"
+
                     html_rows = "".join(
-                        f"<tr><td>{r['id']}</td><td>{r['user_id']}</td><td>{r['type']}</td><td>{r['product']}</td><td>{r.get('created_at','')}</td><td><span class='badge {r['status']}'>{r['status']}</span></td>"
+                        f"<tr>"
+                        f"<td>{r['id']}</td>"
+                        f"<td>{r['user_id']}</td>"
+                        f"<td>{r['type']}</td>"
+                        f"<td>{r['product']}</td>"
+                        f"<td>{r.get('created_at','')}</td>"
+                        f"<td>{_receipt_badge(r['id'])}</td>"
+                        f"<td><span class='badge {r['status']}'>{r['status']}</span></td>"
                         f"<td>"
-                        f"<form method='POST' action='/admin/act' style='display:inline'>"
+                        f"<form method='POST' action='/admin/act' class='inline'>"
                         f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
                         f"<input type='hidden' name='id' value='{r['id']}'/>"
                         f"<input type='hidden' name='action' value='approve'/>"
                         f"<input type='hidden' name='csrf' value='{csrf_value}'/>"
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
-                        f"<select name='payment_method' title='روش پرداخت را انتخاب کنید' style='width:140px;margin-inline:4px'>{_method_opts}</select>"
-                        f"<input type='text' name='transaction_id' placeholder='شناسه تراکنش' title='شناسه تراکنش (در صورت وجود)' style='width:140px;margin-inline:4px'/>"
-                        f"<input type='number' name='discount' placeholder='تخفیف' title='مبلغ تخفیف (اختیاری)' style='width:100px;margin-inline:4px'/>"
+                        f"<select name='payment_method' title='روش پرداخت را انتخاب کنید' class='pm'>{_method_opts}</select>"
+                        f"<input class='tx' type='text' name='transaction_id' placeholder='شناسه تراکنش' title='شناسه تراکنش (در صورت وجود)'/>"
+                        f"<input class='dc' type='number' name='discount' placeholder='تخفیف' title='مبلغ تخفیف (اختیاری)'/>"
                         f"<button class='btn approve' type='submit'>{_ui_t('approve_button','تایید')}</button>"
-                        f"</form> "
-                        f"<form method='POST' action='/admin/act' style='display:inline'>"
+                        f"</form>"
+                        f"<form method='POST' action='/admin/act' class='inline'>"
                         f"<input type='hidden' name='token' value='{config.bot.admin_dashboard_token}'/>"
                         f"<input type='hidden' name='id' value='{r['id']}'/>"
                         f"<input type='hidden' name='action' value='reject'/>"
@@ -1806,9 +1832,86 @@ async def run_webhook_mode(application: Application) -> None:
                         f"<input type='hidden' name='redirect' value='{_qs(page=f['page'])}'/>"
                         f"<button class='btn reject' type='submit'>{_ui_t('reject_button','رد')}</button>"
                         f"</form>"
-                        f"</td></tr>"
+                        f"</td>"
+                        f"</tr>"
                         for r in rows
                     )
+
+                    resp_html = f"""
+<html>
+<head>
+<meta charset='utf-8' />
+<title>{_ui_t('admin_title','مدیریت سفارش‌ها')}</title>
+<style>
+body{{font-family: Vazirmatn, sans-serif; background:#0d1117; color:#e6edf3;}}
+a, input, select, button{{font-size:14px;}}
+.container{{max-width:1100px;margin:20px auto;padding:16px;background:#161b22;border-radius:12px;}}
+.controls label{{margin-inline-end:8px;}}
+.controls input,.controls select{{margin:4px;padding:6px 8px;border-radius:8px;border:1px solid #30363d;background:#0d1117;color:#c9d1d9;}}
+.controls .btn{{padding:8px 12px;border-radius:8px;border:1px solid #30363d;background:#238636;color:#fff;cursor:pointer;}}
+table{{width:100%;border-collapse:collapse;margin-top:16px;}}
+th,td{{border-bottom:1px solid #30363d;padding:10px;text-align:right;}}
+th{{background:#0d1117;color:#c9d1d9;}}
+.badge.pending{{background:#d29922;padding:4px 8px;border-radius:8px;color:#161b22;}}
+.badge.approved{{background:#238636;padding:4px 8px;border-radius:8px;color:#fff;}}
+.badge.rejected{{background:#f85149;padding:4px 8px;border-radius:8px;color:#161b22;}}
+.flash{{margin:12px 0;padding:10px;border-radius:8px;}}
+.flash.success{{background:#1f6feb26;border:1px solid #1f6feb;}}
+.flash.error{{background:#f8514926;border:1px solid #f85149;}}
+.inline{{display:inline;}}
+.pm,.tx,.dc{{width:140px;margin-inline:4px;}}
+.rcpt.yes{{color:#1f6feb;}}
+.rcpt.no{{color:#8b949e;}}
+.filters{{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0;}}
+.filters .chip{{background:#0d1117;border:1px solid #30363d;border-radius:999px;padding:6px 10px;}}
+</style>
+</head>
+<body>
+  <div class='container'>
+    <h2 style='margin-top:0'>{_ui_t('admin_title','مدیریت سفارش‌ها')}</h2>
+    {flash_html}
+    <form method='GET' action='/admin' class='controls'>
+      <input type='hidden' name='token' value='{config.bot.admin_dashboard_token}' />
+      <div class='filters'>
+        <span class='chip'>وضعیت:
+          <select name='status'>
+            <option value='' {'selected' if not f['status'] else ''}>همه</option>
+            <option value='pending' {'selected' if f['status']=='pending' else ''}>در انتظار</option>
+            <option value='approved' {'selected' if f['status']=='approved' else ''}>تایید</option>
+            <option value='rejected' {'selected' if f['status']=='rejected' else ''}>رد</option>
+          </select>
+        </span>
+        <span class='chip'>نوع:
+          <select name='type'>
+            <option value='' {'selected' if not f['ptype'] else ''}>همه</option>
+            <option value='course' {'selected' if f['ptype']=='course' else ''}>دوره</option>
+            <option value='book' {'selected' if f['ptype']=='book' else ''}>کتاب</option>
+          </select>
+        </span>
+        <span class='chip'>کاربر (تلگرام ID): <input name='uid' value='{f['uid_str']}' /></span>
+        <span class='chip'>محصول: <input name='product' value='{f['product_q']}' /></span>
+        <span class='chip'>از: <input type='date' name='from' value='{f['from_str']}' /></span>
+        <span class='chip'>تا: <input type='date' name='to' value='{f['to_str']}' /></span>
+        <button class='btn' type='submit'>جستجو</button>
+        <a class='btn' style='background:#1f6feb;text-decoration:none' href='{_qs(page=0)}&fmt=csv'>CSV</a>
+        <a class='btn' style='background:#a371f7;text-decoration:none' href='{_qs(page=0)}&fmt=xlsx'>XLSX</a>
+      </div>
+    </form>
+    <table>
+      <thead>
+        <tr>
+          <th>شناسه</th><th>کاربر</th><th>نوع</th><th>محصول</th><th>تاریخ</th><th>رسید</th><th>وضعیت</th><th>اقدام</th>
+        </tr>
+      </thead>
+      <tbody>
+        {html_rows}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+"""
+                    return web.Response(text=resp_html, content_type="text/html", charset="utf-8")
 
                     # Stats summary (top)
                     try:
@@ -2103,9 +2206,9 @@ async def run_webhook_mode(application: Application) -> None:
                         ).scalar_one_or_none()
                     if u:
                         text = (
-                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد."
+                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد.\nاگر سوالی دارید با پشتیبانی در تماس باشید."
                             if action == "approve"
-                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
+                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد.\nدر صورت واریز، لطفاً رسید صحیح را ارسال یا با @ostad_hatami تماس بگیرید."
                         )
                         asyncio.create_task(
                             application.bot.send_message(chat_id=u.telegram_user_id, text=text)
@@ -2245,9 +2348,9 @@ async def run_webhook_mode(application: Application) -> None:
                         ).scalar_one_or_none()
                     if u:
                         text = (
-                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد."
+                            f"✅ پرداخت شما برای «{db_purchase.product_id}» تایید شد.\nاگر سوالی دارید با پشتیبانی در تماس باشید."
                             if action == "approve"
-                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد."
+                            else f"❌ پرداخت شما برای «{db_purchase.product_id}» رد شد.\nدر صورت واریز، لطفاً رسید صحیح را ارسال یا با @ostad_hatami تماس بگیرید."
                         )
                         asyncio.create_task(
                             application.bot.send_message(chat_id=u.telegram_user_id, text=text)

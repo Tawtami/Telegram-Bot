@@ -182,6 +182,10 @@ def _upgrade_schema_if_needed(conn):
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_phone ON users(phone)"))
+            # Address fields
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT"))
+            conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(16)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_postal ON users(postal_code)"))
 
             # Purchases: ensure financial columns and receipt columns
             # Add financial columns to purchases if missing

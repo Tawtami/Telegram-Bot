@@ -28,6 +28,8 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(String(512), nullable=True)
     last_name: Mapped[str] = mapped_column(String(512), nullable=True)
     phone: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
+    address: Mapped[str] = mapped_column(String(512), nullable=True)
+    postal_code: Mapped[str] = mapped_column(String(16), nullable=True, index=True)
     # Legacy encrypted columns (kept for backward compatibility during migration)
     first_name_enc: Mapped[str] = mapped_column(String(512))
     last_name_enc: Mapped[str] = mapped_column(String(512))

@@ -30,6 +30,7 @@ async def start_profile_edit(update: Update, context: Any) -> None:
         [InlineKeyboardButton("🎓 رشته تحصیلی", callback_data="profile_edit:major")],
         [InlineKeyboardButton("👤 نام/نام‌خانوادگی", callback_data="profile_edit:name")],
         [InlineKeyboardButton("📱 شماره تماس", callback_data="profile_edit:phone")],
+        [InlineKeyboardButton("🏠 آدرس پستی", callback_data="profile_edit:address")],
         [InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")],
     ]
     await query.edit_message_text("کدام مورد را می‌خواهید ویرایش کنید؟", reply_markup=_kb(rows))
@@ -258,6 +259,14 @@ def build_profile_edit_handlers() -> list:
         context.user_data["profile_edit"] = "phone"
         await q.edit_message_text("لطفاً شماره تماس خود را ارسال کنید (مثال: 09121234567)")
 
+    async def request_address_edit(update: Update, context: Any) -> None:
+        q = update.callback_query
+        if not q:
+            return
+        await q.answer()
+        context.user_data["profile_edit"] = "address"
+        await q.edit_message_text("لطفاً آدرس پستی و کد پستی را در یک پیام ارسال کنید (مثال: تهران، خیابان ... — 1234567890)")
+
     async def handle_profile_text(update: Update, context: Any) -> None:
         # Decide based on context flag
         mode = context.user_data.get("profile_edit")
@@ -335,6 +344,60 @@ def build_profile_edit_handlers() -> list:
             await update.message.reply_text("✅ شماره تماس بروزرسانی شد.")
             context.user_data.pop("profile_edit", None)
             return
+        if mode == "address":
+            # Expect address — postalcode or just free text
+            raw = text
+            parts = [p.strip() for p in raw.replace("—", "-").split("-")]
+            address = parts[0].strip()
+            postal = parts[1].strip() if len(parts) > 1 else ""
+            ok = True
+            errs = []
+            if address:
+                if len(address) < 5:
+                    ok = False
+                    errs.append("آدرس بسیار کوتاه است.")
+            if postal:
+                import re
+                pc = Validator.convert_to_english_digits(postal)
+                if not re.fullmatch(r"^\d{5,10}$", pc):
+                    ok = False
+                    errs.append("کد پستی نامعتبر است.")
+            if not ok:
+                await update.message.reply_text("؛ ".join(errs))
+                return
+            with session_scope() as session:
+                db_user = (
+                    session.query(DBUser).filter(DBUser.telegram_user_id == user_id).one_or_none()
+                )
+                if db_user:
+                    old_addr = getattr(db_user, "address", None)
+                    old_pc = getattr(db_user, "postal_code", None)
+                    audit_profile_change(
+                        session,
+                        user_id=db_user.id,
+                        field_name="address",
+                        old_value=old_addr,
+                        new_value=address,
+                        changed_by=user_id,
+                    )
+                    if postal:
+                        audit_profile_change(
+                            session,
+                            user_id=db_user.id,
+                            field_name="postal_code",
+                            old_value=old_pc,
+                            new_value=postal,
+                            changed_by=user_id,
+                        )
+                get_or_create_user(session, user_id, city=None, province=None)
+                # Direct update
+                if db_user:
+                    db_user.address = address
+                    db_user.postal_code = postal or None
+                session.flush()
+            await update.message.reply_text("✅ آدرس پستی بروزرسانی شد.")
+            context.user_data.pop("profile_edit", None)
+            return
 
     return [
         CallbackQueryHandler(start_profile_edit, pattern=r"^menu_profile_edit$"),
@@ -344,6 +407,7 @@ def build_profile_edit_handlers() -> list:
         CallbackQueryHandler(edit_major, pattern=r"^profile_edit:major$"),
         CallbackQueryHandler(request_name_edit, pattern=r"^profile_edit:name$"),
         CallbackQueryHandler(request_phone_edit, pattern=r"^profile_edit:phone$"),
+        CallbackQueryHandler(request_address_edit, pattern=r"^profile_edit:address$"),
         CallbackQueryHandler(set_province, pattern=r"^set_province:"),
         CallbackQueryHandler(set_city, pattern=r"^set_city:"),
         CallbackQueryHandler(set_grade, pattern=r"^set_grade:"),

@@ -257,6 +257,16 @@ class Validator:
             if not is_valid:
                 errors.append(error)
 
+        # Optional address validations
+        if user_data.get("postal_code"):
+            pc = cls.convert_to_english_digits(user_data["postal_code"]) or ""
+            if not re.fullmatch(r"^\d{5,10}$", pc):
+                errors.append("کد پستی نامعتبر است.")
+        if user_data.get("address"):
+            addr = str(user_data.get("address", "")).strip()
+            if len(addr) < 5:
+                errors.append("آدرس بسیار کوتاه است.")
+
         return len(errors) == 0, errors
 
     @staticmethod
