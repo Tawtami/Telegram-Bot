@@ -7,7 +7,6 @@ async def test_get_approved_book_buyers(tmp_path):
     from database.db import session_scope
     from database.models_sql import User, Purchase
     from database.service import get_approved_book_buyers
-    from utils.crypto import crypto_manager
 
     # Seed unique user id per test run
     unique_id = int(time.time() * 1000) % 100000 + 50  # Get unique timestamp-based ID
@@ -15,9 +14,9 @@ async def test_get_approved_book_buyers(tmp_path):
     with session_scope() as session:
         u = User(
             telegram_user_id=unique_id,  # avoid collisions across tests
-            first_name_enc=crypto_manager.encrypt_text("A"),
-            last_name_enc=crypto_manager.encrypt_text("B"),
-            phone_enc=crypto_manager.encrypt_text("0912"),
+            first_name="A",
+            last_name="B",
+            phone="0912",
         )
         session.add(u)
         session.flush()

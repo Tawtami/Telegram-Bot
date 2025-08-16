@@ -30,10 +30,9 @@ from utils.crypto import crypto_manager
 # ---------------------
 
 
-def encrypt_text(value: Optional[str]) -> str:
-    if not value:
-        return ""
-    return crypto_manager.encrypt_text(str(value))
+def encrypt_text(_: Optional[str]) -> str:
+    # Encryption disabled for PII and notes; keep signature for compatibility
+    return ""
 
 
 def get_or_create_user(
@@ -53,13 +52,9 @@ def get_or_create_user(
     if user is None:
         user = User(
             telegram_user_id=telegram_user_id,
-            # Prefer plain columns; keep legacy enc filled for backward compatibility
             first_name=(first_name or ""),
             last_name=(last_name or ""),
             phone=(phone or ""),
-            first_name_enc=encrypt_text(first_name),
-            last_name_enc=encrypt_text(last_name),
-            phone_enc=encrypt_text(phone),
             province=province or "",
             city=city or "",
             grade=grade or "",
@@ -73,15 +68,12 @@ def get_or_create_user(
     changed = False
     if first_name is not None:
         user.first_name = first_name
-        user.first_name_enc = encrypt_text(first_name)
         changed = True
     if last_name is not None:
         user.last_name = last_name
-        user.last_name_enc = encrypt_text(last_name)
         changed = True
     if phone is not None:
         user.phone = phone
-        user.phone_enc = encrypt_text(phone)
         changed = True
     if province is not None:
         user.province = province
@@ -165,7 +157,7 @@ def create_purchase(
         discount=discount,
         payment_method=payment_method,
         transaction_id=transaction_id,
-        notes_enc=encrypt_text(notes) if notes else None,
+        notes_enc=None,
     )
     session.add(purchase)
     session.flush()

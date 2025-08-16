@@ -9,7 +9,6 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from config import config
 from database.models_sql import User as DBUser
-from utils.crypto import crypto_manager
 from utils.rate_limiter import rate_limit_handler
 from ui.keyboards import build_main_menu_keyboard
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
@@ -62,21 +61,10 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
             reply_markup=build_main_menu_keyboard(),
         )
         return
-    # Prefer plain columns; fall back to legacy encrypted fields for backward compatibility
+    # Use plain columns only (legacy encrypted fields removed)
     first_name = (getattr(db_user, "first_name", None) or "").strip()
     last_name = (getattr(db_user, "last_name", None) or "").strip()
     phone = (getattr(db_user, "phone", None) or "").strip()
-    if not (first_name and last_name):
-        try:
-            first_name = first_name or (crypto_manager.decrypt_text(db_user.first_name_enc) or "")
-            last_name = last_name or (crypto_manager.decrypt_text(db_user.last_name_enc) or "")
-        except Exception:
-            pass
-    if not phone:
-        try:
-            phone = crypto_manager.decrypt_text(db_user.phone_enc) or ""
-        except Exception:
-            phone = ""
     phone = phone or "ثبت نشده"
     student = {
         "first_name": first_name,

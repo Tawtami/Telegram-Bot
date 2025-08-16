@@ -30,10 +30,7 @@ class User(Base):
     phone: Mapped[str] = mapped_column(String(64), nullable=True, index=True)
     address: Mapped[str] = mapped_column(String(512), nullable=True)
     postal_code: Mapped[str] = mapped_column(String(16), nullable=True, index=True)
-    # Legacy encrypted columns (kept for backward compatibility during migration)
-    first_name_enc: Mapped[str] = mapped_column(String(512))
-    last_name_enc: Mapped[str] = mapped_column(String(512))
-    phone_enc: Mapped[str] = mapped_column(String(512), nullable=True)
+    # Legacy encrypted columns removed
     province: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     city: Mapped[str] = mapped_column(String(128), nullable=True, index=True)
     grade: Mapped[str] = mapped_column(String(32), nullable=True, index=True)
@@ -99,7 +96,7 @@ class Purchase(Base):
     receipt_notes: Mapped[str] = mapped_column(String(1024), nullable=True)
     admin_action_by: Mapped[int] = mapped_column(BigInteger, nullable=True)
     admin_action_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
-    notes_enc: Mapped[str] = mapped_column(String(2048), nullable=True)
+    # Legacy notes_enc removed (encryption disabled)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc), index=True
     )

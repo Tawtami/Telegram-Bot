@@ -36,9 +36,9 @@ def test_user_model_creation(session):
     """Test User model creation and basic attributes."""
     user = User(
         telegram_user_id=123456789,
-        first_name_enc="encrypted_first_name",
-        last_name_enc="encrypted_last_name",
-        phone_enc="encrypted_phone",
+        first_name="first",
+        last_name="last",
+        phone="09120000000",
         province="تهران",
         city="تهران",
         grade="دهم",
@@ -51,8 +51,8 @@ def test_user_model_creation(session):
     # Test retrieval
     retrieved_user = session.query(User).filter_by(telegram_user_id=123456789).first()
     assert retrieved_user is not None
-    assert retrieved_user.first_name_enc == "encrypted_first_name"
-    assert retrieved_user.last_name_enc == "encrypted_last_name"
+    assert retrieved_user.first_name == "first"
+    assert retrieved_user.last_name == "last"
     assert retrieved_user.province == "تهران"
     assert retrieved_user.grade == "دهم"
     assert retrieved_user.field_of_study == "ریاضی"
@@ -93,7 +93,7 @@ def test_course_model(session):
 def test_purchase_model(session):
     """Test Purchase model with relationships."""
     # Create a user first
-    user = User(telegram_user_id=111111111, first_name_enc="test_user", last_name_enc="test_last")
+    user = User(telegram_user_id=111111111, first_name="test_user", last_name="test_last")
     session.add(user)
     session.flush()  # Get the user ID
 
@@ -120,7 +120,7 @@ def test_profile_change_model(session):
     """Test ProfileChange model."""
     # Create a user first
     user = User(
-        telegram_user_id=222222222, first_name_enc="change_user", last_name_enc="change_last"
+        telegram_user_id=222222222, first_name="change_user", last_name="change_last"
     )
     session.add(user)
     session.flush()
@@ -146,7 +146,7 @@ def test_profile_change_model(session):
 def test_model_relationships(session):
     """Test that model relationships work correctly."""
     # Create user
-    user = User(telegram_user_id=333333333, first_name_enc="rel_user", last_name_enc="rel_last")
+    user = User(telegram_user_id=333333333, first_name="rel_user", last_name="rel_last")
     session.add(user)
     session.flush()
 
@@ -182,7 +182,7 @@ def test_model_constraints(session):
     """Test model constraints and unique fields."""
     # Test unique telegram_user_id constraint
     user1 = User(
-        telegram_user_id=444444444, first_name_enc="unique_user1", last_name_enc="unique_last1"
+        telegram_user_id=444444444, first_name="unique_user1", last_name="unique_last1"
     )
     session.add(user1)
     session.commit()
@@ -190,8 +190,8 @@ def test_model_constraints(session):
     # Try to create another user with same telegram_user_id
     user2 = User(
         telegram_user_id=444444444,  # Same ID
-        first_name_enc="unique_user2",
-        last_name_enc="unique_last2",
+        first_name="unique_user2",
+        last_name="unique_user2",
     )
     session.add(user2)
 
@@ -209,7 +209,7 @@ def test_model_constraints(session):
 def test_model_defaults(session):
     """Test model default values."""
     user = User(
-        telegram_user_id=555555555, first_name_enc="default_user", last_name_enc="default_last"
+        telegram_user_id=555555555, first_name="default_user", last_name="default_last"
     )
 
     # Add and flush to trigger default value generation

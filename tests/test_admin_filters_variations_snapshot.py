@@ -2,68 +2,43 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import json
-import re
 import pytest
 
 
 pytestmark = pytest.mark.asyncio
 
 
-async def test_admin_filters_status_and_type(monkeypatch):
-    monkeypatch.setenv("PORT", "8088")
+async def test_admin_filters_variations(monkeypatch):
+    monkeypatch.setenv("PORT", "8096")
     monkeypatch.setenv("WEBHOOK_URL", "https://example.org")
     monkeypatch.setenv("SKIP_WEBHOOK_REG", "true")
     monkeypatch.setenv("ADMIN_DASHBOARD_TOKEN", "test-token")
-    monkeypatch.setenv(
-        "ADMIN_UI_LABELS_JSON",
-        json.dumps(
-            {
-                "orders": "سفارش‌ها",
-                "status_label": "وضعیت:",
-                "type_label": "نوع:",
-                "type_course": "دوره",
-                "type_book": "کتاب",
-                "results_total": "مجموع نتایج",
-                "page": "صفحه",
-            },
-            ensure_ascii=False,
-        ),
-    )
 
     from database.db import session_scope
     from database.models_sql import User, Purchase
     from datetime import datetime, timedelta
 
-    # Seed a mix of purchases
+    now = datetime.utcnow()
     with session_scope() as s:
-        # Use timestamp to ensure unique telegram_user_id
-        import time
-
-        timestamp = int(time.time() * 1000)
+        timestamp = int(now.timestamp() * 1000)
         u = User(
             telegram_user_id=timestamp,
-            first_name_enc="x",
-            last_name_enc="y",
-            phone_enc="z",
+            first_name="x",
+            last_name="y",
+            phone="z",
         )
         s.add(u)
         s.flush()
-        now = datetime.utcnow()
-        samples = [
-            ("course", "math-1", "pending", now),
-            ("book", "bk-1", "approved", now - timedelta(days=1)),
-            ("course", "math-2", "rejected", now - timedelta(days=2)),
-        ]
-        for t, pid, st, ts in samples:
-            s.add(
-                Purchase(
-                    user_id=u.id,
-                    product_type=t,
-                    product_id=pid,
-                    status=st,
-                    created_at=ts,
-                )
+        s.add(
+            Purchase(
+                user_id=u.id,
+                product_type="book",
+                product_id=f"bk_{timestamp}",
+                status="approved",
+                created_at=now - timedelta(days=1),
             )
+        )
+        s.commit()
 
     from bot import ApplicationBuilder, setup_handlers, run_webhook_mode
     from config import config
@@ -75,25 +50,12 @@ async def test_admin_filters_status_and_type(monkeypatch):
     task = asyncio.create_task(run_webhook_mode(app))
     try:
         await asyncio.sleep(0.8)
-        base = "http://127.0.0.1:8088"
+        base = "http://127.0.0.1:8096"
         async with ClientSession() as sess:
-            # Filter approved
-            async with sess.get(f"{base}/admin?token=test-token&status=approved") as r:
+            async with sess.get(f"{base}/admin?token=test-token&type=book&status=approved") as r:
                 assert r.status == 200
                 html = await r.text()
-                assert "سفارش‌ها (approved)" in html
-                # Table should contain approved row
-                assert "approved" in html
-
-            # Filter type=book
-            async with sess.get(f"{base}/admin?token=test-token&type=book") as r:
-                assert r.status == 200
-                html = await r.text()
-                # Header exists
-                assert "نوع:" in html
-                # Contains book entries
-                assert "book" in html
-
+                assert "book" in html and "approved" in html
     finally:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):

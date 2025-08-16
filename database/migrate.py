@@ -177,7 +177,7 @@ def _upgrade_schema_if_needed(conn):
     # 3) Fallback DDL for critical tables and column additions (Postgres)
     try:
         if str(getattr(ENGINE.dialect, 'name', '')).startswith("postgresql"):
-            # Users: add plain PII columns if missing
+            # Users: ensure plain PII columns exist; legacy _enc columns removal is intentional
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT"))
@@ -186,6 +186,7 @@ def _upgrade_schema_if_needed(conn):
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT"))
             conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS postal_code VARCHAR(16)"))
             conn.execute(text("CREATE INDEX IF NOT EXISTS ix_users_postal ON users(postal_code)"))
+            # Do NOT auto-drop *_enc columns here to avoid data loss; manual migration can drop them later.
 
             # Purchases: ensure financial columns and receipt columns
             # Add financial columns to purchases if missing

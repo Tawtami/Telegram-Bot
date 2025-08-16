@@ -1,7 +1,7 @@
 import pytest
 
 
-def _seed_purchase(session, crypto_manager):
+def _seed_purchase(session, _crypto_manager_unused):
     import time
     from database.models_sql import User, Purchase
 
@@ -9,9 +9,9 @@ def _seed_purchase(session, crypto_manager):
 
     u = User(
         telegram_user_id=unique_id,
-        first_name_enc=crypto_manager.encrypt_text("X"),
-        last_name_enc=crypto_manager.encrypt_text("Y"),
-        phone_enc=crypto_manager.encrypt_text("0912"),
+        first_name="X",
+        last_name="Y",
+        phone="0912",
     )
     session.add(u)
     session.flush()
