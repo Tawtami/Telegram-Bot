@@ -105,13 +105,17 @@ async def handle_menu_selection(update: Update, context: ContextTypes.DEFAULT_TY
                 reply_markup=_REGISTER_KEYBOARD,
             )
             return
+        first_name = (getattr(db_user, "first_name", None) or "").strip()
+        last_name = (getattr(db_user, "last_name", None) or "").strip()
+        phone = (getattr(db_user, "phone", None) or "ثبت نشده").strip() or "ثبت نشده"
         profile_text = (
             "👤 **پروفایل شما**\n\n"
+            f"👤 **نام:** {first_name} {last_name}\n"
+            f"📱 **شماره تماس:** {phone}\n"
             f"📍 **استان:** {db_user.province or '—'}\n"
             f"🏙 **شهر:** {db_user.city or '—'}\n"
             f"📚 **پایه تحصیلی:** {db_user.grade or '—'}\n"
-            f"🎓 **رشته تحصیلی:** {db_user.field_of_study or '—'}\n\n"
-            "ℹ️ برای حفظ حریم خصوصی، نام و شماره تماس نمایش داده نمی‌شود."
+            f"🎓 **رشته تحصیلی:** {db_user.field_of_study or '—'}\n"
         )
 
         kb = InlineKeyboardMarkup(
