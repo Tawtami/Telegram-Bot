@@ -301,10 +301,14 @@ class ClientSession:
 
                 with _sess() as _s:
                     p = _s.query(_Purchase).filter_by(id=pid).first()
-                    if p and getattr(p, "status", None) == "pending" and action in ("approve", "reject"):
+                    if (
+                        p
+                        and getattr(p, "status", None) == "pending"
+                        and action in ("approve", "reject")
+                    ):
                         if action == "approve":
-                            pm = (str(data.get("payment_method") or "").lower() or None)
-                            tx = (str(data.get("transaction_id") or "") or None)
+                            pm = str(data.get("payment_method") or "").lower() or None
+                            tx = str(data.get("transaction_id") or "") or None
                             try:
                                 dc = int(str(data.get("discount") or "0") or 0)
                             except Exception:
