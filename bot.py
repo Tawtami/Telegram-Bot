@@ -754,8 +754,7 @@ async def profile_command(update: Update, context: Any) -> None:
                     )
                     .select_from(DBReceipt)
                     .join(DBPurchase, DBPurchase.id == DBReceipt.purchase_id)
-                    .join(DBUser, DBUser.id == DBPurchase.user_id)
-                    .where(DBUser.telegram_user_id == user_id)
+                    .where(DBPurchase.user_id == getattr(db_user, "id", -1))
                     .order_by(DBReceipt.submitted_at.desc())
                 ).fetchmany(5)
             if rows:
