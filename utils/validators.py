@@ -299,3 +299,19 @@ class Validator:
             )
 
         return True, "فایل معتبر است."
+
+    @staticmethod
+    def format_card_number(card: str) -> str:
+        """Return card number grouped in blocks of 4 digits with spaces.
+
+        Non-digits are stripped first; if formatting fails, original string is returned.
+        """
+        if not card:
+            return ""
+        import re
+
+        digits = re.sub(r"\D+", "", str(card))
+        if len(digits) < 12:
+            return card
+        groups = [digits[i : i + 4] for i in range(0, len(digits), 4)]
+        return " ".join(groups)

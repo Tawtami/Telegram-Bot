@@ -1494,21 +1494,22 @@ async def run_webhook_mode(application: Application) -> None:
                 total = len(items)
                 start = f["page"] * f["page_size"]
                 slice_items = items[start : start + f["page_size"]]
-                rows = [
-                    {
-                        "id": p.id,
-                        "user_id": p.user_id,
-                        "type": p.product_type,
-                        "product": p.product_id,
-                        "status": p.status,
-                        "created_at": (
-                            getattr(p, "created_at", None).isoformat()
-                            if getattr(p, "created_at", None)
-                            else None
-                        ),
-                    }
-                    for p in slice_items
-                ]
+                rows = []
+                for p in slice_items:
+                    rows.append(
+                        {
+                            "id": p.id,
+                            "user_id": p.user_id,
+                            "type": p.product_type,
+                            "product": p.product_id,
+                            "status": p.status,
+                            "created_at": (
+                                getattr(p, "created_at", None).isoformat()
+                                if getattr(p, "created_at", None)
+                                else None
+                            ),
+                        }
+                    )
 
                 accept = request.headers.get("Accept", "").lower()
                 wants_csv = f["fmt"] == "csv" or ("text/csv" in accept)

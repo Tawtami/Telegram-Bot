@@ -238,12 +238,14 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     """Show payment information"""
     book_data = context.user_data["book_purchase"]
 
+    from utils.validators import Validator
+    card_fmt = Validator.format_card_number(config.bot.payment_card_number)
     message_text = (
         "💳 اطلاعات پرداخت:\n\n"
         f"📖 کتاب: {book_data['title']}\n"
         f"💰 مبلغ: {book_data['price']:,} تومان\n\n"
         "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
-        f"{config.bot.payment_card_number}\n"
+        f"{card_fmt}\n"
         f"به نام: {config.bot.payment_payee_name}\n\n"
         "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
         "❗️ پس از تایید پرداخت توسط ادمین، اطلاعات ارسال کتاب به شما اعلام خواهد شد."
@@ -254,14 +256,20 @@ async def show_payment_info(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             await update.message.reply_text(
                 message_text,
                 reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+                    [
+                        [InlineKeyboardButton("📤 ارسال رسید", callback_data="hint_upload_receipt")],
+                        [InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")],
+                    ]
                 ),
             )
         elif update.callback_query:
             await update.callback_query.edit_message_text(
                 message_text,
                 reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")]]
+                    [
+                        [InlineKeyboardButton("📤 ارسال رسید", callback_data="hint_upload_receipt")],
+                        [InlineKeyboardButton("🔙 انصراف", callback_data="cancel_book_purchase")],
+                    ]
                 ),
             )
 

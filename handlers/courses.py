@@ -873,9 +873,11 @@ async def handle_course_registration_confirm(
     else:
         payment_text += "💰 مبلغ: تماس بگیرید\n\n"
 
+    from utils.validators import Validator
+    card_fmt = Validator.format_card_number(config.bot.payment_card_number)
     payment_text += (
         "1️⃣ مبلغ را به شماره کارت زیر واریز کنید:\n"
-        f"{config.bot.payment_card_number}\n"
+        f"{card_fmt}\n"
         f"به نام: {config.bot.payment_payee_name}\n\n"
         "2️⃣ تصویر رسید پرداخت را ارسال کنید.\n\n"
         "❗️ پس از تایید پرداخت توسط ادمین، دوره به لیست دوره‌های خریداری‌شده شما اضافه خواهد شد.\n\n"
@@ -885,7 +887,10 @@ async def handle_course_registration_confirm(
     await query.edit_message_text(
         payment_text,
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")]]
+            [
+                [InlineKeyboardButton("📤 ارسال رسید", callback_data="hint_upload_receipt")],
+                [InlineKeyboardButton("🔙 بازگشت به منو", callback_data="back_to_menu")],
+            ]
         ),
     )
 

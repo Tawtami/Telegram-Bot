@@ -88,6 +88,17 @@ async def handle_payment_receipt(update: Update, context: ContextTypes.DEFAULT_T
     caption = None
     success_message = None
 
+    # If user clicked the hint button, guide them
+    if update.callback_query and update.callback_query.data == "hint_upload_receipt":
+        await update.callback_query.answer()
+        await update.callback_query.edit_message_text(
+            "لطفاً همین حالا تصویر رسید پرداخت را به صورت عکس ارسال کنید تا بررسی شود.",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🔙 بازگشت", callback_data="back_to_menu")]]
+            ),
+        )
+        return
+
     # Helper to build admin inline keyboard for approval/rejection (token based)
     def admin_approval_keyboard(token: str) -> InlineKeyboardMarkup:
         data_prefix = f"pay:{token}"
