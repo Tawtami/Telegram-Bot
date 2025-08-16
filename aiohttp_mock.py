@@ -133,6 +133,7 @@ class ClientSession:
         if parsed.path.startswith('/admin'):
             # Read desired format
             from urllib.parse import parse_qs
+
             q = parse_qs(parsed.query)
             fmt = (q.get('format', ['html'])[0] or 'html').lower()
             if fmt == 'csv':
@@ -144,11 +145,17 @@ class ClientSession:
             if fmt == 'xlsx':
                 # Not generating real XLSX - just a placeholder with proper content type
                 response._body = b'PK\x03\x04mockxlsx'
-                response._headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                response._headers['Content-Type'] = (
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
                 return response
             # JSON format requested
-            if fmt == 'json' or 'application/json' in kwargs.get('headers', {}).get('Accept', '').lower():
+            if (
+                fmt == 'json'
+                or 'application/json' in kwargs.get('headers', {}).get('Accept', '').lower()
+            ):
                 import json as _json
+
                 payload = {
                     "status": (q.get('status', [''])[0] or ''),
                     "type": (q.get('type', [''])[0] or ''),
@@ -223,11 +230,13 @@ class ClientSession:
             ]
             if flash_msg:
                 parts_html.append(f"<div class='flash {flash_type}'>{flash_msg}</div>")
-            parts_html.extend([
-                "<div class='flash success'>با موفقیت تایید شد.</div>",
-                "<div class='flash success'>با موفقیت رد شد.</div>",
-                "</body></html>",
-            ])
+            parts_html.extend(
+                [
+                    "<div class='flash success'>با موفقیت تایید شد.</div>",
+                    "<div class='flash success'>با موفقیت رد شد.</div>",
+                    "</body></html>",
+                ]
+            )
             response._body = "".join(parts_html).encode('utf-8')
             # Simulate setting CSRF cookie via headers
             response._headers['Set-Cookie'] = [
