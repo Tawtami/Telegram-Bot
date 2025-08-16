@@ -108,6 +108,13 @@ class ClientSession:
 
     def __init__(self, *args, **kwargs):
         self._cookies = {}
+        self._external_cookie_jar = kwargs.get('cookie_jar') or CookieJar(unsafe=True)
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        return False
 
     class _CookieJar:
         def __init__(self, outer):
@@ -119,9 +126,32 @@ class ClientSession:
         def update_cookies(self, cookies):
             self._outer._cookies.update(cookies)
 
+        def filter_cookies(self, url):
+            merged = {}
+            try:
+                merged.update(self._outer._external_cookie_jar._cookies)
+            except Exception:
+                pass
+            merged.update(self._outer._cookies)
+            return merged
+
     @property
     def cookie_jar(self):
         return ClientSession._CookieJar(self)
+
+    def _capture_cookies(self, response):
+        try:
+            hdr = response._headers.get('Set-Cookie')
+            values = hdr if isinstance(hdr, list) else ([hdr] if hdr else [])
+            for h in values:
+                if not h:
+                    continue
+                main = str(h).split(';', 1)[0]
+                if '=' in main:
+                    k, v = main.split('=', 1)
+                    self._cookies[k] = {'value': v}
+        except Exception:
+            pass
 
     def get(self, url, *args, **kwargs):
         """Mock get method - returns response object directly"""
@@ -141,6 +171,7 @@ class ClientSession:
                 csv = 'id,user_id,telegram_user_id,product_type,product_id,status,admin_action_by,admin_action_at,created_at\n'
                 response._body = csv.encode('utf-8')
                 response._headers['Content-Type'] = 'text/csv'
+                self._capture_cookies(response)
                 return response
             if fmt == 'xlsx':
                 # Not generating real XLSX - just a placeholder with proper content type
@@ -148,6 +179,7 @@ class ClientSession:
                 response._headers['Content-Type'] = (
                     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 )
+                self._capture_cookies(response)
                 return response
             # JSON format requested
             if (
@@ -170,6 +202,7 @@ class ClientSession:
                 }
                 response._body = _json.dumps(payload).encode('utf-8')
                 response._headers['Content-Type'] = 'application/json'
+                self._capture_cookies(response)
                 return response
             # Return minimal HTML that includes expected labels
             from urllib.parse import urlparse, parse_qs
@@ -243,6 +276,7 @@ class ClientSession:
                 'csrf=TESTCSRF; Path=/; Max-Age=3600; HttpOnly',
                 'csrf=TESTCSRF; Path=/; Max-Age=3600; Domain=127.0.0.1; HttpOnly',
             ]
+            self._capture_cookies(response)
             return response
         return response
 
@@ -346,11 +380,17 @@ def _response(
     return r
 
 
+def _middleware_decorator(func):
+	# Simply return the function; in our mock we don't apply it
+	return func
+
+
 class web:
-    Application = _App
-    AppRunner = _AppRunner
-    TCPSite = _TCPSite
-    Response = staticmethod(_response)
-    json_response = staticmethod(_json_response)
-    HTTPException = _HTTPException
-    HTTPSeeOther = _HTTPSeeOther
+	Application = _App
+	AppRunner = _AppRunner
+	TCPSite = _TCPSite
+	Response = staticmethod(_response)
+	json_response = staticmethod(_json_response)
+	HTTPException = _HTTPException
+	HTTPSeeOther = _HTTPSeeOther
+	middleware = staticmethod(_middleware_decorator)
