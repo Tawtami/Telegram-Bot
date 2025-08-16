@@ -242,15 +242,15 @@ async def handle_paid_single_select(update: Update, context: ContextTypes.DEFAUL
     title, slug = slug_map.get(key, ("تک‌درس", "single_unknown"))
     # Try enrich from data/courses.json if exists
     try:
-        import json
-        from utils.cache import cache_manager
+    import json
+    from utils.cache import cache_manager
 
-        c = cache_manager.get_cache("courses")
-        all_courses = c._get_sync("all_courses")
-        if all_courses is None:
+    c = cache_manager.get_cache("courses")
+    all_courses = c._get_sync("all_courses")
+    if all_courses is None:
             with open("data/courses.json", "r", encoding="utf-8") as f:
                 all_courses = json.load(f)
-            c._set_sync("all_courses", all_courses, ttl=600)
+        c._set_sync("all_courses", all_courses, ttl=600)
         # Find any paid course matching our slug key by course_id or title contains
         course = next(
             (
