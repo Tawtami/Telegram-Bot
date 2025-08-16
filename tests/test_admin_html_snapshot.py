@@ -13,7 +13,7 @@ async def test_admin_html_includes_receipt_preview():
     from telegram_mock import MagicMock
 
     Application = MagicMock
-    import aiohttp
+    from aiohttp.test_utils import TestServer, TestClient
 
     app = web.Application()
     application = Application()
@@ -23,19 +23,18 @@ async def test_admin_html_includes_receipt_preview():
     for r in application._web_app.router.routes():
         app.router.add_routes([r])
 
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, host="127.0.0.1", port=0)
-    await site.start()
-    port = list(site._server.sockets)[0].getsockname()[1]
+    server = TestServer(app)
+    await server.start_server()
+    client = TestClient(server)
+    await client.start_server()
 
-    async with aiohttp.ClientSession() as session:
-        resp = await session.get(f"http://127.0.0.1:{port}/admin", params={"fmt": "html"})
-        assert resp.status in (200, 401)
-        if resp.status == 200:
-            text = await resp.text()
-            assert "🔍" in text
-            assert "CSV" in text and "XLSX" in text
-            assert "action=preview" in text
+    resp = await client.get("/admin", params={"fmt": "html"})
+    assert resp.status in (200, 401)
+    if resp.status == 200:
+        text = await resp.text()
+        assert "🔍" in text
+        assert "CSV" in text and "XLSX" in text
+        assert "action=preview" in text
 
-    await runner.cleanup()
+    await client.close()
+    await server.close()
