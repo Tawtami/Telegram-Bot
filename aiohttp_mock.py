@@ -191,6 +191,8 @@ class ClientSession:
             csv_href = f"{base}?{qs}&format=csv"
             xlsx_href = f"{base}?{qs}&format=xlsx"
             title_suffix = f" ({status_q})" if status_q else ""
+            flash_msg = (q.get('flash', [''])[0] or '').strip()
+            flash_type = (q.get('flash_type', ['success'])[0] or 'success').strip() or 'success'
             html = (
                 "<html><head><meta charset='utf-8'></head><body>"
                 f"<h1>سفارش‌ها{title_suffix}</h1>"
@@ -223,6 +225,7 @@ class ClientSession:
                 "<th>وضعیت</th>"
                 "<th>اقدام</th>"
                 "</tr></thead><tbody></tbody></table>"
+                + (f"<div class='flash {flash_type}'>{flash_msg}</div>" if flash_msg else "")
                 "<div class='flash success'>با موفقیت تایید شد.</div>"
                 "<div class='flash success'>با موفقیت رد شد.</div>"
                 "</body></html>"
