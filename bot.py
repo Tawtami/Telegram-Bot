@@ -767,6 +767,7 @@ async def profile_command(update: Update, context: Any) -> None:
             else:
                 # Test-only fallback: if no rows and running under pytest, show latest receipts globally
                 import os as _os
+
                 if _os.getenv("PYTEST_CURRENT_TEST"):
                     with _s() as s:
                         alt = s.execute(
