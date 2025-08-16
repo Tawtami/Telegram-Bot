@@ -51,7 +51,7 @@ class PerformanceConfig:
     """Performance and caching settings"""
 
     cache_ttl_seconds: int = 300
-    max_requests_per_minute: int = 10
+    max_requests_per_minute: int = 1000
     cleanup_interval_seconds: int = 300
     max_concurrent_users: int = 1000
     request_timeout_seconds: int = 30
@@ -192,7 +192,7 @@ class Config:
 
         self.performance = PerformanceConfig(
             cache_ttl_seconds=int(os.getenv("CACHE_TTL_SECONDS", "300")),
-            max_requests_per_minute=int(os.getenv("MAX_REQUESTS_PER_MINUTE", "10")),
+            max_requests_per_minute=int(os.getenv("MAX_REQUESTS_PER_MINUTE", "1000")),
             cleanup_interval_seconds=int(os.getenv("CLEANUP_INTERVAL_SECONDS", "300")),
             max_concurrent_users=int(os.getenv("MAX_CONCURRENT_USERS", "1000")),
             request_timeout_seconds=int(os.getenv("REQUEST_TIMEOUT_SECONDS", "30")),

@@ -7,6 +7,7 @@ for menus/submenus without hitting Telegram network.
 
 import asyncio
 from types import SimpleNamespace
+from typing import cast, Any
 
 # Ensure telegram mocks are loaded
 import sys, os, types
@@ -28,7 +29,8 @@ def _noop_session_scope():
     yield SimpleNamespace()
 
 
-fake_db.session_scope = _noop_session_scope
+# Help static type checkers recognize dynamically injected attributes
+setattr(fake_db, 'session_scope', cast(Any, _noop_session_scope))
 sys.modules['database.db'] = fake_db
 
 fake_service = types.ModuleType('database.service')
@@ -51,8 +53,8 @@ class _Dummy:
     pass
 
 
-fake_models.User = _Dummy
-fake_models.Purchase = _Dummy
+setattr(fake_models, 'User', cast(Any, _Dummy))
+setattr(fake_models, 'Purchase', cast(Any, _Dummy))
 sys.modules['database.models_sql'] = fake_models
 
 from handlers.courses import (
