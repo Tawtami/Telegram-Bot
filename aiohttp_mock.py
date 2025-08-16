@@ -165,6 +165,12 @@ class ClientSession:
             from urllib.parse import parse_qs
 
             q = parse_qs(parsed.query)
+            # Enforce admin token for protected routes
+            token_val = (q.get('token', [''])[0] or '').strip()
+            if not token_val:
+                response.status = 401
+                response._body = b"unauthorized"
+                return response
             fmt = (q.get('format', ['html'])[0] or 'html').lower()
             if fmt == 'csv':
                 # Minimal CSV content
