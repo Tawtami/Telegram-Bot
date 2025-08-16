@@ -265,7 +265,9 @@ def build_profile_edit_handlers() -> list:
             return
         await q.answer()
         context.user_data["profile_edit"] = "address"
-        await q.edit_message_text("لطفاً آدرس پستی و کد پستی را در یک پیام ارسال کنید (مثال: تهران، خیابان ... — 1234567890)")
+        await q.edit_message_text(
+            "لطفاً آدرس پستی و کد پستی را در یک پیام ارسال کنید (مثال: تهران، خیابان ... — 1234567890)"
+        )
 
     async def handle_profile_text(update: Update, context: Any) -> None:
         # Decide based on context flag
@@ -358,6 +360,7 @@ def build_profile_edit_handlers() -> list:
                     errs.append("آدرس بسیار کوتاه است.")
             if postal:
                 import re
+
                 pc = Validator.convert_to_english_digits(postal)
                 if not re.fullmatch(r"^\d{5,10}$", pc):
                     ok = False
