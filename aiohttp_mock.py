@@ -381,16 +381,16 @@ def _response(
 
 
 def _middleware_decorator(func):
-	# Simply return the function; in our mock we don't apply it
-	return func
+    # Simply return the function; in our mock we don't apply it
+    return func
 
 
 class web:
-	Application = _App
-	AppRunner = _AppRunner
-	TCPSite = _TCPSite
-	Response = staticmethod(_response)
-	json_response = staticmethod(_json_response)
-	HTTPException = _HTTPException
-	HTTPSeeOther = _HTTPSeeOther
-	middleware = staticmethod(_middleware_decorator)
+    Application = _App
+    AppRunner = _AppRunner
+    TCPSite = _TCPSite
+    Response = staticmethod(_response)
+    json_response = staticmethod(_json_response)
+    HTTPException = _HTTPException
+    HTTPSeeOther = _HTTPSeeOther
+    middleware = staticmethod(_middleware_decorator)
