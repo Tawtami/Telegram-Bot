@@ -2588,7 +2588,7 @@ th{{background:#0d1117;color:#c9d1d9;}}
         # WooCommerce paid-order webhook (POST-only)
         async def wc_paid(request):
             try:
-                secret_hdr = request.headers.get("X-Telegram-Secret", "")
+                secret_hdr = request.headers.get("X-Bot-Secret", "") or request.headers.get("X-Telegram-Secret", "")
                 wc_secret = os.getenv("WOOCOMMERCE_WEBHOOK_SECRET", "")
                 if not wc_secret or secret_hdr != wc_secret:
                     return web.Response(status=401, text="unauthorized")
@@ -2910,4 +2910,5 @@ def main() -> None:
 if __name__ == "__main__":
     # For local development only - Railway uses start.py
     main()
+
 
