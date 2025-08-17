@@ -2585,6 +2585,89 @@ th{{background:#0d1117;color:#c9d1d9;}}
         app.router.add_post("/admin/act", admin_act_post)
         app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
+        # WooCommerce paid-order webhook (POST-only)
+        async def wc_paid(request):
+            try:
+                secret_hdr = request.headers.get("X-Telegram-Secret", "")
+                wc_secret = os.getenv("WOOCOMMERCE_WEBHOOK_SECRET", "")
+                if not wc_secret or secret_hdr != wc_secret:
+                    return web.Response(status=401, text="unauthorized")
+
+                payload = await request.json()
+                if (payload or {}).get("event") != "order.paid":
+                    return web.json_response({"ok": True})
+
+                order = (payload or {}).get("order") or {}
+                user_obj = (payload or {}).get("user") or {}
+                telegram_user_id = str(user_obj.get("telegram_user_id") or "").strip()
+
+                # Persist purchase(s) in DB
+                try:
+                    from sqlalchemy import select, update
+                    from database.db import session_scope
+                    from database.models_sql import User as DBUser, Purchase
+                    from database.service import get_or_create_user, create_purchase
+
+                    with session_scope() as session:
+                        _tgid = int(telegram_user_id) if telegram_user_id else 0
+                        if _tgid:
+                            db_user = session.execute(
+                                select(DBUser).where(DBUser.telegram_user_id == _tgid)
+                            ).scalar_one_or_none()
+                            if not db_user:
+                                db_user = get_or_create_user(session, telegram_user_id=_tgid)
+                                session.flush()
+
+                            items = order.get("items") or []
+                            for it in items:
+                                sku = str(it.get("sku") or "").lower()
+                                name = str(it.get("name") or "")
+                                pid = str(it.get("product_id") or name or sku or "")
+                                ptype = "book" if ("book" in sku or "کتاب" in name) else "course"
+
+                                existing = session.execute(
+                                    select(Purchase).where(
+                                        Purchase.user_id == db_user.id,
+                                        Purchase.product_type == ptype,
+                                        Purchase.product_id == pid
+                                    )
+                                ).scalar_one_or_none()
+                                if existing:
+                                    session.execute(
+                                        update(Purchase)
+                                        .where(Purchase.id == existing.id)
+                                        .values(status="approved")
+                                    )
+                                else:
+                                    create_purchase(
+                                        session,
+                                        user_id=db_user.id,
+                                        product_type=ptype,
+                                        product_id=pid,
+                                        status="approved",
+                                        amount=int(float(order.get("total") or 0))
+                                    )
+                                session.flush()
+                except Exception as e:
+                    logger.warning(f"wc_paid persistence error: {e}")
+
+                # Notify user
+                try:
+                    if telegram_user_id:
+                        text = (
+                            f"پرداخت شما تایید شد \n"
+                            f"سفارش: {order.get('id')}\nمبلغ: {order.get('total')} {order.get('currency')}"
+                        )
+                        await application.bot.send_message(chat_id=str(telegram_user_id), text=text)
+                except Exception as e:
+                    logger.debug(f"wc_paid DM failed: {e}")
+
+                return web.json_response({"ok": True})
+            except Exception as e:
+                logger.error(f"wc_paid error: {e}")
+                return web.Response(status=500, text="server error")
+
+        app.router.add_post("/webhooks/woocommerce", wc_paid)
 
         # skip_webhook computed earlier
 
@@ -2827,3 +2910,4 @@ def main() -> None:
 if __name__ == "__main__":
     # For local development only - Railway uses start.py
     main()
+
