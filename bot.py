@@ -2585,16 +2585,34 @@ th{{background:#0d1117;color:#c9d1d9;}}
         app.router.add_post("/admin/act", admin_act_post)
         app.router.add_get("/db/health", db_health)
         app.router.add_post(config.webhook.path, telegram_webhook)
-        # WooCommerce paid-order webhook (POST-only)
+
+        # WooCommerce paid-order webhook (POST-only with secret + HMAC)
         async def wc_paid(request):
             import json
+
             try:
-                secret_hdr = request.headers.get("X-Bot-Secret", "") or request.headers.get("X-Telegram-Secret", "")
+                # Header secret fallback (optional)
+                secret_hdr = request.headers.get("X-Bot-Secret", "") or request.headers.get(
+                    "X-Telegram-Secret", ""
+                )
                 wc_secret = os.getenv("WOOCOMMERCE_WEBHOOK_SECRET", "")
-                if not wc_secret or secret_hdr != wc_secret:
+                if wc_secret and secret_hdr != wc_secret:
                     return web.Response(status=401, text="unauthorized")
 
-                payload = await request.json()
+                # Raw body for HMAC verification
+                payload_text = await request.text()
+                hmac_secret = os.getenv("WOOCOMMERCE_WEBHOOK_HMAC_SECRET", "")
+                if hmac_secret:
+                    import hmac, hashlib
+
+                    expected = hmac.new(
+                        hmac_secret.encode(), payload_text.encode(), hashlib.sha256
+                    ).hexdigest()
+                    provided = request.headers.get("X-Signature", "") or ""
+                    if not hmac.compare_digest(expected, provided):
+                        return web.Response(status=401, text="bad signature")
+
+                payload = json.loads(payload_text or "{}")
                 if (payload or {}).get("event") != "order.paid":
                     return web.json_response({"ok": True})
 
@@ -2602,7 +2620,7 @@ th{{background:#0d1117;color:#c9d1d9;}}
                 user_obj = (payload or {}).get("user") or {}
                 telegram_user_id = str(user_obj.get("telegram_user_id") or "").strip()
 
-                # Persist purchase(s) in DB
+                # Persist purchase(s) in DB with structured logging
                 try:
                     from sqlalchemy import select, update
                     from database.db import session_scope
@@ -2630,14 +2648,18 @@ th{{background:#0d1117;color:#c9d1d9;}}
                                     select(Purchase).where(
                                         Purchase.user_id == db_user.id,
                                         Purchase.product_type == ptype,
-                                        Purchase.product_id == pid
+                                        Purchase.product_id == pid,
                                     )
                                 ).scalar_one_or_none()
+
                                 if existing:
                                     session.execute(
                                         update(Purchase)
                                         .where(Purchase.id == existing.id)
                                         .values(status="approved")
+                                    )
+                                    logger.info(
+                                        f"[wc_paid] purchase updated user={db_user.id} pid={pid} type={ptype}"
                                     )
                                 else:
                                     create_purchase(
@@ -2646,22 +2668,23 @@ th{{background:#0d1117;color:#c9d1d9;}}
                                         product_type=ptype,
                                         product_id=pid,
                                         status="approved",
-                                        amount=int(float(order.get("total") or 0))
+                                        amount=int(float(order.get('total') or 0)),
+                                    )
+                                    logger.info(
+                                        f"[wc_paid] purchase created user={db_user.id} pid={pid} type={ptype}"
                                     )
                                 session.flush()
                 except Exception as e:
-                    logger.warning(f"wc_paid persistence error: {e}")
+                    logger.error(f"[wc_paid] DB error: {e}")
 
-                # Notify user
+                # DM notify with logging
                 try:
                     if telegram_user_id:
-                        text = (
-                            f"پرداخت شما تایید شد \n"
-                            f"سفارش: {order.get('id')}\nمبلغ: {order.get('total')} {order.get('currency')}"
-                        )
-                        await application.bot.send_message(chat_id=str(telegram_user_id), text=text)
+                        txt = f"پرداخت شما تایید شد ✅\nسفارش: {order.get('id')}\nمبلغ: {order.get('total')} {order.get('currency')}"
+                        await application.bot.send_message(chat_id=str(telegram_user_id), text=txt)
+                        logger.info(f"[wc_paid] DM sent to {telegram_user_id}")
                 except Exception as e:
-                    logger.debug(f"wc_paid DM failed: {e}")
+                    logger.error(f"[wc_paid] DM failed: {e}")
 
                 return web.json_response({"ok": True})
             except Exception as e:
@@ -2911,7 +2934,3 @@ def main() -> None:
 if __name__ == "__main__":
     # For local development only - Railway uses start.py
     main()
-
-
-
-
