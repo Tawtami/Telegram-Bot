@@ -2587,6 +2587,7 @@ th{{background:#0d1117;color:#c9d1d9;}}
         app.router.add_post(config.webhook.path, telegram_webhook)
         # WooCommerce paid-order webhook (POST-only)
         async def wc_paid(request):
+            import json
             try:
                 secret_hdr = request.headers.get("X-Bot-Secret", "") or request.headers.get("X-Telegram-Secret", "")
                 wc_secret = os.getenv("WOOCOMMERCE_WEBHOOK_SECRET", "")
@@ -2910,6 +2911,7 @@ def main() -> None:
 if __name__ == "__main__":
     # For local development only - Railway uses start.py
     main()
+
 
 
 
